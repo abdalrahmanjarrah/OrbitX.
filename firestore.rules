@@ -290,7 +290,9 @@ service cloud.firestore {
                       isAdmin();
 
       match /friends/{friendId} {
-        allow read: if isOwner(userId) || isAdmin();
+        // Friends list is public so users can see each other's friends
+        allow read: if isAuthenticated();
+        // Only owner/admin can add/remove friends
         allow write: if isOwner(userId) || isAdmin();
       }
 

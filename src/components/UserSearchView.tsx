@@ -19,7 +19,7 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
       }
       setIsSearching(true);
       try {
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, 'profiles');
         const searchTermExact = searchTerm.trim();
         const q1 = query(
           usersRef, 

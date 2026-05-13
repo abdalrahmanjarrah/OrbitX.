@@ -39,11 +39,12 @@ const SURAHS = [
 export const getAstronautRank = (xp: number, missionRole?: string) => {
   const roleName = missionRole ? ` ${missionRole}` : "";
   const ranks = [
-    { title: `مبتدئ${roleName}`, color: "text-gray-400", icon: "👨‍🚀", planet: "bg-gray-500 shadow-gray-500/50", minXp: 0 },
-    { title: `مستكشف${roleName}`, color: "text-green-400", icon: "🛰️", planet: "bg-green-500 shadow-green-500/50", minXp: 5000 },
-    { title: `طيار${roleName}`, color: "text-blue-400", icon: "🚀", planet: "bg-blue-500 shadow-blue-500/50", minXp: 15000 },
-    { title: `قائد وحدة${roleName}`, color: "text-red-400", icon: "👨‍🚀", planet: "bg-red-500 shadow-red-500/50", minXp: 30000 },
-    { title: `أسطورة${roleName}`, color: "text-indigo-500", icon: "👑", planet: "bg-indigo-500/20 shadow-indigo-400/50", minXp: 50000 },
+    { title: `أول خطوة${roleName}`, color: "text-gray-400", icon: "👨‍🚀", planet: "bg-gray-500 shadow-gray-500/50", minXp: 0 },
+    { title: `مستكشف كوني${roleName}`, color: "text-green-400", icon: "🛰️", planet: "bg-green-500 shadow-green-500/50", minXp: 2000 },
+    { title: `عاشق النجوم${roleName}`, color: "text-blue-400", icon: "🚀", planet: "bg-blue-500 shadow-blue-500/50", minXp: 5000 },
+    { title: `منضبط كوني${roleName}`, color: "text-red-400", icon: "👨‍🚀", planet: "bg-red-500 shadow-red-500/50", minXp: 15000 },
+    { title: `خبير المجرة${roleName}`, color: "text-indigo-500", icon: "👑", planet: "bg-indigo-500/20 shadow-indigo-400/50", minXp: 30000 },
+    { title: `أسطورة OrbitX${roleName}`, color: "text-indigo-500", icon: "👑", planet: "bg-indigo-500/20 shadow-indigo-400/50", minXp: 50000 },
   ];
 
   let currentRankIndex = 0;
@@ -517,12 +518,13 @@ function App() {
         bio: userData.bio || '',
         level: userData.level,
         xp: userData.xp,
+        totalFocusSessions: userData.totalFocusSessions || 0,
         friendsCount: userData.friendsCount || 0,
         hearts: userData.hearts || 0,
         role: userData.role,
         banned: userData.banned || false,
         currentActivity: userData.currentActivity || 'في المدار',
-                              };
+      };
       setDoc(profileRef, publicData, { merge: true }).catch(e => console.error("Profile sync failed", e));
     }
   }, [userData]);
@@ -968,6 +970,31 @@ function NotificationsDropdown({ userId }: { userId: string }) {
     });
   };
 
+  const handleAcceptFriendRequest = async (notif: any) => {
+    try {
+      const batch = writeBatch(db);
+      const myFriendRef = doc(db, 'users', userId, 'friends', notif.senderId);
+      const otherFriendRef = doc(db, 'users', notif.senderId, 'friends', userId);
+      
+      batch.set(myFriendRef, { timestamp: serverTimestamp() });
+      batch.set(otherFriendRef, { timestamp: serverTimestamp() });
+      batch.update(doc(db, 'users', userId), { friendsCount: increment(1) });
+      batch.update(doc(db, 'users', notif.senderId), { friendsCount: increment(1) });
+      batch.delete(doc(db, 'users', userId, 'notifications', notif.id));
+      
+      await batch.commit();
+      alert('تم قبول طلب الصداقة! أنتم الآن رفقاء فضاء.');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeclineFriendRequest = async (notifId: string) => {
+    try {
+      await deleteDoc(doc(db, 'users', userId, 'notifications', notifId));
+    } catch (e) {}
+  };
+
   return (
     <div className="relative">
       <button 
@@ -998,7 +1025,21 @@ function NotificationsDropdown({ userId }: { userId: string }) {
               ) : (
                 notifications.map(n => (
                   <div key={n.id} className={`p-3 border-b border-white/5 text-sm ${n.read ? 'opacity-70' : 'bg-white/5'}`}>
-                    {n.content}
+                    {n.type === 'friend_request' ? (
+                       <div className="space-y-2">
+                         <div className="flex items-center gap-2">
+                           <img src={n.senderPhoto} className="w-6 h-6 rounded-full" />
+                           <span className="font-bold text-indigo-400">{n.senderName}</span>
+                         </div>
+                         <p className="text-xs text-gray-300">{n.content}</p>
+                         <div className="flex gap-2">
+                           <button onClick={(e) => { e.stopPropagation(); handleAcceptFriendRequest(n); }} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1 rounded-lg transition-colors">قبول</button>
+                           <button onClick={(e) => { e.stopPropagation(); handleDeclineFriendRequest(n.id); }} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-bold py-1 rounded-lg transition-colors">إلغاء</button>
+                         </div>
+                       </div>
+                    ) : (
+                      n.content
+                    )}
                   </div>
                 ))
               )}
@@ -1386,7 +1427,7 @@ function ChallengeModal({ user, onClose }: { user: UserData, onClose: () => void
       const friendIds = snapshot.docs.map(doc => doc.id);
       if (friendIds.length > 0) {
         try {
-          const friendsQuery = query(collection(db, 'profiles'), where('uid', 'in', friendIds));
+          const friendsQuery = query(collection(db, 'profiles'), where('__name__', 'in', friendIds));
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map(doc => doc.data() as UserData));
         } catch (e) {
@@ -2464,6 +2505,8 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
   
   const [showJoinInfo, setShowJoinInfo] = useState(false);
   const [hasJoinedStation, setHasJoinedStation] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
   const isJoinedRef = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [sharedNotes, setSharedNotes] = useState('');
@@ -2472,7 +2515,49 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
   const [lastMessageTime, setLastMessageTime] = useState<number>(0);
   const participantsCountRef = useRef(0);
 
-  const [showExitDialog, setShowExitDialog] = useState(false);
+  const joinTimeLeftRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isJoined && room?.timerStatus === 'focus' && joinTimeLeftRef.current === null) {
+      joinTimeLeftRef.current = timeLeft;
+    } else if (!isJoined || room?.timerStatus !== 'focus') {
+      joinTimeLeftRef.current = null;
+    }
+  }, [isJoined, room?.timerStatus, timeLeft]);
+
+  const calculateAndApplyXp = async () => {
+    if (joinTimeLeftRef.current !== null && room?.timerStatus === 'focus') {
+      const secondsSpent = joinTimeLeftRef.current - timeLeft;
+      const minutesSpent = Math.floor(secondsSpent / 60);
+      if (minutesSpent > 0) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          xp: increment(minutesSpent)
+        });
+        if (user.fleetId) updateDoc(doc(db, 'fleets', user.fleetId), { xp: increment(minutesSpent) }).catch(() => {});
+      }
+    }
+  };
+
+  const handleConfirmExit = async () => {
+    setShowExitDialog(false);
+    await calculateAndApplyXp();
+    
+    setComboMultiplier(1);
+    
+    // Broadcast exit to chat (no penalty deduction if they studied)
+    if (participantsCountRef.current > 1) {
+      await addDoc(collection(db, 'rooms', stationId, 'messages'), {
+        text: `🚀 غادر المحرك (${user.displayName}) المحطة للراحة.`,
+        userId: 'system',
+        userName: 'نظام التنبيه',
+        userPhoto: '',
+        timestamp: serverTimestamp(),
+        type: 'text'
+      });
+    }
+
+    onExit();
+  };
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [studyLink, setStudyLink] = useState('');
@@ -2488,7 +2573,6 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
   const [shieldPercent, setShieldPercent] = useState<number>(0);
   
   // Voice Call State
-  const [isJoined, setIsJoined] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
 
   useEffect(() => {
@@ -2510,17 +2594,17 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
   const [pendingMission, setPendingMission] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubTyping = onSnapshot(collection(db, 'rooms', stationId, 'typing'), snap => {
-      const newMap: Record<string, {name: string, time: number}> = {};
-      snap.docs.forEach(d => {
-        if (d.id !== user.uid) newMap[d.id] = d.data() as {name: string, time: number};
-      });
-      setTypingMap(newMap);
-    }, () => {});
-    
-    const interval = setInterval(() => setTypingMap(m => ({...m})), 2000);
-    return () => { unsubTyping(); clearInterval(interval); };
-  }, [stationId, user.uid]);
+      const unsubTyping = onSnapshot(collection(db, 'rooms', stationId, 'typing'), snap => {
+        const newMap: Record<string, {name: string, time: number}> = {};
+        snap.docs.forEach(d => {
+          if (d.id !== user.uid) newMap[d.id] = d.data() as {name: string, time: number};
+        });
+        setTypingMap(newMap);
+      }, () => {});
+      
+      const interval = setInterval(() => setTypingMap(m => ({...m})), 2000);
+      return () => { unsubTyping(); clearInterval(interval); };
+    }, [stationId, user.uid]);
 
   const typingNames = Object.values(typingMap).filter(t => Date.now() - t.time < 4000).map(t => t.name);
 
@@ -3069,25 +3153,22 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
     return () => clearInterval(interval);
   }, [showAFKCheck, afkTimeLeft]);
 
-  const handleAFKFailure = () => {
+  const handleAFKFailure = async () => {
     setShowAFKCheck(false);
     
-    // Penalize
-    updateDoc(doc(db, 'users', user.uid), { xp: increment(-20) }).catch(() => {});
-    if (user.fleetId) updateDoc(doc(db, 'fleets', user.fleetId), { xp: increment(-20) }).catch(() => {});
+    // Partial reward for time spent
+    await calculateAndApplyXp();
     
-    // Announce to room
+    // Kick user out
     addDoc(collection(db, 'rooms', stationId, 'messages'), {
-      text: `💤 غادر ${user.displayName} المحطة بسبب عدم الاستجابة (AFK) وتم خصم 20 نقطة منه!`,
+      text: `💤 غادر ${user.displayName} المحطة بسبب عدم الاستجابة (AFK). تم حفظ نقاطه المسجلة حتى الآن.`,
       userId: 'system',
       userName: 'نظام المراقبة',
       userPhoto: '',
       timestamp: serverTimestamp(),
-      type: 'text',
-      isExitPenalty: true
+      type: 'text'
     }).catch(() => {});
     
-    // Kick user out
     onExit();
   };
 
@@ -3194,8 +3275,12 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
       if (room.timerStatus === 'focus') {
         // Award XP and increment sessions
         const isGroup = participantsCountRef.current > 1;
-        const groupMultiplier = isGroup ? 2 : 1; // Double fuel for group commitment
-        const regularXp = 100 * comboMultiplier * groupMultiplier;
+        const groupMultiplier = isGroup ? 2 : 1; 
+        const xpEarnedBase = room.timerDuration; // 1 XP per minute
+        const regularXp = xpEarnedBase * comboMultiplier * groupMultiplier;
+        
+        // Reset join time so leaving during break doesn't grant focus XP again
+        joinTimeLeftRef.current = null;
         
         // Return remaining shield to user
         const refund = remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
@@ -3683,58 +3768,85 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
           "flex flex-col items-center justify-center relative min-h-[500px] transition-all duration-1000 py-10 lg:py-20",
           isFocusMode ? "scale-[1.15] lg:scale-[1.4]" : "scale-100 lg:scale-[1.3]"
         )}>
-          <div className="relative w-full max-w-[500px] aspect-square flex items-center justify-center">
-            {/* Drawn Orbit */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40 mix-blend-screen" viewBox="0 0 500 500">
-              <circle cx="250" cy="250" r="140" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1" strokeDasharray="4,8" fill="none" />
-            </svg>
+          <div className="relative w-full max-w-[600px] aspect-square flex items-center justify-center">
+            {/* Solar System Background Rings */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+              {[0, 1, 2, 3, 4].map(i => (
+                <div 
+                  key={i}
+                  className="absolute rounded-full border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                  style={{ width: `${380 + i * 90}px`, height: `${380 + i * 90}px` }}
+                />
+              ))}
+            </div>
+
             {/* Orbiting Planets (Users) */}
-            {participantsData.map((p, index) => {
-              const angle = (index / participantsData.length) * 360;
+            {[...participantsData].sort((a, b) => a.uid.localeCompare(b.uid)).slice(0, 5).map((p, index) => {
+              const baseRadius = 190; // Increased distance from center
+              const orbitSpacing = 45; 
+              const radius = baseRadius + (index * orbitSpacing);
+              
+              // Seeded derivation for visual variety
+              const seed = p.uid.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+              const duration = 60 + (seed % 40) + (index * 25); 
+              const initialAngle = (seed * 137.5) % 360; 
+
               return (
-                <motion.div 
-                  key={p.uid}
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 40 + index * 10, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 pointer-events-none"
-                >
+                <div key={p.uid} className="absolute inset-0 pointer-events-none">
+                  {/* Subtle Orbit Path Highlight */}
                   <div 
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
-                    style={{ transform: `rotate(${angle}deg) translateY(-140px) rotate(-${angle}deg)` }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5 pointer-events-none"
+                    style={{ width: radius * 2, height: radius * 2 }}
+                  />
+
+                  {/* The Orbiting Container */}
+                  <motion.div 
+                    animate={{ rotate: [initialAngle, initialAngle + 360] }}
+                    transition={{ duration, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0"
                   >
-                    <div className="relative pointer-events-auto">
-                      {p.uid === user.uid && isJoined && !isMuted && volumeLevel > 5 && (
-                        <motion.div
-                          initial={{ scale: 1, opacity: 0.5 }}
-                          animate={{ scale: 1.5, opacity: 0 }}
-                          transition={{ duration: 0.5, repeat: Infinity }}
-                          className="absolute inset-0 rounded-full bg-green-500 z-[-1]"
-                        />
-                      )}
-                      <button 
-                        onClick={() => onSelectUser(p.uid)}
-                        className={cn(
-                          "w-10 h-10 md:w-12 md:h-12 rounded-full border-2 p-0.5 overflow-hidden shadow-sm transition-all",
-                          p.uid === user.uid ? "border-indigo-400 shadow-indigo-400/40" : "border-blue-400 shadow-blue-400/20",
-                          getAstronautRank(p.xp).planet
-                        )}
+                    {/* The Planet itself */}
+                    <div 
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
+                      style={{ transform: `translateY(-${radius}px)` }}
+                    >
+                      {/* Counter-rotate content */}
+                      <motion.div
+                        animate={{ rotate: [-(initialAngle), -(initialAngle + 360)] }}
+                        transition={{ duration, repeat: Infinity, ease: "linear" }}
+                        className="flex flex-col items-center gap-1"
                       >
-                        <img src={p.photoURL} alt={p.displayName} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-                      </button>
-                      {/* Status Badges */}
-                      <div className="absolute -top-1 -right-1 flex gap-0.5">
-                        {p.hearts < 3 && (
-                          <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-red-500 flex items-center justify-center border border-black">
-                            <Heart size={8} className="text-white fill-white" />
-                          </div>
-                        )}
-                      </div>
+                        <div className="relative pointer-events-auto">
+                          {p.uid === user.uid && isJoined && !isMuted && volumeLevel > 5 && (
+                            <motion.div
+                              initial={{ scale: 1, opacity: 0.5 }}
+                              animate={{ scale: 1.4, opacity: 0 }}
+                              transition={{ duration: 0.5, repeat: Infinity }}
+                              className="absolute inset-0 rounded-full bg-green-500 z-[-1]"
+                            />
+                          )}
+                          <button 
+                            onClick={() => onSelectUser(p.uid)}
+                            className={cn(
+                              "w-10 h-10 md:w-12 md:h-12 rounded-full border-2 p-0.5 overflow-hidden shadow-xl transition-all",
+                              p.uid === user.uid ? "border-amber-400 shadow-amber-400/40" : "border-indigo-400 shadow-indigo-400/20"
+                            )}
+                          >
+                            <img 
+                              src={p.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.uid}`} 
+                              alt={p.displayName} 
+                              className="w-full h-full rounded-full object-cover bg-slate-900" 
+                              referrerPolicy="no-referrer" 
+                            />
+                          </button>
+                        </div>
+                        <span className="text-[6px] md:text-[8px] font-bold bg-[#0a0b16]/90 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 text-white whitespace-nowrap shadow-lg">
+                          {p.displayName.split(' ')[0]}
+                        </span>
+                      </motion.div>
                     </div>
-                    <span className="text-[6px] md:text-[8px] font-bold bg-white/5/80 shadow-inner backdrop-blur-xl bg-[#0a0b16]/80 px-2 py-0.5 rounded-full border border-white/5">
-                      {p.displayName.split(' ')[0]}
-                    </span>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               );
             })}
 
@@ -4161,12 +4273,12 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
           >
             <div className="bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20">
-              <h2 className="text-xl font-black mb-4 text-center text-red-500 flex items-center justify-center gap-2">
-                <ShieldAlert size={24} />
-                تحذير خطير!
+              <h2 className="text-xl font-black mb-4 text-center text-white flex items-center justify-center gap-2">
+                <Rocket size={24} />
+                مغادرة المحطة
               </h2>
               <p className="text-gray-300 text-center text-sm mb-6 leading-relaxed">
-                الخروج من المحطة أثناء وضع التركيز سيؤدي إلى فقدان قلب 💔 وخسارة المضاعف التراكمي (Combo). هل أنت متأكد من الهروب؟
+                هل تريد مغادرة وضع التركيز؟ سيتم حفظ نقاط الخبرة التي اكتسبتها بناءً على الوقت الذي قضيته.
               </p>
               <div className="flex gap-4 flex-col sm:flex-row">
                 <button
@@ -4176,32 +4288,10 @@ function StudyRoomView({ user, stationId, onExit, onSelectUser }: { user: UserDa
                   البقاء والمتابعة
                 </button>
                 <button
-                  onClick={async () => {
-                    setShowExitDialog(false);
-                    await updateDoc(doc(db, 'users', user.uid), {
-                      hearts: increment(-1)
-                    });
-                    setComboMultiplier(1);
-                    
-                    // Penalty message for peer accountability
-                    if (participantsCountRef.current > 1) {
-                      await addDoc(collection(db, 'rooms', stationId, 'messages'), {
-                        text: `🚨 المحرك (${user.displayName}) توقف عن العمل! السفينة تتباطأ!`,
-                        userId: 'system',
-                        userName: 'نظام التنبيه',
-                        userPhoto: '',
-                        timestamp: serverTimestamp(),
-                        type: 'text',
-                        isExitPenalty: true
-                      });
-                    }
-
-                    // Cleanup handles leaving participants list
-                    onExit();
-                  }}
-                  className="px-4 py-3 bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/50 rounded-xl font-bold transition-all text-sm whitespace-nowrap"
+                  onClick={handleConfirmExit}
+                  className="px-4 py-3 bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all text-sm whitespace-nowrap"
                 >
-                  الهروب الآن
+                  مغادرة الآن
                 </button>
               </div>
             </div>
@@ -4311,10 +4401,10 @@ function LeaderboardView({ user, onSelectUser }: { user: UserData, onSelectUser:
   const [leaders, setLeaders] = useState<UserData[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+    const q = query(collection(db, 'profiles'), orderBy('xp', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setLeaders(snapshot.docs.map(doc => doc.data() as UserData));
-    }, (e) => handleFirestoreError(e, OperationType.GET, 'users_leaderboard'));
+    }, (e) => handleFirestoreError(e, OperationType.GET, 'profiles_leaderboard'));
     return () => unsubscribe();
   }, []);
 
@@ -4665,7 +4755,7 @@ function ProfileView({ user, isStudying }: { user: UserData, isStudying?: boolea
       if (friendIds.length > 0) {
         try {
           // Use 'in' query to fetch all friends in one go
-          const friendsQuery = query(collection(db, 'profiles'), where('uid', 'in', friendIds));
+          const friendsQuery = query(collection(db, 'profiles'), where('__name__', 'in', friendIds));
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map(doc => doc.data() as UserData));
         } catch (e) {
@@ -5415,7 +5505,7 @@ function ScheduleView({ user }: { user: UserData }) {
             value={task}
             onChange={(e) => setTask(e.target.value)}
             placeholder="مثال: مذاكرة رياضيات"
-            className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none placeholder:text-gray-600"
             dir="rtl"
           />
         </div>
@@ -5425,7 +5515,7 @@ function ScheduleView({ user }: { user: UserData }) {
             type="time" 
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none"
           />
         </div>
         <div className="space-y-2">
@@ -5433,10 +5523,10 @@ function ScheduleView({ user }: { user: UserData }) {
           <select 
             value={day}
             onChange={(e) => setDay(e.target.value)}
-            className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none"
+            className="w-full bg-[#0a0b16] border border-white/10 rounded-xl px-4 py-2 text-right focus:outline-none appearance-none"
             dir="rtl"
           >
-            {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+            {DAYS.map(d => <option key={d} value={d} className="bg-[#0a0b16] text-white py-2">{d}</option>)}
           </select>
         </div>
         <button 
@@ -5448,10 +5538,10 @@ function ScheduleView({ user }: { user: UserData }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
         {DAYS.map(d => (
-          <div key={d} className="space-y-3">
-            <h3 className="text-center font-bold py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-xs">{d}</h3>
+          <div key={d} className="space-y-3 min-w-0">
+            <h3 className="text-center font-bold py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-[10px] uppercase tracking-wider text-indigo-400">{d}</h3>
             <div className="space-y-2">
               {items.filter(i => i.day === d).map(item => (
                 <motion.div 
@@ -6068,7 +6158,7 @@ function UserModal({ userId, currentUserId, currentUser, onClose }: { userId: st
       const friendIds = snapshot.docs.map(doc => doc.id);
       if (friendIds.length > 0) {
         try {
-          const friendsQuery = query(collection(db, 'profiles'), where('uid', 'in', friendIds));
+          const friendsQuery = query(collection(db, 'profiles'), where('__name__', 'in', friendIds));
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map(doc => doc.data() as UserData));
         } catch (e) {
@@ -6081,31 +6171,32 @@ function UserModal({ userId, currentUserId, currentUser, onClose }: { userId: st
     return () => unsubscribe();
   }, [userId]);
 
-  const handleToggleFriend = async () => {
-    if (!userData) return;
-    const friendRef = doc(db, 'users', currentUserId, 'friends', userId);
-    const otherFriendRef = doc(db, 'users', userId, 'friends', currentUserId);
+  const handleSendFriendRequest = async () => {
+    if (!userData || !currentUser) return;
     
     try {
       if (isFriend) {
-        await deleteDoc(friendRef);
-        await deleteDoc(otherFriendRef);
-        await updateDoc(doc(db, 'users', currentUserId), { friendsCount: increment(-1) });
-        await updateDoc(doc(db, 'users', userId), { friendsCount: increment(-1) });
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'users', currentUserId, 'friends', userId));
+        batch.delete(doc(db, 'users', userId, 'friends', currentUserId));
+        batch.update(doc(db, 'users', currentUserId), { friendsCount: increment(-1) });
+        batch.update(doc(db, 'users', userId), { friendsCount: increment(-1) });
+        await batch.commit();
+        alert('تم إلغاء الصداقة');
       } else {
-        await setDoc(friendRef, { timestamp: serverTimestamp() });
-        await setDoc(otherFriendRef, { timestamp: serverTimestamp() });
-        await updateDoc(doc(db, 'users', currentUserId), { friendsCount: increment(1) });
-        await updateDoc(doc(db, 'users', userId), { friendsCount: increment(1) });
-        addDoc(collection(db, 'users', userId, 'notifications'), {
-           type: 'friend',
-           content: 'قام صديق جديد بإضافتك!', // Cannot access user.displayName easily here without context, let's just make it generic or if context has current user
+        await addDoc(collection(db, 'users', userId, 'notifications'), {
+           type: 'friend_request',
+           senderId: currentUserId,
+           senderName: currentUser.displayName,
+           senderPhoto: currentUser.photoURL,
+           content: `يريد ${currentUser.displayName} أن يكون صديقك في الفضاء!`,
            read: false,
            timestamp: serverTimestamp()
-        }).catch(console.error);
+        });
+        alert('تم إرسال طلب الصداقة بنجاح!');
       }
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, 'friends');
+      handleFirestoreError(e, OperationType.WRITE, 'friend_request');
     }
   };
 
@@ -6147,7 +6238,7 @@ function UserModal({ userId, currentUserId, currentUser, onClose }: { userId: st
                   <div className="flex gap-4 flex-wrap">
                     {userId !== currentUserId && (
                       <button 
-                        onClick={handleToggleFriend}
+                        onClick={handleSendFriendRequest}
                         className={cn(
                           "px-6 py-2 rounded-xl font-bold transition-all text-sm flex items-center gap-2",
                           isFriend ? "bg-white/5 border border-white/10 hover:bg-white/10" : "bg-indigo-500 hover:bg-indigo-700"
@@ -6771,13 +6862,15 @@ export function BlackHolesView({ user }: { user: UserData }) {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const usersSnapshot = await getDocs(collection(db, 'profiles'));
         let totalSessions = 0;
         let users: UserData[] = [];
         usersSnapshot.forEach(doc => {
           const data = doc.data() as UserData;
-          totalSessions += data.totalFocusSessions || 0;
-          users.push(data);
+          if (data.totalFocusSessions) {
+            totalSessions += data.totalFocusSessions;
+            users.push({ ...data, uid: doc.id });
+          }
         });
         
         users.sort((a, b) => (b.totalFocusSessions || 0) - (a.totalFocusSessions || 0));
@@ -7391,7 +7484,7 @@ function FleetsView({ user }: { user: UserData }) {
           for (let i = 0; i < activeFleet.members.length; i += 10) chunks.push(activeFleet.members.slice(i, i + 10));
           let allMems: UserData[] = [];
           for (const chunk of chunks) {
-            const q = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const q = query(collection(db, 'profiles'), where('__name__', 'in', chunk));
             const snap = await getDocs(q);
             allMems = [...allMems, ...snap.docs.map(d => d.data() as UserData)];
           }
@@ -7753,7 +7846,7 @@ function FleetsView({ user }: { user: UserData }) {
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white text-sm truncate">{m.displayName}</span>
                     {activeFleet.ownerId === m.uid ? (
-                       <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full border border-yellow-500/30">مسؤول</span>
+                       <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold">مؤسس الأسطول 👑</span>
                      ) : activeFleet.coAdmins?.includes(m.uid) ? (
                        <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/30">نائب مسؤول</span>
                      ) : null}
