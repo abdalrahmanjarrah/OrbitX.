@@ -9,30 +9,37 @@ export default defineConfig(({mode}) => {
   return {
     base: '/OrbitX../',
     plugins: [
-      react(), 
+      react(),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          name: 'OrbitX - مساحة الدراسة',
+          name: 'OrbitX',
           short_name: 'OrbitX',
-          description: 'منصتك المبتكرة للدراسة بتركيز عالي',
           theme_color: '#0a0b16',
           background_color: '#0a0b16',
           display: 'standalone',
           icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: '
+            { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        },
+        workbox: {
+          maximumFileSizeToCacheInBytes: 10485760
+        }
+      })
+    ],
+    define: {
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+      },
+    },
+    server: {
+      hmr: process.env.DISABLE_HMR !== 'true',
+    },
+  };
+});
