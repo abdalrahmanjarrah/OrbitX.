@@ -287,13 +287,19 @@ service cloud.firestore {
                         request.resource.data.get('role', 'user') == resource.data.get('role', 'user') && // Cannot change role
                         request.resource.data.email == resource.data.email && // Cannot change email
                         request.resource.data.uid == resource.data.uid) || 
+                      (
+                        // Allow others to increment friendsCount when accepting requests
+                        isAuthenticated() && 
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friendsCount']) &&
+                        (request.resource.data.friendsCount == resource.data.friendsCount + 1 || request.resource.data.friendsCount == resource.data.friendsCount - 1)
+                      ) ||
                       isAdmin();
 
       match /friends/{friendId} {
         // Friends list is public so users can see each other's friends
         allow read: if isAuthenticated();
-        // Only owner/admin can add/remove friends
-        allow write: if isOwner(userId) || isAdmin();
+        // Allow owner to write, or the friend themselves (when accepting/removing requests)
+        allow write: if isOwner(userId) || request.auth.uid == friendId || isAdmin();
       }
 
       match /schedule/{itemId} {
@@ -336,25 +342,32 @@ service cloud.firestore {
                         (
                           // Creator can update everything
                           request.auth.uid == resource.data.get('creatorId', '') || 
-                          // Participants can ONLY update the participants list (join/leave)
+                          // Participants can update participants list (join/leave) and timer status
                           (
-                            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']) &&
                             (
-                              // Joining: Only adding self
+                              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'emptyAt', 'creatorId', 'creatorName']) &&
                               (
-                                request.resource.data.participants.hasAll(resource.data.participants) &&
-                                request.resource.data.participants.size() == resource.data.participants.size() + 1 &&
-                                request.auth.uid in request.resource.data.participants &&
-                                !(request.auth.uid in resource.data.participants) &&
-                                request.resource.data.participants.size() <= resource.data.maxParticipants
-                              ) ||
-                              // Leaving: Only removing self
-                              (
-                                resource.data.participants.hasAll(request.resource.data.participants) &&
-                                resource.data.participants.size() == request.resource.data.participants.size() + 1 &&
-                                !(request.auth.uid in request.resource.data.participants) &&
-                                request.auth.uid in resource.data.participants
+                                // Joining: Only adding self
+                                (
+                                  request.resource.data.participants.hasAll(resource.data.participants) &&
+                                  request.resource.data.participants.size() == resource.data.participants.size() + 1 &&
+                                  request.auth.uid in request.resource.data.participants &&
+                                  !(request.auth.uid in resource.data.participants) &&
+                                  request.resource.data.participants.size() <= resource.data.maxParticipants
+                                ) ||
+                                // Leaving: Only removing self
+                                (
+                                  resource.data.participants.hasAll(request.resource.data.participants) &&
+                                  resource.data.participants.size() == request.resource.data.participants.size() + 1 &&
+                                  !(request.auth.uid in request.resource.data.participants) &&
+                                  request.auth.uid in resource.data.participants
+                                )
                               )
+                            ) ||
+                            (
+                               // Any participant can operate the timer if they are in the participants array
+                               request.auth.uid in resource.data.participants &&
+                               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timerStatus', 'startTime'])
                             )
                           )
                         )) || 
