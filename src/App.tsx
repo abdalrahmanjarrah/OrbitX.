@@ -445,6 +445,7 @@ const RECITERS = [
 ];
 
 import { Farm3D } from "./components/Farm3D";
+import LandingPage from "./components/LandingPage";
 
 // --- Types ---
 interface UserData {
@@ -468,6 +469,8 @@ interface UserData {
   streak?: number;
   lastActiveDate?: string;
   lastStudyDate?: string;
+  completedTasks?: number;
+  hearts?: number;
   totalFocusSessions?: number;
   seeds?: number;
   plants?: {
@@ -746,6 +749,10 @@ function App() {
             setView("dashboard");
           } else {
             // Initialize new user
+            const isAdminEmail =
+              user.email === "lumafashionhq@gmail.com" ||
+              user.email === "abdalrahmanjarrah94@gmail.com";
+
             const newUserData: UserData = {
               uid: user.uid,
               displayName: user.displayName || "رائد فضاء",
@@ -753,20 +760,39 @@ function App() {
               photoURL: user.photoURL || "",
               level: 1,
               xp: 0,
-              role:
-                user.email === "lumafashionhq@gmail.com" ||
-                user.email === "abdalrahmanjarrah94@gmail.com"
-                  ? "admin"
-                  : "user",
+              role: isAdminEmail ? "admin" : "user",
               friendsCount: 0,
               banned: false,
               currentActivity: "في لوحة التحكم",
               streak: 1,
               lastActiveDate: new Date().toISOString().split("T")[0],
             };
-            setDoc(userRef, newUserData).catch((e) =>
-              handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
-            );
+
+            const initUser = async () => {
+                await setDoc(userRef, newUserData).catch((e) =>
+                  handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
+                );
+
+                const profileRef = doc(db, "profiles", user.uid);
+                await setDoc(profileRef, {
+                  uid: user.uid,
+                  displayName: user.displayName || "رائد فضاء",
+                  photoURL: user.photoURL || "",
+                  bio: "",
+                  level: 1,
+                  xp: 0,
+                  totalFocusSessions: 0,
+                  friendsCount: 0,
+                  role: isAdminEmail ? "admin" : "user",
+                  banned: false,
+                  currentActivity: "في لوحة التحكم",
+                  streak: 1,
+                  lastActiveDate: new Date().toISOString().split("T")[0],
+                }, { merge: true }).catch((e) =>
+                  handleFirestoreError(e, OperationType.WRITE, `profiles/${user.uid}`)
+                );
+            };
+            initUser();
           }
         },
         (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}`),
@@ -966,460 +992,6 @@ export default function WrappedApp() {
   );
 }
 
-function LandingPage({ onLogin }: { onLogin: () => void }) {
-  return (
-    <div className="min-h-screen relative overflow-x-hidden selection:bg-indigo-500/200/30">
-      <StarBackground />
-      <div className="atmosphere-bg" />
-
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between backdrop-blur-xl bg-[#0a0b16]/80 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <Rocket className="w-6 h-6 text-indigo-400" />
-          <span className="text-xl font-bold font-display tracking-tight">
-            OrbitX
-          </span>
-        </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-          <a href="#features" className="hover:text-white transition-colors">
-            المميزات
-          </a>
-          <a
-            href="#how-it-works"
-            className="hover:text-white transition-colors"
-          >
-            كيف يعمل
-          </a>
-          <a href="#community" className="hover:text-white transition-colors">
-            المجتمع
-          </a>
-        </div>
-        <button
-          onClick={onLogin}
-          className="px-5 py-2 bg-white/5 hover:bg-[#0a0b16]/20 rounded-full text-sm font-bold transition-all border border-white/10"
-        >
-          دخول الرواد
-        </button>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-40 px-6 flex flex-col items-center text-center overflow-hidden">
-        {/* Animated Orbits & Planets */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 left-1/2 -mt-[300px] -ml-[300px] w-[600px] h-[600px] rounded-full border border-indigo-500/10 border-dashed"
-          />
-          <motion.div
-            animate={{ rotate: -360 }}
-            transition={{ duration: 70, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 left-1/2 -mt-[450px] -ml-[450px] w-[900px] h-[900px] rounded-full border border-fuchsia-500/10 border-dotted"
-          />
-          {/* Planet 1 */}
-          <motion.div
-            animate={{ y: [0, -20, 0], rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[20%] left-[15%] w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-400 blur-[2px] opacity-20 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
-          />
-          {/* Planet 2 */}
-          <motion.div
-            animate={{ y: [0, 30, 0], rotate: [0, -15, 15, 0] }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1,
-            }}
-            className="absolute top-[40%] right-[10%] w-32 h-32 rounded-full bg-gradient-to-bl from-fuchsia-600 to-pink-400 blur-[3px] opacity-20 shadow-[0_0_60px_rgba(217,70,239,0.5)]"
-          />
-        </div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, type: "spring", stiffness: 100 }}
-          className="relative z-10 text-6xl md:text-9xl font-black font-display mb-6 tracking-tighter leading-[1.1] filter drop-shadow-2xl"
-        >
-          <span className="bg-gradient-to-r from-indigo-400 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent inline-block animate-gradient-x">
-            OrbitX
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="relative z-10 text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium"
-        >
-          منصة الدراسة الجماعية الأولى من نوعها، حيث تتحول جلسات المذاكرة المملة
-          إلى رحلات فضائية ملهمة وممتعة مع أصدقائك.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="relative z-10 flex flex-col sm:flex-row items-center gap-4"
-        >
-          <button
-            onClick={onLogin}
-            className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-2xl font-bold text-xl flex items-center gap-3 shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:shadow-[0_0_60px_rgba(99,102,241,0.6)] hover:scale-105 transition-all duration-300"
-          >
-            ابدأ رحلتك الآن مجاناً
-            <Rocket className="w-6 h-6 animate-pulse" />
-          </button>
-        </motion.div>
-
-        {/* Mock UI Preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, type: "spring", stiffness: 50 }}
-          className="relative z-10 mt-20 w-full max-w-5xl mx-auto rounded-xl sm:rounded-3xl border border-white/10 bg-[#060714]/90 backdrop-blur-xl shadow-2xl overflow-hidden shadow-indigo-900/40"
-        >
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0a0b16]">
-            <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-400/80"></div>
-            <div className="w-3 h-3 rounded-full bg-green-400/80"></div>
-            <div className="mx-auto text-xs font-mono text-gray-500">
-              app.orbitx.study
-            </div>
-          </div>
-          <div className="relative aspect-video max-h-[600px] w-full bg-[#05050a] flex overflow-hidden">
-            {/* Fake App Content */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-40">
-              <StarBackground />
-            </div>
-
-            <div
-              className="relative z-10 flex w-full h-full p-4 gap-4"
-              dir="rtl"
-            >
-              {/* Left Sidebar (Widgets) */}
-              <div className="hidden md:flex flex-col gap-4 w-64 shrink-0">
-                {/* Quran Widget */}
-                <div className="bg-[#0a0b16]/90 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-indigo-400">
-                      <Music size={16} />
-                    </span>
-                    <h4 className="text-sm font-bold text-white flex gap-2">
-                      <BookOpen size={16} /> القرآن الكريم
-                    </h4>
-                  </div>
-                  <div className="bg-black/30 rounded-lg p-2 text-xs text-center border border-white/5">
-                    مشاري العفاسي
-                  </div>
-                  <div className="bg-black/30 rounded-lg p-2 text-xs text-center border border-white/5">
-                    الفاتحة 1
-                  </div>
-                  <div className="flex justify-center items-center gap-4 mt-2">
-                    <SkipForward size={16} className="text-gray-500" />
-                    <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">
-                      <Play size={14} className="text-white fill-current" />
-                    </div>
-                    <SkipBack size={16} className="text-gray-500" />
-                  </div>
-                </div>
-
-                {/* Tasks Widget */}
-                <div className="bg-[#0a0b16]/90 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-green-400">
-                      <CheckSquare size={16} />
-                    </span>
-                    <h4 className="text-sm font-bold text-white">
-                      مهامي الجانبية
-                    </h4>
-                  </div>
-                  <div className="text-center text-xs text-gray-500 py-4 border-b border-white/5 font-medium">
-                    {" "}
-                    لا توجد مهام حالياً...
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="bg-indigo-500/20 text-indigo-400 p-2 rounded-lg">
-                      <Plus size={16} />
-                    </div>
-                    <div className="bg-black/30 rounded-lg px-3 py-2 text-xs text-gray-400 border border-white/5 flex-1">
-                      مهمة جديدة...
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chat Widget */}
-                <div className="bg-[#0a0b16]/90 border border-white/5 rounded-2xl p-4 flex-1 flex flex-col">
-                  <div className="flex items-center justify-between">
-                    <span className="text-cyan-400">
-                      <MessageCircle size={16} />
-                    </span>
-                    <h4 className="text-sm font-bold text-white">
-                      دردشة المحطة
-                    </h4>
-                  </div>
-                  <div className="flex-1"></div>
-                </div>
-              </div>
-
-              {/* Center Main Area (Timer & Orbits) */}
-              <div className="flex-1 flex flex-col items-center justify-center relative">
-                {/* Orbit Rings */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full border border-white/5"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] rounded-full border border-white/5 border-dashed"></div>
-
-                {/* Timer Center */}
-                <div className="relative z-10 w-64 h-64 rounded-full bg-[#0a0b16]/80 flex flex-col items-center justify-center border-4 border-[#ffb800] glowing-ring">
-                  <div className="absolute inset-0 rounded-full border-[12px] border-[#ffb800]/20 pointer-events-none"></div>
-                  <div className="text-6xl font-black text-white font-mono mb-2 track-tight drop-shadow-md">
-                    24:54
-                  </div>
-                  <div className="text-sm text-gray-300 font-bold bg-[#ffb800]/10 px-3 py-1 rounded-full text-[#ffb800]">
-                    مرحلة التركيز
-                  </div>
-                </div>
-
-                {/* Orbiting Avatar */}
-                <div className="absolute top-1/2 left-[calc(50%+175px)] -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border-2 border-indigo-400 bg-[#0a0b16] flex items-center justify-center">
-                  <UserIcon size={20} className="text-indigo-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Controls Bar */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#0a0b16]/90 border border-white/10 rounded-full py-3 px-6 flex items-center justify-between gap-6 z-20 shadow-2xl backdrop-blur-md">
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-bold text-green-400">
-                    متصل صوتياً
-                  </span>
-                  <span className="text-[10px] text-gray-500">
-                    مكتوم space = تحدث
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white cursor-pointer">
-                  <Headphones size={18} />
-                </div>
-                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center hover:bg-red-500/30 text-red-500 cursor-pointer border border-red-500/20">
-                  <MicOff size={18} />
-                </div>
-              </div>
-              <div className="w-[1px] h-8 bg-white/10"></div>
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full border-2 border-green-500 bg-[#151525] flex items-center justify-center overflow-hidden">
-                  <UserIcon size={20} className="text-gray-400" />
-                </div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0a0b16] rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Global Analytics Preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="relative z-10 w-full max-w-5xl mx-auto mt-16 scale-95 opacity-80 pointer-events-none hover:opacity-100 transition-opacity"
-        >
-          <AnalyticsView
-            user={{ xp: 1450, totalFocusSessions: 1420, level: 14 } as any}
-            friends={
-              [
-                { uid: "1", displayName: "أحمد", xp: 450, level: 12 },
-                { uid: "2", displayName: "سارة", xp: 820, level: 15 },
-                { uid: "3", displayName: "خالد", xp: 120, level: 10 },
-              ] as any[]
-            }
-          />
-        </motion.div>
-
-        {/* Ambient Glow */}
-        <div className="absolute top-1/2 left-10 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-10 w-96 h-96 bg-fuchsia-500/20 rounded-full blur-[100px] pointer-events-none" />
-      </section>
-
-      {/* Features Grid */}
-      <section id="features" className="py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">لماذا OrbitX؟</h2>
-            <p className="text-gray-400">
-              كل ما تحتاجه للتركيز والإبداع في مكان واحد
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FeatureCard
-              icon={<Timer className="w-8 h-8 text-blue-400" />}
-              title="مؤقت الشمس الذكي"
-              description="نظام بومودورو متطور يتفاعل مع تركيزك، مع تنبيهات ذكية عند التشتت."
-            />
-            <FeatureCard
-              icon={<Users className="w-8 h-8 text-indigo-500" />}
-              title="مدارات جماعية"
-              description="انضم إلى محطات دراسية مع أصدقائك، وراقب تقدمهم ككواكب تدور حول الشمس."
-            />
-            <FeatureCard
-              icon={<Music className="w-8 h-8 text-pink-400" />}
-              title="أجواء فضائية"
-              description="مكتبة صوتية متكاملة تشمل القرآن الكريم وأصوات الطبيعة الهادئة."
-            />
-            <FeatureCard
-              icon={<Zap className="w-8 h-8 text-yellow-400" />}
-              title="نظام التطور"
-              description="اكسب XP، ارتقِ في المستويات، وافتح شارات نادرة تعكس إنجازاتك."
-            />
-            <FeatureCard
-              icon={<MessageCircle className="w-8 h-8 text-green-400" />}
-              title="ساحة النقاش"
-              description="اطرح أسئلتك، شارك ملخصاتك، وتفاعل مع مجتمع من الرواد الطموحين."
-            />
-            <FeatureCard
-              icon={<Shield className="w-8 h-8 text-red-400" />}
-              title="بيئة آمنة"
-              description="نظام إشراف متطور يضمن بيئة دراسية محفزة وخالية من المشتتات."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works */}
-      <section id="how-it-works" className="py-20 px-6 bg-[#0a0b16]/2">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">كيف تبدأ رحلتك؟</h2>
-            <p className="text-gray-400">
-              ثلاث خطوات بسيطة لتغيير طريقة دراستك
-            </p>
-          </div>
-          <div className="space-y-12">
-            <StepItem
-              number="01"
-              title="أنشئ محطتك الخاصة"
-              description="اختر اسماً لمحطتك وحدد المهمة التي تريد إنجازها اليوم."
-            />
-            <StepItem
-              number="02"
-              title="ادعُ طاقمك"
-              description="شارك رابط المحطة مع أصدقائك أو اتركها عامة لينضم إليك رواد آخرون."
-            />
-            <StepItem
-              number="03"
-              title="انطلق نحو النجاح"
-              description="ابدأ مؤقت التركيز، استمتع بالأجواء، واكسب النقاط مع كل دقيقة تنجز فيها."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Community Preview */}
-      <section id="community" className="py-20 px-6">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-12">من قلب المجتمع</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-            <img
-              src="https://picsum.photos/seed/space1/400/400"
-              className="rounded-2xl grayscale hover:grayscale-0 transition-all duration-500"
-              referrerPolicy="no-referrer"
-            />
-            <img
-              src="https://picsum.photos/seed/space2/400/400"
-              className="rounded-2xl grayscale hover:grayscale-0 transition-all duration-500"
-              referrerPolicy="no-referrer"
-            />
-            <img
-              src="https://picsum.photos/seed/space3/400/400"
-              className="rounded-2xl grayscale hover:grayscale-0 transition-all duration-500"
-              referrerPolicy="no-referrer"
-            />
-            <img
-              src="https://picsum.photos/seed/space4/400/400"
-              className="rounded-2xl grayscale hover:grayscale-0 transition-all duration-500"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <button
-            onClick={onLogin}
-            className="text-indigo-500 font-bold hover:underline flex items-center gap-2 mx-auto"
-          >
-            انضم للمجتمع وشاهد المزيد
-            <SkipBack className="w-4 h-4 rotate-180" />
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-white/5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Rocket className="w-6 h-6 text-indigo-400" />
-          <span className="text-xl font-bold font-display">OrbitX</span>
-        </div>
-        <p className="text-gray-500 text-sm">
-          جميع الحقوق محفوظة © {new Date().getFullYear()} OrbitX - منصة الدراسة
-          الفضائية
-        </p>
-      </footer>
-    </div>
-  );
-}
-
-function StatItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-center">
-      <div className="text-3xl md:text-5xl font-black font-display text-white mb-2">
-        {value}
-      </div>
-      <div className="text-sm text-gray-500 font-bold uppercase tracking-widest">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function StepItem({
-  number,
-  title,
-  description,
-}: {
-  number: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex gap-8 items-start group">
-      <div className="text-5xl font-black font-display text-white/10 group-hover:text-indigo-400/20 transition-colors leading-none">
-        {number}
-      </div>
-      <div className="text-right" dir="rtl">
-        <h3 className="text-2xl font-bold mb-2">{title}</h3>
-        <p className="text-gray-400 leading-relaxed">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <motion.div
-      whileHover={{ y: -10 }}
-      className="p-8 rounded-3xl glass glass-hover flex flex-col items-center text-center group transition-all"
-    >
-      <div className="mb-6 p-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 group-hover:bg-indigo-500/200/10 group-hover:scale-110 transition-all">
-        {icon}
-      </div>
-      <h3 className="text-xl font-bold mb-3 text-white">{title}</h3>
-      <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
-    </motion.div>
-  );
-}
-
 function NotificationsDropdown({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -1610,11 +1182,9 @@ function Dashboard({
   useEffect(() => {
     if (
       user &&
-      user.level === 1 &&
-      user.xp <= 10 &&
-      !localStorage.getItem("hasSeenTour_v3")
+      !localStorage.getItem("hasSeenTour_v4")
     ) {
-      // Delay slightly for render
+      localStorage.setItem("hasSeenTour_v4", "true");
       setTimeout(() => setRunTour(true), 1500);
     }
   }, [user]);
@@ -2428,7 +1998,7 @@ function HomeView({
     const roomsQuery = query(
       collection(db, "rooms"),
       orderBy("createdAt", "desc"),
-      limit(12),
+      limit(50),
     );
     const unsubscribeRooms = onSnapshot(
       roomsQuery,
@@ -2638,6 +2208,7 @@ function HomeView({
                   room={room}
                   activeUsers={activeUsers}
                   onEnter={() => onEnterStation(room.id)}
+                  isAdmin={user.role === 'admin'}
                 />
               ))}
             </div>
@@ -2703,8 +2274,8 @@ function HomeView({
                       const roomData = {
                         name: `تحدي: ${challenge.challengerName} ⚔️ ${user.displayName}`,
                         task: "تحدي التركيز العميق",
-                        creatorId: challenge.challengerId,
-                        creatorName: challenge.challengerName,
+                        creatorId: user.uid,
+                        creatorName: user.displayName,
                         participants: [user.uid, challenge.challengerId],
                         maxParticipants: 2,
                         timerStatus: "idle",
@@ -2716,6 +2287,12 @@ function HomeView({
                         collection(db, "rooms"),
                         roomData,
                       );
+                      addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
+                        type: "challenge_accepted",
+                        content: `قبل ${user.displayName} التحدي الخاص بك! ابحث عن الغرفة وانضم لها الآن ⚔️`,
+                        read: false,
+                        timestamp: serverTimestamp(),
+                      }).catch(() => {});
                       onEnterStation(roomRef.id);
                     }}
                     className="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-2 rounded-xl text-xs font-bold transition-colors"
@@ -2961,11 +2538,13 @@ function StationCard({
   room,
   activeUsers,
   onEnter,
+  isAdmin,
 }: {
   room: Room;
   activeUsers?: UserData[];
   onEnter: () => void;
   key?: string;
+  isAdmin?: boolean;
 }) {
   // Calculate uptime based on accumulated focus time
   const [uptime, setUptime] = useState("");
@@ -2995,12 +2574,19 @@ function StationCard({
   }, [room.accumulatedFocusSeconds, room.timerStatus, room.startTime]);
 
   return (
-    <motion.button
+    <motion.div
       variants={bentoItem}
       whileHover={bentoHover}
       onClick={onEnter}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onEnter();
+        }
+      }}
       className={cn(
-        "p-8 rounded-3xl glass glass-hover text-right flex flex-col gap-6 transition-colors group relative overflow-hidden bg-cover bg-center",
+        "p-8 rounded-3xl glass glass-hover text-right flex flex-col gap-6 transition-colors group relative overflow-hidden bg-cover bg-center cursor-pointer",
         room.imageUrl && "shadow-inner border-transparent",
       )}
       style={
@@ -3012,6 +2598,20 @@ function StationCard({
       }
     >
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+
+      {isAdmin && (
+         <button
+            onClick={async (e) => {
+               e.stopPropagation();
+               if(window.confirm('هل أنت متأكد من حذف هذه المحطة؟')) {
+                  await deleteDoc(doc(db, "rooms", room.id)).catch(() => {});
+               }
+            }}
+            className="absolute top-4 left-4 z-50 p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg transition-colors"
+         >
+            <Trash2 size={14} />
+         </button>
+      )}
 
       <div className="flex items-center justify-between w-full relative z-10">
         <div className="flex flex-wrap items-center justify-end -space-x-2 w-1/2">
@@ -3069,7 +2669,7 @@ function StationCard({
           <SkipBack size={12} className="rotate-180" />
         </div>
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -3705,6 +3305,7 @@ function StudyRoomView({
   onSelectUser: (id: string) => void;
 }) {
   const [room, setRoom] = useState<Room | null>(null);
+  const lastXpGrantTimestampRef = useRef<number | null>(null);
   const safeUpdateRoom = async (data: any) => {
     try {
       await updateDoc(doc(db, "rooms", stationId), data);
@@ -3750,14 +3351,24 @@ function StudyRoomView({
           lastXpUpdateTimeRef.current - Math.max(0, timeLeft);
         if (secondsSpent >= 60) {
           const minutesSpent = Math.floor(secondsSpent / 60);
-          lastXpUpdateTimeRef.current -= minutesSpent * 60;
-          updateDoc(doc(db, "users", user.uid), {
-            xp: increment(minutesSpent),
-          }).catch(() => {});
-          if (user.fleetId)
-            updateDoc(doc(db, "fleets", user.fleetId), {
-              xp: increment(minutesSpent),
-            }).catch(() => {});
+          // سقف أمان: 1 XP لكل دقيقة كحد أقصى
+          const safeMinutes = Math.min(minutesSpent, 1);
+          lastXpUpdateTimeRef.current -= safeMinutes * 60;
+
+          // تحقق من آخر وقت منح XP لمنع التكرار
+          const now = Date.now();
+          const lastGrant = lastXpGrantTimestampRef.current || 0;
+          if (now - lastGrant >= 55000) {
+              lastXpGrantTimestampRef.current = now;
+
+              updateDoc(doc(db, "users", user.uid), {
+                xp: increment(safeMinutes),
+              }).catch(() => {});
+              if (user.fleetId)
+                updateDoc(doc(db, "fleets", user.fleetId), {
+                  xp: increment(safeMinutes),
+                }).catch(() => {});
+          }
         }
       }
     } else {
@@ -4001,9 +3612,8 @@ function StudyRoomView({
         snapshot.docChanges().forEach((change) => {
           if (change.type === "added") {
             const msg = change.doc.data();
-            if (!initialLoadMsgs && msg.userId !== user.uid) {
-              playSound("message");
-            }
+            // User requested no chat sound inside Study Rounds. So we mute it.
+            // if (!initialLoadMsgs && msg.userId !== user.uid) { playSound("message"); }
             if (!initialLoadMsgs) {
               if (msg.isExitPenalty) {
                 setActiveAlerts(prev => [...prev, {id: change.doc.id, text: msg.text, type: 'distraction'}]);
@@ -4038,8 +3648,15 @@ function StudyRoomView({
         ),
     );
 
-    // We no longer join participants automatically on mount
-    // This will be handled by the "Join" button
+    // Join automatically on mount
+    if (!isJoinedRef.current) {
+      setIsJoined(true);
+      setHasJoinedStation(true);
+      updateDoc(roomRef, {
+        participants: arrayUnion(user.uid),
+        emptyAt: null,
+      }).catch(() => {});
+    }
 
     updateDoc(doc(db, "users", user.uid), {
       currentActivity: `يتصفح محطة: ${room?.name || "..."}`,
@@ -4622,14 +4239,7 @@ function StudyRoomView({
     }
   }, [timeLeft, room?.timerStatus, user.uid, stationId]);
 
-  useEffect(() => {
-    // Auto-toggle focus mode based on timer status so we hide non-essentials
-    if (room?.timerStatus === "focus") {
-      setIsFocusMode(true);
-    } else {
-      setIsFocusMode(false);
-    }
-  }, [room?.timerStatus]);
+  // Removed auto-toggle focus mode requested by user
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -4941,18 +4551,7 @@ function StudyRoomView({
 
         {/* Left Side: Actions */}
         <div className="flex items-center gap-4 md:gap-6">
-          {/* Join/Leave Button */}
-          <button
-            onClick={toggleCall}
-            className={cn(
-              "px-6 py-2.5 rounded-2xl font-bold transition-all shadow-sm flex items-center gap-2 text-sm",
-              isJoined
-                ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
-                : "bg-indigo-500 hover:bg-indigo-700 shadow-indigo-500/20",
-            )}
-          >
-            <span>{isJoined ? "مغادرة المدار" : "انضم للمحطة"}</span>
-          </button>
+
 
           {/* Utility Actions */}
           <div className="flex items-center gap-2 border-r border-white/10 pr-4 mr-2">
@@ -5950,6 +5549,14 @@ function ChatView({
   onSelectUser: (id: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isChatEnabled, setIsChatEnabled] = useState(true);
+  
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "system", "settings"), (docSnap) => {
+       if (docSnap.exists()) setIsChatEnabled(docSnap.data().isChatEnabled !== false);
+    });
+    return () => unsub();
+  }, []);
   const [newMessage, setNewMessage] = useState("");
   const [typingMap, setTypingMap] = useState<
     Record<string, { name: string; time: number }>
@@ -6017,6 +5624,10 @@ function ChatView({
     .map((t) => t.name);
 
   const handleSendMessage = async () => {
+    if (!isChatEnabled && user.role !== 'admin') {
+       alert("الشات العام موقف حالياً من قبل الإدارة.");
+       return;
+    }
     if (!newMessage.trim()) return;
     if (newMessage.length > 500) {
       alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
@@ -6169,6 +5780,7 @@ function ChatView({
           <input
             type="text"
             value={newMessage}
+            disabled={!isChatEnabled && user.role !== 'admin'}
             onChange={(e) => {
               setNewMessage(e.target.value);
               const now = Date.now();
@@ -6181,7 +5793,7 @@ function ChatView({
               }
             }}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="اكتب رسالة للجميع..."
+            placeholder={!isChatEnabled && user.role !== 'admin' ? "الشات موقف حالياً..." : "اكتب رسالة للجميع..."}
             className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-2xl px-6 py-4 text-right focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all"
             dir="rtl"
           />
@@ -6280,6 +5892,7 @@ function ProfileView({
   const [friends, setFriends] = useState<UserData[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(user.bio || "");
+  const [displayName, setDisplayName] = useState(user.displayName || "");
   const [missionRoleStr, setMissionRoleStr] = useState(user.missionRole || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputExhibitionRef = useRef<HTMLInputElement>(null);
@@ -7546,6 +7159,24 @@ function ScheduleView({ user }: { user: UserData }) {
 }
 
 function AdminView({ user }: { user: UserData }) {
+  const [isChatEnabled, setIsChatEnabled] = useState(true);
+  
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "system", "settings"), (docSnap) => {
+       if (docSnap.exists()) {
+          setIsChatEnabled(docSnap.data().isChatEnabled !== false);
+       }
+    });
+    return () => unsub();
+  }, []);
+  
+  const toggleChat = async () => {
+    try {
+      await updateDoc(doc(db, "system", "settings"), { isChatEnabled: !isChatEnabled }).catch(async () => {
+         await setDoc(doc(db, "system", "settings"), { isChatEnabled: !isChatEnabled });
+      });
+    } catch(e) {}
+  };
   const [users, setUsers] = useState<UserData[]>([]);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -7899,6 +7530,15 @@ function AdminView({ user }: { user: UserData }) {
                 </button>
               </div>
               <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 block text-right">الاسم</label>
+                  <input
+                    type="text"
+                    value={editingUser.displayName}
+                    onChange={(e) => setEditingUser({...editingUser, displayName: e.target.value})}
+                    className="w-full bg-[#0a0b16] border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500 text-right"
+                  />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-400 block text-right">
                     مستوى (ج)

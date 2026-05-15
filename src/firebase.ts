@@ -15,11 +15,16 @@ export const signInWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {
-    console.error("Error signing in with Google", error);
+    if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+      console.error("Error signing in with Google", error);
+    }
+    
     if (error.code === 'auth/requests-from-referer-are-blocked' || error.message?.includes('referer')) {
       alert(`خطأ في تسجيل الدخول: النطاق الحالي غير مصرح به في إعدادات Firebase.\n\nالرجاء إضافة النطاق (${window.location.hostname}) إلى قسم "Authorized domains" في إعدادات Authentication داخل Firebase Console.`);
     } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-      alert('تم إغلاق نافذة تسجيل الدخول. إذا تكررت المشكلة، يرجى تجربة فتح التطبيق في نافذة/علامة تبويب جديدة.');
+      console.warn('Popup closed by user.');
+      // Do not rethrow for user cancellation
+      return null;
     } else {
       alert('حدث خطأ أثناء تسجيل الدخول: ' + error.message);
     }

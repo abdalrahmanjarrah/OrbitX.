@@ -174,7 +174,7 @@ service cloud.firestore {
              data.level is number && data.level >= 1 &&
              data.xp is number && data.xp >= 0 &&
              data.role in ['admin', 'user'] &&
-             data.hearts is number && data.hearts >= 0 && data.hearts <= 3 &&
+             (!('hearts' in data) || (data.hearts is number && data.hearts >= 0 && data.hearts <= 3)) &&
              (!('friendsCount' in data) || (data.friendsCount is number && data.friendsCount >= 0)) &&
              (!('banned' in data) || data.banned is bool) &&
              (!('currentActivity' in data) || (data.currentActivity is string && data.currentActivity.size() <= 100)) &&
@@ -198,7 +198,7 @@ service cloud.firestore {
              data.level is number && data.level >= 1 &&
              data.xp is number && data.xp >= 0 &&
              (!('friendsCount' in data) || (data.friendsCount is number && data.friendsCount >= 0)) &&
-             data.hearts is number && data.hearts >= 0 && data.hearts <= 3 &&
+             (!('hearts' in data) || (data.hearts is number && data.hearts >= 0 && data.hearts <= 3)) &&
              data.role in ['admin', 'user'] &&
              (!('banned' in data) || data.banned is bool) &&
              (!('currentActivity' in data) || (data.currentActivity is string && data.currentActivity.size() <= 100)) &&
