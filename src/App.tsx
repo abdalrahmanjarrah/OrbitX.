@@ -4147,7 +4147,7 @@ function StudyRoomView({
       const elapsed = Date.now() - startMs;
       // Require at least 90% of the time really elapsed to avoid stale timeLeft=0 race condition
       if (elapsed < durationMs - 5000) return;
-
+      if (room.creatorId !== user.uid) return;
       if (isTransitioningRef.current) return;
       isTransitioningRef.current = true;
 
