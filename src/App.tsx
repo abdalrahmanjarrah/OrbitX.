@@ -4228,7 +4228,7 @@ updateDoc(userRef, updates).catch((e) =>
       // Auto transition for anyone to prevent stalls if creator is AFK
       const delay =
         room.creatorId === user.uid ? 0 : Math.random() * 2000 + 1000;
-      setTimeout(() => {
+      transitionTimeoutRef.current = setTimeout(() => {
         const nextStatus = room.timerStatus === "focus" ? "break" : "idle";
         const focusToAdd =
           room.timerStatus === "focus" ? room.timerDuration * 60 : 0;
