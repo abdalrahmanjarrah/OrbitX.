@@ -4182,7 +4182,7 @@ if (room.timerStatus === "focus") {
 
   currentBetRef.current = 0;
   remainingShieldRef.current = 0;
-
+const updates = {
   lastStudyDate: new Date().toISOString().split("T")[0],
 };
 
