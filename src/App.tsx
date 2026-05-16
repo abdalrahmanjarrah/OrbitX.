@@ -4126,9 +4126,12 @@ function StudyRoomView({
   const isTransitioningRef = useRef(false);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      isTransitioningRef.current = false;
-    }
+   if (
+  timeLeft > 5 &&
+  room?.timerStatus !== "idle"
+) {
+  isTransitioningRef.current = false;
+}
     if (timeLeft === 0 && room && room.timerStatus !== "idle") {
       if (!room.startTime) return;
       const startMs =
@@ -4590,11 +4593,11 @@ updateDoc(userRef, updates).catch((e) =>
                 {isFocusMode ? "خروج من التركيز" : "تركيز عميق"}
               </span>
               <Zap className={cn("w-5 h-5", isFocusMode && "animate-pulse")} />
-            </button>
+          </button>
 
             <button
               onClick={() => {
-                if (room.timerStatus === "focus") {
+                
                   setShowExitDialog(true);
                 } else {
                   // Cleanup handles leaving participants list
