@@ -4124,7 +4124,7 @@ function StudyRoomView({
   };
 
   const isTransitioningRef = useRef(false);
-
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
    if (
   timeLeft > 5 &&
