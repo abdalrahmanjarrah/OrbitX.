@@ -3770,11 +3770,11 @@ function StudyRoomView({
           }, 60000); // 1 XP every 1 minute
         }
       } else {
-        if (fuelLeakInterval) {
-          clearInterval(fuelLeakInterval);
-          fuelLeakInterval = null;
-        }
-      }
+  if (fuelLeakIntervalRef.current) {
+    clearInterval(fuelLeakIntervalRef.current);
+    fuelLeakIntervalRef.current = null;
+  }
+}
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
