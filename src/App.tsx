@@ -4249,7 +4249,12 @@ updateDoc(userRef, updates).catch((e) =>
       setTimeout(() => {
         isTransitioningRef.current = false;
       }, 5000);
-    }
+   }
+    return () => {
+  if (transitionTimeoutRef.current) {
+    clearTimeout(transitionTimeoutRef.current);
+  }
+};
   }, [timeLeft, room?.timerStatus, user.uid, stationId]);
 
   // Removed auto-toggle focus mode requested by user
