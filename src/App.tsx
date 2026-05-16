@@ -4188,9 +4188,9 @@ function StudyRoomView({
         // lastXpUpdateTimeRef already handles this by being null
 
         // Return remaining shield to user
-        const refund =
+         const refund =
           remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
-        const xpEarned = refund; // Regular XP is now awarded linearly every minute
+        const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
 
         currentBetRef.current = 0;
         remainingShieldRef.current = 0;
@@ -4201,16 +4201,17 @@ function StudyRoomView({
           lastStudyDate: new Date().toISOString().split("T")[0],
         };
 
-        if (xpEarned > 0) {
-          updates.xp = increment(xpEarned);
+        if (safeXpEarned > 0) {
+            updates.xp = increment(safeXpEarned);
         }
 
         // Daily Quest Reward
         if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
-          updates.xp = increment((xpEarned > 0 ? xpEarned : 0) + 50);
+          // نضيف الثوابت بأمان مع التأكد من عدم تجاوز المنطق السابق
+          const questBonus = 50;
+          updates.xp = increment((safeXpEarned > 0 ? safeXpEarned : 0) + questBonus);
           updates.completedTasks = increment(1); // Keep track of completed tasks if we want
         }
-
         if (((user.totalFocusSessions || 0) + 1) % 5 === 0) {
           updates.seeds = increment(1);
         }
