@@ -4246,13 +4246,17 @@ updateDoc(userRef, updates).catch((e) =>
         safeUpdateRoom(updateData);
       }, delay);
 
-      setTimeout(() => {
-        isTransitioningRef.current = false;
+      transitionResetTimeoutRef.current = setTimeout(() => {
+  isTransitioningRef.current = false;
       }, 5000);
    }
-    return () => {
+   return () => {
   if (transitionTimeoutRef.current) {
     clearTimeout(transitionTimeoutRef.current);
+  }
+
+  if (transitionResetTimeoutRef.current) {
+    clearTimeout(transitionResetTimeoutRef.current);
   }
 };
   }, [timeLeft, room?.timerStatus, user.uid, stationId]);
