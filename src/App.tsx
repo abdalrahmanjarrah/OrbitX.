@@ -4127,7 +4127,7 @@ function StudyRoomView({
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
    if (
-  timeLeft > 5 &&
+  timeLeft > 1 &&
   room?.timerStatus !== "idle"
 ) {
   isTransitioningRef.current = false;
