@@ -3641,21 +3641,6 @@ function StudyRoomView({
                 setActiveAlerts(prev => [...prev, {id: change.doc.id, text: msg.text, type: 'presence'}]);
               }
             }
-            if (
-              msg.isExitPenalty &&
-              msg.userId !== user.uid &&
-              isJoinedRef.current &&
-              prevStatus.current === "focus"
-            ) {
-              // Self-deduct XP
-              updateDoc(doc(db, "users", user.uid), {
-                xp: increment(-20),
-              }).catch(console.error);
-              if (user.fleetId)
-                updateDoc(doc(db, "fleets", user.fleetId), {
-                  xp: increment(-20),
-                }).catch(() => {});
-            }
           }
         });
         initialLoadMsgs = false;
