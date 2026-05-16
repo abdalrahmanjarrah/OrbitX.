@@ -3341,11 +3341,17 @@ function StudyRoomView({
   const participantsCountRef = useRef(0);
 
   const lastXpUpdateTimeRef = useRef<number | null>(null);
+  
+  const afkFailCountRef = useRef(0);
+  const sessionXpCountRef = useRef<number>(0);
+  const MAX_XP_PER_SESSION = 120;
 
   useEffect(() => {
     if (isJoined && room?.timerStatus === "focus") {
       if (lastXpUpdateTimeRef.current === null) {
         lastXpUpdateTimeRef.current = timeLeft;
+        sessionXpCountRef.current = 0; // تصفير العداد بداية كل جلسة
+        afkFailCountRef.current = 0;
       } else {
         const secondsSpent =
           lastXpUpdateTimeRef.current - Math.max(0, timeLeft);
@@ -3358,13 +3364,27 @@ function StudyRoomView({
           // تحقق من آخر وقت منح XP لمنع التكرار
           const now = Date.now();
           const lastGrant = lastXpGrantTimestampRef.current || 0;
-          if (now - lastGrant >= 55000) {
+          if (now - lastGrant >= 55000 && sessionXpCountRef.current < MAX_XP_PER_SESSION) {
               lastXpGrantTimestampRef.current = now;
-
-              updateDoc(doc(db, "users", user.uid), {
-                xp: increment(safeMinutes),
-              }).catch(() => {});
-              if (user.fleetId)
+              
+              const xpToGrant = Math.min(safeMinutes, MAX_XP_PER_SESSION - sessionXpCountRef.current);
+              if (xpToGrant > 0) {
+                sessionXpCountRef.current += xpToGrant;
+                updateDoc(doc(db, "users", user.uid), {
+                  xp: increment(xpToGrant),
+                }).catch(() => {});
+                if (user.fleetId)
+                  updateDoc(doc(db, "fleets", user.fleetId), {
+                    xp: increment(xpToGrant),
+                  }).catch(() => {});
+              }
+          }
+        }
+      }
+    } else {
+      lastXpUpdateTimeRef.current = null;
+    }
+  }, [isJoined, room?.timerStatus, timeLeft, user.uid, user.fleetId]);
                 updateDoc(doc(db, "fleets", user.fleetId), {
                   xp: increment(safeMinutes),
                 }).catch(() => {});
