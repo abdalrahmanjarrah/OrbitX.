@@ -4132,7 +4132,7 @@ function StudyRoomView({
 ) {
   isTransitioningRef.current = false;
 }
-    if (timeLeft === 0 && room && room.timerStatus !== "idle") {
+    if (timeLeft <= 1 && room && room.timerStatus !== "idle") {
       if (!room.startTime) return;
       const startMs =
         typeof room.startTime.toDate === "function"
