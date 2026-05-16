@@ -4250,10 +4250,15 @@ updateDoc(userRef, updates).catch((e) =>
   isTransitioningRef.current = false;
       }, 5000);
    }
-   return () => {
+  return () => {
   if (transitionTimeoutRef.current) {
     clearTimeout(transitionTimeoutRef.current);
   }
+
+  if (transitionResetTimeoutRef.current) {
+    clearTimeout(transitionResetTimeoutRef.current);
+  }
+};
 
   if (transitionResetTimeoutRef.current) {
     clearTimeout(transitionResetTimeoutRef.current);
