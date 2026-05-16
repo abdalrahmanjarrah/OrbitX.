@@ -4242,7 +4242,7 @@ updateDoc(userRef, updates).catch((e) =>
           updateData.accumulatedFocusSeconds =
             (room.accumulatedFocusSeconds || 0) + focusToAdd;
         }
-
+        if (room.creatorId !== user.uid) return;
         safeUpdateRoom(updateData);
       }, delay);
 
