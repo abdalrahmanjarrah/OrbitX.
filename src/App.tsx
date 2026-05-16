@@ -4230,6 +4230,7 @@ updateDoc(userRef, updates).catch((e) =>
       const delay =
         room.creatorId === user.uid ? 0 : Math.random() * 2000 + 1000;
       transitionTimeoutRef.current = setTimeout(() => {
+        if (isTransitioningRef.current === false) return;
         const nextStatus = room.timerStatus === "focus" ? "break" : "idle";
         const focusToAdd =
           room.timerStatus === "focus" ? room.timerDuration * 60 : 0;
