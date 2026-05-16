@@ -4163,74 +4163,71 @@ function StudyRoomView({
       if (isTransitioningRef.current) return;
       isTransitioningRef.current = true;
 
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.visibilityState === "hidden"
-      ) {
-        new Notification("انتهى الوقت!", {
-          body:
-            room.timerStatus === "focus"
-              ? "انتهت جلسة التركيز، حان وقت الاستراحة"
-              : "انتهت الاستراحة، حان وقت التركيز",
-        });
-      }
+     if (
+  "Notification" in window &&
+  Notification.permission === "granted" &&
+  document.visibilityState === "hidden"
+) {
+  new Notification("انتهى الوقت!", {
+    body:
+      room.timerStatus === "focus"
+        ? "انتهت جلسة التركيز، حان وقت الاستراحة"
+        : "انتهت الاستراحة، حان وقت التركيز",
+  });
+}
 
-      playSound("timer");
-      if (room.timerStatus === "focus") {
-        // Award XP and increment sessions
-        const isGroup = participantsCountRef.current > 1;
-        const groupMultiplier = 1;
-        const xpEarnedBase = room.timerDuration; // 1 XP per minute
-        const regularXp = xpEarnedBase * groupMultiplier;
+playSound("timer");
+if (room.timerStatus === "focus") {
+  // Award XP and increment sessions
+  const isGroup = participantsCountRef.current > 1;
+  const groupMultiplier = 1;
+  const xpEarnedBase = room.timerDuration; // 1 XP per minute
+  const regularXp = xpEarnedBase * groupMultiplier;
 
-        // Reset join time so leaving during break doesn't grant focus XP again
-        // lastXpUpdateTimeRef already handles this by being null
+  // Reset join time so leaving during break doesn't grant focus XP again
+  // lastXpUpdateTimeRef already handles this by being null
 
-        // Return remaining shield to user
-         const refund =
-          remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
-        const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
+  // Return remaining shield to user
+  const refund =
+    remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
+  const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
 
-        currentBetRef.current = 0;
-        remainingShieldRef.current = 0;
-        setShieldPercent(0);
-        const userRef = doc(db, "users", user.uid);
-        const updates: any = {
-          totalFocusSessions: increment(1),
-          lastStudyDate: new Date().toISOString().split("T")[0],
-        };
+  currentBetRef.current = 0;
+  remainingShieldRef.current = 0;
 
-        if (safeXpEarned > 0) {
-            updates.xp = increment(safeXpEarned);
-        }
+  lastStudyDate: new Date().toISOString().split("T")[0],
+};
 
-        // Daily Quest Reward
-        if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
-          // نضيف الثوابت بأمان مع التأكد من عدم تجاوز المنطق السابق
-          const questBonus = 50;
-          updates.xp = increment((safeXpEarned > 0 ? safeXpEarned : 0) + questBonus);
-          updates.completedTasks = increment(1); // Keep track of completed tasks if we want
-        }
-        if (((user.totalFocusSessions || 0) + 1) % 5 === 0) {
-          updates.seeds = increment(1);
-        }
+if (safeXpEarned > 0) {
+  updates.xp = increment(safeXpEarned);
+}
 
-        // Also we must water the plants if they exist
-        if (user.plants && user.plants.length > 0) {
-          const now = Date.now();
-          // We can't easily iterate and map over an array in Firestore updates
-          // without replacing the whole array.
-          const updatedPlants = user.plants.map((p) => ({
-            ...p,
-            lastWateredAt: now,
-          }));
-          updates.plants = updatedPlants;
-        }
+// Daily Quest Reward
+if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
+  const questBonus = 50;
+  updates.xp = increment((safeXpEarned > 0 ? safeXpEarned : 0) + questBonus);
+  updates.completedTasks = increment(1); // Keep track of completed tasks if we want
+}
 
-        updateDoc(userRef, updates).catch((e) =>
-          handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
-        );
+if (((user.totalFocusSessions || 0) + 1) % 5 === 0) {
+  updates.seeds = increment(1);
+}
+
+// Also we must water the plants if they exist
+if (user.plants && user.plants.length > 0) {
+  const now = Date.now();
+  // We can't easily iterate and map over an array in Firestore updates
+  // without replacing the whole array.
+  const updatedPlants = user.plants.map((p) => ({
+    ...p,
+    lastWateredAt: now,
+  }));
+  updates.plants = updatedPlants;
+}
+
+updateDoc(userRef, updates).catch((e) =>
+  handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
+);
 
         if (user.fleetId) {
           updateDoc(doc(db, "fleets", user.fleetId), {
