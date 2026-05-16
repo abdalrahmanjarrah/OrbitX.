@@ -3708,22 +3708,23 @@ function StudyRoomView({
           }).catch(() => {});
         }
 
-        if (!fuelLeakInterval) {
-          fuelLeakInterval = setInterval(async () => {
-            localLeaked += 1;
-            setLeakedXP(localLeaked);
+       if (!fuelLeakIntervalRef.current)
+  fuelLeakIntervalRef.current = setInterval(async () => {
+    localLeaked += 1;
+    setLeakedXP(localLeaked);
 
-            if (currentBetRef.current > 0) {
-              // Deplete Shield
-              remainingShieldRef.current = Math.max(
-                0,
-                remainingShieldRef.current - 1,
-              );
-              setShieldPercent(
-                Math.round(
-                  (remainingShieldRef.current / currentBetRef.current) * 100,
-                ),
-              );
+    if (currentBetRef.current > 0) {
+      // Deplete Shield
+      remainingShieldRef.current = Math.max(
+        0,
+        remainingShieldRef.current - 1,
+      );
+
+      setShieldPercent(
+        Math.round(
+          (remainingShieldRef.current / currentBetRef.current) * 100,
+        ),
+      );
 
               // If shield hits 0 while they are still out
               if (remainingShieldRef.current === 0) {
