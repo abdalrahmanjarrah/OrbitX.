@@ -4011,6 +4011,13 @@ function StudyRoomView({
   }, [showAFKCheck, afkTimeLeft]);
 
   const handleAFKFailure = async () => {
+    afkFailCountRef.current += 1;
+    if (afkFailCountRef.current < 2) {
+      // إعطاء فرصة ثانية قبل الطرد النهائي
+      setAfkTimeLeft(15);
+      return;
+    }
+
     setShowAFKCheck(false);
 
     // Kick user out
