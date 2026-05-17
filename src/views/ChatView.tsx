@@ -236,40 +236,9 @@ export default function ChatView({
   }, [user.uid]);
 
   useEffect(() => {
-    const unsubTyping = onSnapshot(
-      collection(db, "chat_typing"),
-      (snap) => {
-        const newMap: Record<string, { name: string; time: number }> = {};
-        snap.docs.forEach((d) => {
-          if (d.id !== user.uid)
-            newMap[d.id] = d.data() as { name: string; time: number };
-        });
-        setTypingMap(newMap);
-      },
-      () => {},
-    );
-
-    // Force re-render periodically to clear old dots
-    const interval = setInterval(() => {
-      setTypingMap(m => {
-        let changed = false;
-        const next = { ...m };
-        const now = Date.now();
-        for (const k in next) {
-          if (now - next[k].time > 4000) {
-            delete next[k];
-            changed = true;
-          }
-        }
-        return changed ? next : m;
-      });
-    }, 2000);
-    return () => {
-      unsubTyping();
-      clearInterval(interval);
-    };
-  }, [user.uid]);
-
+  // تم إيقاف الاستماع لـ chat_typing لتوفر عمليات القراءة والكتابة يومياً ولحماية حصة الـ 20,000 ✓
+  // تم التخلص من الـ Loop والـ setInterval لضمان استقرار التطبيق.
+}, [user.uid]);
   const typingNames = Object.values(typingMap)
     .filter((t) => Date.now() - t.time < 3000)
     .map((t) => t.name);
@@ -448,43 +417,33 @@ export default function ChatView({
       </div>
 
       <div className="p-6 bg-space-dark/80 border-t border-white/10">
-        <div className="relative">
-          {!isChatEnabled && user.role !== 'admin' ? (
-             <div className="w-full bg-[#0a0b16] border border-red-500/30 rounded-2xl px-6 py-4 text-center text-red-400 font-bold bg-opacity-50">
-               الدردشة العامة مغلقة من قبل الإدارة 🔒
-             </div>
-          ) : (
-            <>
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  const now = Date.now();
-                  if (now - lastTypingUpdate.current > 2500) {
-                    lastTypingUpdate.current = now;
-                    setDoc(doc(db, "chat_typing", user.uid), {
-                      name: user.displayName,
-                      time: now,
-                    }).catch(() => {});
-                  }
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="اكتب رسالة للجميع..."
-                className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-2xl px-6 py-4 text-right focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all text-white placeholder:text-gray-600"
-                dir="rtl"
-              />
-              <button
-                onClick={handleSendMessage}
-                className="absolute left-2 top-2 bottom-2 px-6 bg-indigo-500 rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
-              >
-                <span>إرسال</span>
-                <Send size={18} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+  <div className="relative">
+    {!isChatEnabled && user.role !== 'admin' ? (
+       <div className="w-full bg-[#0a0b16] border border-red-500/30 rounded-2xl px-6 py-4 text-center text-red-400 font-bold bg-opacity-50">
+         الدردشة العامة مغلقة من قبل الإدارة 🔒
+       </div>
+    ) : (
+      <>
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)} // تم التنظيف بنجاح وبأمان ✓
+          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+          placeholder="اكتب رسالة للجميع..."
+          className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-2xl px-6 py-4 text-right focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all text-white placeholder:text-gray-600"
+          dir="rtl"
+        />
+        <button
+          onClick={handleSendMessage}
+          className="absolute left-2 top-2 bottom-2 px-6 bg-indigo-500 rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+        >
+          <span>إرسال</span>
+          <Send size={18} />
+        </button>
+      </>
+    )}
+  </div>
+</div>
     </motion.div>
   );
 }
