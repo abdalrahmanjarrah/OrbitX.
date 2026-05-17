@@ -684,51 +684,59 @@ if (fuelLeakInterval) {
 
       // Use a more reliable cleanup
       const cleanup = async () => {
+        if (!user?.uid || !stationId) return;
         try {
           const roomSnap = await getDoc(roomRef);
-          if (roomSnap.exists()) {
-            const data = roomSnap.data();
-            const remainingParticipants = data.participants.filter(
-              (p: string) => p !== user.uid,
-            );
-
-            const updates: any = {
-              participants: arrayRemove(user.uid),
-              emptyAt: remainingParticipants.length === 0 ? serverTimestamp() : deleteField(),
-            };
-
-            if (
-              data.creatorId === user.uid &&
-              remainingParticipants.length > 0
-            ) {
-              updates.creatorId = remainingParticipants[0];
-            }
-
-            await updateDoc(roomRef, updates);
-
-            if (remainingParticipants.length === 0) {
-              setTimeout(async () => {
-                try {
-                  const checkSnap = await getDoc(roomRef);
-                  if (
-                    checkSnap.exists() &&
-                    checkSnap.data().participants?.length === 0
-                  ) {
-                    await deleteDoc(roomRef);
-                  }
-                } catch (e) {}
-              }, 300000);
-            }
+          
+          // 1. حماية صارمة: إذا المحطة محذوفة أصلاً من قاعدة البيانات، توقف فوراً ولا تعمل أي شيء!
+          if (!roomSnap.exists()) {
+            console.log("المحطة محذوفة بالفعل، تم إلغاء التحديثات لمنع عودتها.");
+            // نقوم فقط بتحديث نشاط المستخدم بأمان دون لمس المحطة
+            await updateDoc(doc(db, "users", user.uid), {
+              currentActivity: "في لوحة التحكم",
+            }).catch(() => {});
+            return;
           }
+
+          const data = roomSnap.data();
+          const remainingParticipants = (data.participants || []).filter(
+            (p: string) => p !== user.uid,
+          );
+
+          const updates: any = {
+            participants: arrayRemove(user.uid),
+            emptyAt: remainingParticipants.length === 0 ? serverTimestamp() : deleteField(),
+          };
+
+          if (data.creatorId === user.uid && remainingParticipants.length > 0) {
+            updates.creatorId = remainingParticipants[0];
+          }
+
+          // نحدث المحطة فقط لأننا تأكدنا بوجودها بالـ if السابقة
+          await updateDoc(roomRef, updates);
+
+          if (remainingParticipants.length === 0) {
+            setTimeout(async () => {
+              try {
+                const checkSnap = await getDoc(roomRef);
+                if (checkSnap.exists() && (!checkSnap.data().participants || checkSnap.data().participants.length === 0)) {
+                  await deleteDoc(roomRef);
+                }
+              } catch (e) {}
+            }, 300000);
+          }
+
+          // تحديث نشاط المستخدم بنجاح
           await updateDoc(doc(db, "users", user.uid), {
             currentActivity: "في لوحة التحكم",
           });
+
         } catch (e: any) {
           if (
             e?.code !== 'not-found' && e?.code !== 'permission-denied' &&
             !e?.message?.includes("No document to update")
           ) {
-            console.error('Cleanup failed:', e);
+            console.error('Cleanup safely bypassed:', e);
           }
         }
       };
