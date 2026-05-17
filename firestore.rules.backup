@@ -380,12 +380,6 @@ service cloud.firestore {
                       isAdmin();
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.creatorId) || isAdmin();
 
-      
-      match /typing/{userId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && request.auth.uid == userId;
-      }
-
       match /messages/{messageId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isNotBanned() && 
@@ -400,17 +394,6 @@ service cloud.firestore {
         allow create: if isAuthenticated() && isNotBanned() && request.resource.data.sender == request.auth.uid;
         allow delete: if isAuthenticated() && (resource.data.receiver == request.auth.uid || resource.data.sender == request.auth.uid);
       }
-    }
-
-    
-    match /system/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    match /chat_typing/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     match /advices/{adviceId} {

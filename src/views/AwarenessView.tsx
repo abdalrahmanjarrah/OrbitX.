@@ -1,0 +1,547 @@
+import { Joyride } from "react-joyride";
+import { playSound } from "../lib/sound";
+import Markdown from "react-markdown";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import Globe from "react-globe.gl";
+import React, { useState, useEffect, useRef, Component } from "react";
+import {
+  Leaf,
+  Swords,
+  ChevronLeft,
+  Rocket,
+  Timer,
+  Users,
+  Zap,
+  Star,
+  LogOut,
+  LayoutDashboard,
+  MessageSquare,
+  User as UserIcon,
+  Heart,
+  ShieldAlert,
+  AlertTriangle,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Lock,
+  Send,
+  Image as ImageIcon,
+  Plus,
+  X,
+  MessageCircle,
+  Calendar,
+  Shield,
+  Trash2,
+  Music,
+  CloudRain,
+  Flame,
+  Wind,
+  Bird,
+  ChevronDown,
+  PlayCircle,
+  PauseCircle,
+  CheckCircle,
+  Info,
+  Keyboard,
+  Waves,
+  TrainFront,
+  Mic,
+  MicOff,
+  Headphones,
+  Settings,
+  Radio,
+  Trophy,
+  Menu,
+  Square,
+  Store,
+  BookOpen,
+  Target,
+  Telescope,
+  Award,
+  Activity,
+  Eye,
+  Terminal as TerminalIcon,
+  Cpu,
+  CheckSquare,
+  Bell,
+  BarChart3,
+  Search, Globe2, UserCircle,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+import { motion, AnimatePresence } from "motion/react";
+import StarBackground from "../components/StarBackground";
+
+import { cn } from "../lib/utils";
+import {
+  auth,
+  db,
+  signInWithGoogle,
+  logout,
+  handleFirestoreError,
+  OperationType,
+} from "../firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  onSnapshot as originalOnSnapshot,
+  query,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  increment,
+  where,
+  deleteDoc,
+  deleteField,
+  writeBatch,
+} from "firebase/firestore";
+import { UserSearchView } from "../components/UserSearchView";
+
+import { FirestoreError } from 'firebase/firestore';
+
+function onSnapshot(...args: any[]) {
+    // We try to catch uncaught snapshot errors
+    if (args.length === 2 && typeof args[1] === 'function') {
+        return originalOnSnapshot(args[0], args[1], (e: any) => {
+            console.error('Intercepted onSnapshot error', e, args[0]);
+            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
+        });
+    }
+    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
+        const originalError = args[2];
+        args[2] = (e: any) => {
+            console.error('Intercepted onSnapshot error', e, args[0]);
+            originalError(e);
+        };
+        return originalOnSnapshot(args[0], args[1], args[2]);
+    }
+    return originalOnSnapshot(...args);
+}
+
+
+import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import NotificationsDropdown from './NotificationsDropdown';
+import Dashboard from './Dashboard';
+import NavPill from './NavPill';
+import MobileNavPill from './MobileNavPill';
+import DockButton from './DockButton';
+import ChallengeModal from './ChallengeModal';
+import ArticleModal from './ArticleModal';
+import HomeView from './HomeView';
+import StationCard from './StationCard';
+import ExhibitionGallery from './ExhibitionGallery';
+import SuggestionsSection from './SuggestionsSection';
+import QuranPlayer from './QuranPlayer';
+import PersonalTasks from './PersonalTasks';
+import StudyRoomView from './StudyRoomView';
+import LeaderboardView from './LeaderboardView';
+import ChatView from './ChatView';
+import FocusHeatmap from './FocusHeatmap';
+import ProfileView from './ProfileView';
+import DiscussionsView from './DiscussionsView';
+import ScheduleView from './ScheduleView';
+import AdminView from './AdminView';
+import BadgeCard from './BadgeCard';
+import CosmicDiary from './CosmicDiary';
+import FarmDisplay from './FarmDisplay';
+import UserModal from './UserModal';
+import NavLink from './NavLink';
+import BlackHolesView from './BlackHolesView';
+import AnalyticsView from './AnalyticsView';
+import FleetsView from './FleetsView';
+
+export default function AwarenessView({ user }: { user: UserData }) {
+  const [signals, setSignals] = useState<AwarenessSignal[]>([]);
+  const [showHudTitle, setShowHudTitle] = useState(true);
+  const [selectedSignal, setSelectedSignal] = useState<AwarenessSignal | null>(
+    null,
+  );
+  const [isAdmin] = useState(user.role === "admin");
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] = useState("الإعلام الموجه");
+  const [isCreating, setIsCreating] = useState(false);
+  const [deletingSignalId, setDeletingSignalId] = useState<string | null>(null);
+
+  const globeRef = useRef<any>(null);
+
+  // Generate deterministic but random-looking coordinates based on id
+  const getCoordinates = (id: string, index: number) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++)
+      hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    // ensure we scatter them nicely
+    const lat = (hash % 140) - 70; // avoid poles
+    const lng = ((hash * Math.max(1, index)) % 360) - 180;
+    return { lat, lng };
+  };
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "awareness_signals"),
+      orderBy("timestamp", "desc"),
+    );
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetched = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as AwarenessSignal,
+        );
+        setSignals([...fetched, ...DEFAULT_SIGNALS]);
+      },
+      (e) => handleFirestoreError(e, OperationType.GET, "awareness_signals"),
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // force resize for globe on laptop
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // auto rotate globe
+  useEffect(() => {
+    if (globeRef.current && !selectedSignal) {
+      globeRef.current.controls().autoRotate = true;
+      globeRef.current.controls().autoRotateSpeed = 1.0;
+    }
+  }, [selectedSignal]);
+
+  const handleCreate = async () => {
+    if (!newTitle || !newContent || !isAdmin) return;
+    setIsCreating(true);
+    try {
+      await addDoc(collection(db, "awareness_signals"), {
+        title: newTitle,
+        content: newContent,
+        category: newCategory,
+        authorId: user.uid,
+        timestamp: serverTimestamp(),
+        views: 0,
+        likes: 0,
+      });
+      setNewTitle("");
+      setNewContent("");
+    } catch (e) {
+      handleFirestoreError(e, OperationType.CREATE, "awareness_signals");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "awareness_signals", id));
+      if (selectedSignal?.id === id) setSelectedSignal(null);
+      setDeletingSignalId(null);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `awareness_signals/${id}`);
+    }
+  };
+
+  const handleReadSignal = async (sig: AwarenessSignal) => {
+    setSelectedSignal(sig);
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = false;
+      let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
+      if (!coords) {
+        coords = getCoordinates(
+          sig.id,
+          signals.findIndex((s) => s.id === sig.id),
+        );
+      }
+      globeRef.current.pointOfView(
+        { lat: coords.lat, lng: coords.lng, altitude: 2 },
+        1000,
+      );
+    }
+    try {
+      if (!sig.id.startsWith("default-"))
+        await updateDoc(doc(db, "awareness_signals", sig.id), {
+          views: increment(1),
+        });
+    } catch (e) {
+      handleFirestoreError(
+        e,
+        OperationType.UPDATE,
+        `awareness_signals/${sig.id}`,
+      );
+    }
+  };
+
+  const pointsData = signals.map((sig, i) => {
+    let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
+    if (!coords) {
+      coords = getCoordinates(sig.id, i);
+    }
+
+    let color = "#00ffcc"; // target blue-green color
+    return {
+      lat: coords.lat,
+      lng: coords.lng,
+      size: 1,
+      color: color,
+      signal: sig,
+    };
+  });
+
+  const arcsData = Array.from({ length: 15 }).map((_, i) => ({
+    startLat: (Math.random() - 0.5) * 160,
+    startLng: (Math.random() - 0.5) * 360,
+    endLat: (Math.random() - 0.5) * 160,
+    endLng: (Math.random() - 0.5) * 360,
+    color: ["rgba(6, 182, 212, 0.4)", "rgba(16, 185, 129, 0.4)"][i % 2],
+  }));
+
+  return (
+    <div className="relative w-full h-[80vh] md:h-[calc(100vh-120px)] rounded-[2rem] overflow-hidden bg-[#000108] border border-cyan-900/30 block shadow-2xl">
+      {/* 3D Globe Container */}
+      <div className="absolute inset-0 cursor-crosshair">
+        <Globe
+          ref={globeRef}
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+          bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+          pointsData={pointsData}
+          pointLat="lat"
+          pointLng="lng"
+          pointColor="color"
+          pointAltitude={0.02}
+          pointRadius={0.3}
+          pointsMerge={false}
+          onPointClick={(point: any) => handleReadSignal(point.signal)}
+          arcsData={arcsData}
+          arcColor="color"
+          arcDashLength={0.4}
+          arcDashGap={0.2}
+          arcDashAnimateTime={2500}
+          ringColor={(d: any) => d.color}
+          ringMaxRadius={2.5}
+          ringPropagationSpeed={3}
+          ringRepeatPeriod={800}
+          ringsData={pointsData}
+          ringLat="lat"
+          ringLng="lng"
+          atmosphereColor="#06b6d4"
+          atmosphereAltitude={0.2}
+        />
+        {/* Transparent overlay for gradient edges */}
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#000108_100%)]"></div>
+      </div>
+
+      {/* Floating HUD Panel */}
+      <div className="relative z-10 p-4 md:p-8 flex flex-col h-full pointer-events-none w-full max-w-7xl mx-auto">
+        <div className="flex justify-between items-start">
+          <AnimatePresence>
+            {showHudTitle && (
+              <motion.div
+                initial={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+                transition={{ duration: 0.3 }}
+                onClick={() => setShowHudTitle(false)}
+                className="bg-[#0a0b16]/80 backdrop-blur-md border border-cyan-500/30 p-4 md:p-6 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] pointer-events-auto cursor-pointer hover:border-cyan-400/50 transition-all group"
+                title="اضغط للإӡف�ء"
+              >
+                <h2 className="text-xl md:text-2xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-l from-cyan-400 to-emerald-400 flex items-center gap-3">
+                  <TerminalIcon
+                    size={24}
+                    className="text-cyan-400 group-hover:scale-110 transition-transform"
+                  />{" "}
+                  شبكة الوعي العالمي
+                </h2>
+                <p className="text-cyan-500/80 font-mono text-xs hidden md:block">
+                  STATUS: ONLINE | TRACKING {signals.length} ACTIVE SIGNALS...
+                  <br />
+                  &gt; اضغط على النقاط المضيئة لاكتشاف الحقائق المخفية.
+                </p>
+                <p className="text-cyan-500/50 font-mono text-[9px] mt-2 block opacity-0 group-hover:opacity-100 transition-opacity">
+                  انقر للإخفاء ✕
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {isAdmin && !selectedSignal && (
+            <div className="pointer-events-auto">
+              <button
+                onClick={() =>
+                  document
+                    .getElementById("admin-signal-form")
+                    ?.classList.toggle("hidden")
+                }
+                className="px-4 py-2 bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 rounded-xl hover:bg-cyan-800/60 transition font-mono text-xs md:text-sm"
+              >
+                &gt; ADMIN_OVERRIDE
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Admin Form */}
+        {isAdmin && (
+          <div
+            id="admin-signal-form"
+            className="hidden mt-4 bg-[#05050a]/90 backdrop-blur-xl border border-cyan-500/50 p-6 rounded-2xl w-full max-w-md pointer-events-auto shadow-2xl ml-auto self-end"
+          >
+            <h3 className="text-cyan-400 font-bold mb-4 flex items-center gap-2">
+              <ShieldAlert size={18} /> بث إشارة جديدة
+            </h3>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="عنوان الإشارة..."
+              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3"
+              dir="rtl"
+            />
+            <select
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3"
+              dir="rtl"
+            >
+              <option>الإعلام الموجه</option>
+              <option>النظام الاقتصادي</option>
+              <option>الدين العالمي الجديد</option>
+              <option>الحرب النفسية</option>
+              <option>تصنيف شديد السرية</option>
+            </select>
+            <textarea
+              value={newContent}
+              onChange={(e) => setNewContent(e.target.value)}
+              placeholder="محتوى الإشارة..."
+              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm min-h-[100px] mb-3"
+              dir="rtl"
+            />
+            <button
+              onClick={handleCreate}
+              disabled={!newTitle || !newContent || isCreating}
+              className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all"
+            >
+              {isCreating ? "جاري البث..." : "إطلاق الإشارة"}
+            </button>
+          </div>
+        )}
+
+        {/* Article Overlay */}
+        <AnimatePresence>
+          {selectedSignal && (
+            <motion.div
+              initial={{ opacity: 0, x: 50, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50 }}
+              className="absolute right-0 top-0 md:top-24 bottom-0 md:bottom-6 w-full md:w-[450px] max-w-full pointer-events-auto bg-[#0a0b16]/90 backdrop-blur-xl border-l md:border border-cyan-500/40 rounded-none md:rounded-l-3xl p-6 md:p-8 flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                <Radio size={200} className="text-cyan-500" />
+              </div>
+
+              <div className="flex justify-between items-center mb-6 relative z-10">
+                <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded-full border border-cyan-500/30 uppercase tracking-widest font-mono shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                  {selectedSignal.category}
+                </span>
+                <div className="flex items-center gap-3">
+                  {isAdmin &&
+                    (deletingSignalId === selectedSignal.id ? (
+                      <div className="flex items-center gap-1.5 bg-red-500/10 px-1 py-0.5 rounded border border-red-500/30">
+                        <span className="text-[9px] text-red-500">حذف؟</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(selectedSignal.id);
+                          }}
+                          className="text-[9px] text-red-500 font-bold"
+                        >
+                          نعم
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingSignalId(null);
+                          }}
+                          className="text-[9px] text-gray-400"
+                        >
+                          لا
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingSignalId(selectedSignal.id);
+                        }}
+                        className="text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <X size={18} />
+                      </button>
+                    ))}
+                  <button
+                    onClick={() => {
+                      setSelectedSignal(null);
+                      if (globeRef.current) {
+                        globeRef.current.controls().autoRotate = true;
+                      }
+                    }}
+                    className="text-cyan-500 hover:text-cyan-300 font-mono text-sm"
+                  >
+                    [ CLOSE ]
+                  </button>
+                </div>
+              </div>
+
+              <h2 className="text-2xl font-black text-white mb-6 leading-tight relative z-10 text-right">
+                {selectedSignal.title}
+              </h2>
+
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10">
+                <div className="prose prose-invert prose-cyan max-w-none text-gray-300 leading-relaxed text-right text-sm">
+                  <Markdown>{selectedSignal.content}</Markdown>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-cyan-500/20 flex justify-between items-center relative z-10">
+                <span className="text-cyan-500/60 font-mono text-xs flex items-center gap-2">
+                  <Eye size={14} /> DECRYPTED {selectedSignal.views} TIMES
+                </span>
+                <span className="text-emerald-500 font-mono text-xs animate-pulse font-bold">
+                  SIGNAL VERIFIED ✓
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

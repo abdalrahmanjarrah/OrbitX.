@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
-import { getAstronautRank } from '../App';
+import { getAstronautRank } from '../shared';
 
 export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser: (id: string) => void }) {
   const [searchTerm, setSearchTerm] = useState('');

@@ -215,8 +215,16 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
       
       {/* NavBar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-[#06060f]/60 border-b border-white/5 text-left">
-        <div className="font-display font-black tracking-widest text-[22px]">
-          ORBIT<span className="text-fuchsia-400">X</span>
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center justify-center w-8 h-8">
+            <div className="absolute inset-0 border-2 border-indigo-500/30 rounded-full"></div>
+            <div className="absolute inset-0 border-2 border-transparent border-t-indigo-400 border-l-fuchsia-400 rounded-full animate-[spin_4s_linear_infinite]"></div>
+            <div className="absolute inset-1 border-2 border-transparent border-b-cyan-400 border-r-indigo-400 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
+            <div className="absolute w-2 h-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] z-10" />
+          </div>
+          <div className="font-display font-black tracking-widest text-[22px]">
+            ORBIT<span className="text-fuchsia-400">X</span>
+          </div>
         </div>
         <ul className="hidden md:flex gap-8 text-[13px] text-[#5c5a72]" dir="rtl">
           <li><a href="#features" className="hover:text-white transition-colors">المميزات</a></li>
