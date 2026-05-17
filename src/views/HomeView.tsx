@@ -230,18 +230,29 @@ export default function HomeView({
       (snapshot) => {
         const fetchedRooms: Room[] = [];
         const now = Date.now();
+        
         snapshot.docs.forEach((docSnap) => {
+          // تأكيد أن المستند موجود وله بيانات فعلاً قبل أي فحص لقطع الشك باليقين
+          if (!docSnap.exists()) return;
+          
           const data = docSnap.data() as Room;
-          if (data.participants?.length === 0 && data.emptyAt) {
+          
+          // تأمين كود الحذف التلقائي للغرف الفارغة لمنع تعليق قاعدة البيانات
+          if (data && data.participants?.length === 0 && data.emptyAt) {
             const emptyMs = data.emptyAt.toMillis
               ? data.emptyAt.toMillis()
               : data.emptyAt.seconds * 1000;
+              
+            // إذا مرت 5 دقائق وهي فارغة يحذفها، بشرط ألا نكون نحن من يحذفها يدوياً الآن
             if (now - emptyMs > 300000) {
               deleteDoc(docSnap.ref).catch(() => {});
-              return;
+              return; // توقف هنا ولا تضفها للغرف المعروضة
             }
           }
-          fetchedRooms.push({ id: docSnap.id, ...data });
+          
+          if (data) {
+            fetchedRooms.push({ id: docSnap.id, ...data });
+          }
         });
         setRooms(fetchedRooms);
       },
@@ -295,7 +306,7 @@ export default function HomeView({
       unsubscribeUsers();
       unsubscribeChallenges();
     };
-  }, [user.uid]);
+  }, [user.uid]);;
 
   const PREDEFINED_IMAGES = [
     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600&auto=format&fit=crop",
