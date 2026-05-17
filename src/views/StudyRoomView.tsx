@@ -298,6 +298,15 @@ export default function StudyRoomView({
             xp: increment(-10)
           });
         }
+
+        await updateDoc(doc(db, 'rooms', stationId), {
+  participants: arrayRemove(user.uid)
+});
+
+if (fuelLeakInterval) {
+  clearInterval(fuelLeakInterval);
+  fuelLeakInterval = null;
+}
       } catch (e) {
         console.error("Failed to apply exit penalty:", e);
       }
@@ -607,110 +616,62 @@ export default function StudyRoomView({
     let fuelLeakInterval: NodeJS.Timeout | null = null;
     let localLeaked = 0;
 
-    const handleVisibilityChange = () => {
-      if (document.hidden && roomStatusRef.current === "focus") {
-        if (studyLinkRef.current && studyLinkRef.current.trim() !== "") {
-          // Allowed external study mode
-          return;
-        }
-
-        if (isWatchingClassRef.current) {
-          // Allowed class studying mode
-          return;
-        }
-
-        setShowFuelLeak(true);
-        localLeaked = 0;
-        setLeakedXP(0);
-
-        // Play alert sound for fuel leak
-        try {
-          alertSound.current.play().catch(() => {});
-          playSound("notification");
-        } catch (e) {}
-
-        // Announce to the room that the engine stopped
-        if (participantsCountRef.current > 1) {
-          addDoc(collection(db, "rooms", stationId, "messages"), {
-            text: `🚨 المحرك (${user.displayName}) توقف عن العمل! السفينة تتباطأ!`,
-            userId: "system",
-            userName: "نظام التنبيه",
-            userPhoto: "",
-            timestamp: serverTimestamp(),
-            type: "text",
-            isExitPenalty: true,
-          }).catch(() => {});
-        }
-
-        if (!fuelLeakInterval) {
-          fuelLeakInterval = setInterval(async () => {
-            localLeaked += 1;
-            setLeakedXP(localLeaked);
-
-            if (currentBetRef.current > 0) {
-              // Deplete Shield
-              remainingShieldRef.current = Math.max(
-                0,
-                remainingShieldRef.current - 1,
-              );
-              setShieldPercent(
-                Math.round(
-                  (remainingShieldRef.current / currentBetRef.current) * 100,
-                ),
-              );
-
-              // If shield hits 0 while they are still out
-              if (remainingShieldRef.current === 0) {
-                // Fallback to normal XP drain, or perhaps just stop the shield logic
-                // I'll let it fallback to the else branch on next tick by leaving currentBetRef > 0
-                // but remainingShieldRef will stay 0.
-                // Actually, let's keep it simple: no further penalty other than losing the bet.
-                // Wait, losing XP directly after shield is 0 is more brutal!
-                try {
-                  const uSnap = await getDoc(doc(db, "users", user.uid));
-                  if (uSnap.exists()) {
-                    const currentXP = uSnap.data().xp || 0;
-                    if (currentXP > 0) {
-                      await updateDoc(doc(db, "users", user.uid), {
-                        xp: increment(-1),
-                      });
-                      if (user.fleetId)
-                        updateDoc(doc(db, "fleets", user.fleetId), {
-                          xp: increment(-1),
-                        }).catch(() => {});
-                    }
-                  }
-                } catch (err) {}
-              }
-            } else {
-              // To prevent XP from going below 0, check user's current XP first
-              try {
-                const uSnap = await getDoc(doc(db, "users", user.uid));
-                if (uSnap.exists()) {
-                  const currentXP = uSnap.data().xp || 0;
-                  if (currentXP > 0) {
-                    await updateDoc(doc(db, "users", user.uid), {
-                      xp: increment(-1),
-                    });
-                    if (user.fleetId)
-                      updateDoc(doc(db, "fleets", user.fleetId), {
-                        xp: increment(-1),
-                      }).catch(() => {});
-                  }
-                }
-              } catch (err) {}
-            }
-          }, 60000); // 1 XP every 1 minute
-        }
-      } else {
-        if (fuelLeakInterval) {
-          clearInterval(fuelLeakInterval);
-          fuelLeakInterval = null;
-        }
+   const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      // Announce to the room that the engine stopped
+      if (participantsCountRef.current > 1) {
+        addDoc(collection(db, "rooms", stationId, "messages"), {
+          text: `🚨 المحرك (${user.displayName}) توقف عن العمل! السفينة تتباطأ!`,
+          userId: "system",
+          userName: "نظام التنبيه",
+          userPhoto: "",
+          timestamp: serverTimestamp(),
+          type: "text",
+          isExitPenalty: true,
+        }).catch(() => {});
       }
-    };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+      if (!fuelLeakInterval) {
+        fuelLeakInterval = setInterval(async () => {
+          localLeaked += 1;
+          setLeakedXP(localLeaked);
+
+          // إذا كان هناك رهان والدرع ما زال متوفراً لحماية اللاعب
+          if (currentBetRef.current > 0 && remainingShieldRef.current > 0) {
+            remainingShieldRef.current = Math.max(0, remainingShieldRef.current - 1);
+            setShieldPercent(
+              Math.round((remainingShieldRef.current / currentBetRef.current) * 100)
+            );
+          } 
+          // الـ Fallback: إذا لم يكن هناك رهان أصلاً، أو انتهى الدرع ووصل لـ 0 (الخصم المباشر)
+          else {
+            try {
+              // خصم الـ XP من المستخدم
+              await updateDoc(doc(db, "users", user.uid), {
+                xp: increment(-1),
+              });
+
+              // خصم الـ XP من الأسطول إن وجد
+              if (user.fleetId) {
+                updateDoc(doc(db, "fleets", user.fleetId), {
+                  xp: increment(-1),
+                }).catch(() => {});
+              }
+            } catch (err) {
+              console.error("Error draining XP:", err);
+            }
+          }
+        }, 60000); // تكرار كل دقيقة
+      }
+    } else {
+      if (fuelLeakInterval) {
+        clearInterval(fuelLeakInterval);
+        fuelLeakInterval = null;
+      }
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       if (fuelLeakInterval) {
@@ -1158,7 +1119,6 @@ export default function StudyRoomView({
 
         if (user.fleetId) {
           updateDoc(doc(db, "fleets", user.fleetId), {
-            ...(xpEarned > 0 ? { xp: increment(xpEarned) } : {}),
             totalFocusHours: increment(room.timerDuration / 60),
           }).catch((e) => console.error(e));
         }

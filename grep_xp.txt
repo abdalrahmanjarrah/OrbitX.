@@ -291,8 +291,18 @@
 2539-  };
 2540-
 2541-  const handleConfirmExit = async () => {
-2542-    setShowExitDialog(false);
-2543:    await calculateAndApplyXp();
+2542-     setShowExitDialog(false);
+
+2543:     await calculateAndApplyXp();
+
+          await updateDoc(doc(db, 'rooms', stationId), {
+          participants: arrayRemove(user.uid)
+          });
+
+          if (fuelLeakInterval) {
+          clearInterval(fuelLeakInterval);
+           fuelLeakInterval = null;
+          }
 2544-    
 2545-    setComboMultiplier(1);
 2546-    
