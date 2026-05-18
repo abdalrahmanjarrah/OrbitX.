@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -552,6 +552,7 @@ export interface Room {
   task: string;
   imageUrl?: string;
   creatorId: string;
+  hostId?: string;
   creatorName: string;
   participants: string[];
   maxParticipants: number;

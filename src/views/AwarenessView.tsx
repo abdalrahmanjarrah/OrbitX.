@@ -144,10 +144,11 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
+import { DEFAULT_SIGNALS, DEFAULT_COORDS } from '../data/AwarenessDefaults';
 import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';

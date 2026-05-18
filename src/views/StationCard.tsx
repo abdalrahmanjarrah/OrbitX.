@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -179,7 +179,7 @@ import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 
-const bentoItem = {
+const bentoItem: any = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
   visible: {
     opacity: 1,

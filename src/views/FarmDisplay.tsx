@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -193,15 +193,12 @@ export default function FarmDisplay({
   return (
     <>
       {show3DFarm && (
-        <Farm3D
-          onClose={() => setShow3DFarm(false)}
-          worldId={user.uid}
-          isOwner={isOwner}
-          currentUserName={auth.currentUser?.displayName || "لاعب"}
-          userItems={user?.items || []}
-          userXp={user?.xp || 0}
-          isStudying={isStudying}
-        />
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+           <div className="bg-[#050510] border border-cyan-800 p-8 rounded-2xl text-center">
+             <h2 className="text-xl text-cyan-300 mb-4">Farm 3D is under construction</h2>
+             <button onClick={() => setShow3DFarm(false)} className="px-6 py-2 bg-cyan-900 border border-cyan-400 rounded-lg text-cyan-100 hover:bg-cyan-800">Close</button>
+           </div>
+        </div>
       )}
 
       <div className="bg-[#0b0c16] border border-white/5 rounded-3xl p-8 shadow-2xl relative mb-8 overflow-hidden">

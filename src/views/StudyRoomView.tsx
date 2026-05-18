@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -210,6 +210,9 @@ export default function StudyRoomView({
   const [showAlert, setShowAlert] = useState(false);
   const [showFuelLeak, setShowFuelLeak] = useState(false);
   const [leakedXP, setLeakedXP] = useState(0);
+  
+  const fuelLeakIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const localLeakedRef = useRef<number>(0);
 
   const [showAFKCheck, setShowAFKCheck] = useState(false);
   const [isWatchingClass, setIsWatchingClass] = useState(false);
@@ -225,6 +228,8 @@ export default function StudyRoomView({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [lastMessageTime, setLastMessageTime] = useState<number>(0);
   const participantsCountRef = useRef(0);
+  
+  const isHost = room ? ((room.hostId || room.creatorId) === user.uid || user.role === "admin") : false;
 
   const lastXpUpdateTimeRef = useRef<number | null>(null);
   
@@ -254,7 +259,11 @@ export default function StudyRoomView({
         const safeMinutes = 1;
         lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + safeMinutes * 60000;
 
-        const lastGrant = lastXpGrantTimestampRef.current || 0;
+        // Ensure no multiple tabs can grind XP faster than 1 per minute globally.
+        // We use user.lastXpUpdate (if present) to enforce this across all instances.
+        const globalLastGrant = (user as any).lastXpUpdate || 0;
+        const lastGrant = Math.max(lastXpGrantTimestampRef.current || 0, globalLastGrant);
+        
         if (
           now - lastGrant >= 55000 &&
           sessionXpCountRef.current < MAX_XP_PER_SESSION
@@ -269,6 +278,7 @@ export default function StudyRoomView({
             sessionXpCountRef.current += xpToGrant;
             updateDoc(doc(db, "users", user.uid), {
               xp: increment(xpToGrant),
+              lastXpUpdate: now,
             }).catch(() => {});
             if (user.fleetId) {
               updateDoc(doc(db, "fleets", user.fleetId), {
@@ -303,9 +313,9 @@ export default function StudyRoomView({
   participants: arrayRemove(user.uid)
 });
 
-if (fuelLeakInterval) {
-  clearInterval(fuelLeakInterval);
-  fuelLeakInterval = null;
+if (fuelLeakIntervalRef.current) {
+  clearInterval(fuelLeakIntervalRef.current);
+  fuelLeakIntervalRef.current = null;
 }
       } catch (e) {
         console.error("Failed to apply exit penalty:", e);
@@ -314,16 +324,20 @@ if (fuelLeakInterval) {
 
     // Broadcast exit to chat
     if (participantsCountRef.current > 1) {
-      await addDoc(collection(db, "rooms", stationId, "messages"), {
-        text: isExitPenalty 
-          ? `🚀 غادر المحرك (${user.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم 10 XP).`
-          : `🚀 غادر المحرك (${user.displayName}) المحطة.`,
-        userId: "system",
-        userName: "نظام التنبيه",
-        userPhoto: "",
-        timestamp: serverTimestamp(),
-        type: "text",
-      });
+      try {
+        await addDoc(collection(db, "rooms", stationId, "messages"), {
+          text: isExitPenalty 
+            ? `🚀 غادر المحرك (${user.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم 10 XP).`
+            : `🚀 غادر المحرك (${user.displayName}) المحطة.`,
+          userId: "system",
+          userName: "نظام التنبيه",
+          userPhoto: "",
+          timestamp: serverTimestamp(),
+          type: "text",
+        });
+      } catch (e) {
+        console.error("error broadcasting exit message", e);
+      }
     }
 
     onExit();
@@ -415,6 +429,13 @@ if (fuelLeakInterval) {
 
   useEffect(() => {
     roomStatusRef.current = room?.timerStatus || null;
+    
+    // Clear the fuel leak penalty if the room is no longer in focus mode!
+    if (room?.timerStatus !== "focus" && fuelLeakIntervalRef.current) {
+      clearInterval(fuelLeakIntervalRef.current);
+      fuelLeakIntervalRef.current = null;
+      setShowFuelLeak(false);
+    }
   }, [room?.timerStatus]);
 
   const autoJoinAttempted = useRef(false);
@@ -458,10 +479,14 @@ if (fuelLeakInterval) {
             .participants.filter((p: string) => p !== user.uid);
           const updates: any = {
             participants: arrayRemove(user.uid),
-            emptyAt: rem.length === 0 ? serverTimestamp() : null,
+            emptyAt: rem.length === 0 ? serverTimestamp() : deleteField(),
           };
-          if (docSnap.data().creatorId === user.uid && rem.length > 0) {
-            updates.creatorId = rem[0];
+          const currentHostId = docSnap.data().hostId || docSnap.data().creatorId;
+          if (currentHostId === user.uid && rem.length > 0) {
+            updates.hostId = rem[0];
+          }
+          if (rem.length === 0) {
+            updates.timerStatus = "idle";
           }
           await safeUpdateRoom(updates);
         }
@@ -613,11 +638,28 @@ if (fuelLeakInterval) {
     );
 
     // Tab visibility detection for Fuel Leak
-    let fuelLeakInterval: NodeJS.Timeout | null = null;
-    let localLeaked = 0;
+    // Using refs to share state between useEffect and normal functions
 
    const handleVisibilityChange = () => {
-    if (document.visibilityState === "hidden") {
+    if (document.visibilityState === "hidden" || !document.hasFocus()) {
+      if (roomStatusRef.current !== "focus") return;
+      
+      if (studyLinkRef.current && studyLinkRef.current.trim() !== "") {
+        return;
+      }
+
+      if (isWatchingClassRef.current) {
+        return;
+      }
+
+      setShowFuelLeak(true);
+      localLeakedRef.current = 0;
+      setLeakedXP(0);
+
+      try {
+        playSound("alert");
+      } catch (e) {}
+
       // Announce to the room that the engine stopped
       if (participantsCountRef.current > 1) {
         addDoc(collection(db, "rooms", stationId, "messages"), {
@@ -631,10 +673,10 @@ if (fuelLeakInterval) {
         }).catch(() => {});
       }
 
-      if (!fuelLeakInterval) {
-        fuelLeakInterval = setInterval(async () => {
-          localLeaked += 1;
-          setLeakedXP(localLeaked);
+      if (!fuelLeakIntervalRef.current) {
+        fuelLeakIntervalRef.current = setInterval(async () => {
+          localLeakedRef.current += 1;
+          setLeakedXP(localLeakedRef.current);
 
           // إذا كان هناك رهان والدرع ما زال متوفراً لحماية اللاعب
           if (currentBetRef.current > 0 && remainingShieldRef.current > 0) {
@@ -664,23 +706,34 @@ if (fuelLeakInterval) {
         }, 60000); // تكرار كل دقيقة
       }
     } else {
-      if (fuelLeakInterval) {
-        clearInterval(fuelLeakInterval);
-        fuelLeakInterval = null;
+      setShowFuelLeak(false);
+      setLeakedXP(0);
+      if (fuelLeakIntervalRef.current) {
+        clearInterval(fuelLeakIntervalRef.current);
+        fuelLeakIntervalRef.current = null;
       }
     }
   };
 
-  document.addEventListener("visibilitychange", handleVisibilityChange);
+  useEffect(() => {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    }
+  }, []);
 
     return () => {
-      if (fuelLeakInterval) {
-        clearInterval(fuelLeakInterval);
-        fuelLeakInterval = null;
+      if (fuelLeakIntervalRef.current) {
+        clearInterval(fuelLeakIntervalRef.current);
+        fuelLeakIntervalRef.current = null;
       }
       unsubscribeRoom();
       unsubscribeMessages();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
 
       // Use a more reliable cleanup
       const cleanup = async () => {
@@ -708,8 +761,13 @@ if (fuelLeakInterval) {
             emptyAt: remainingParticipants.length === 0 ? serverTimestamp() : deleteField(),
           };
 
-          if (data.creatorId === user.uid && remainingParticipants.length > 0) {
-            updates.creatorId = remainingParticipants[0];
+          const currentHostId = data.hostId || data.creatorId;
+          if (currentHostId === user.uid && remainingParticipants.length > 0) {
+            updates.hostId = remainingParticipants[0];
+          }
+          
+          if (remainingParticipants.length === 0) {
+            updates.timerStatus = "idle";
           }
 
           // نحدث المحطة فقط لأننا تأكدنا بوجودها بالـ if السابقة
@@ -953,7 +1011,7 @@ if (fuelLeakInterval) {
       return;
     }
 
-    if (room?.isChatLocked && room.creatorId !== user.uid && user.role !== "admin") {
+    if (room?.isChatLocked && !isHost) {
       alert("الدردشة مغلقة من قبل المشرف.");
       return;
     }
@@ -1051,25 +1109,30 @@ if (fuelLeakInterval) {
       const elapsed = Date.now() - startMs;
       // Require at least 90% of the time really elapsed to avoid stale timeLeft=0 race condition
       if (elapsed < durationMs - 5000) return;
+      
+      const isLegitEnd = elapsed <= durationMs + 2 * 60 * 1000;
 
       if (isTransitioningRef.current) return;
       isTransitioningRef.current = true;
 
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.visibilityState === "hidden"
-      ) {
-        new Notification("انتهى الوقت!", {
-          body:
-            room.timerStatus === "focus"
-              ? "انتهت جلسة التركيز، حان وقت الاستراحة"
-              : "انتهت الاستراحة، حان وقت التركيز",
-        });
+      // Only show Notification and sound if legit end
+      if (isLegitEnd) {
+        if (
+          "Notification" in window &&
+          Notification.permission === "granted" &&
+          document.visibilityState === "hidden"
+        ) {
+          new Notification("انتهى الوقت!", {
+            body:
+              room.timerStatus === "focus"
+                ? "انتهت جلسة التركيز، حان وقت الاستراحة"
+                : "انتهت الاستراحة، حان وقت التركيز",
+          });
+        }
+        playSound("timer");
       }
 
-      playSound("timer");
-      if (room.timerStatus === "focus") {
+      if (room.timerStatus === "focus" && isLegitEnd) {
         // Award XP and increment sessions
         const isGroup = participantsCountRef.current > 1;
         const groupMultiplier = 1;
@@ -1132,9 +1195,9 @@ if (fuelLeakInterval) {
         }
       }
 
-      // Auto transition for anyone to prevent stalls if creator is AFK
+      // Auto transition for anyone to prevent stalls if host is AFK
       const delay =
-        room.creatorId === user.uid ? 0 : Math.random() * 2000 + 1000;
+        isHost ? 0 : Math.random() * 2000 + 1000;
       setTimeout(() => {
         const nextStatus = room.timerStatus === "focus" ? "break" : "idle";
         const focusToAdd =
@@ -1475,7 +1538,7 @@ if (fuelLeakInterval) {
 
           {/* Utility Actions */}
           <div className="flex items-center gap-2 border-r border-white/10 pr-4 mr-2">
-            {room.creatorId === user.uid && (
+            {isHost && (
               <button
                 onClick={() => setShowDeleteDialog(true)}
                 className="p-2 text-gray-500 hover:text-red-500 transition-colors hover:bg-red-500/10 rounded-xl"
@@ -1832,9 +1895,7 @@ if (fuelLeakInterval) {
           </div>
 
           {/* Timer Controls */}
-          {(room.creatorId === user.uid ||
-            user.role === "admin" ||
-            room.participants?.includes(user.uid)) && (
+          {isHost && (
             <div className="mt-12 flex flex-col items-center gap-6">
               {room.timerStatus === "idle" && (
                 <div className="flex gap-4 mb-4">
@@ -1938,9 +1999,9 @@ if (fuelLeakInterval) {
 
       {/* Delete Confirmation Dialog */}
 
-      {/* Floating Station Chat (Only during break) */}
+      {/* Floating Station Chat (Available in break and idle) */}
       <AnimatePresence>
-        {room?.timerStatus === "break" && (
+        {(room?.timerStatus === "break" || room?.timerStatus === "idle") && (
           <motion.div
             className="fixed bottom-6 right-6 z-50 flex flex-col items-end"
             initial={{ y: 50, opacity: 0, scale: 0.9 }}
@@ -1966,7 +2027,7 @@ if (fuelLeakInterval) {
                           دردشة المحطة
                         </h3>
                       </div>
-                      {(room?.creatorId === user.uid || user.role === "admin") && (
+                      {isHost && (
                         <button
                           onClick={async () => {
                             await safeUpdateRoom({ isChatLocked: !room?.isChatLocked });
@@ -2098,7 +2159,7 @@ if (fuelLeakInterval) {
 
                   <div className="p-3 bg-[#0a0b16]/80 border-t border-white/10 shrink-0">
                     <div className="relative">
-                      {room?.isChatLocked && room.creatorId !== user.uid && user.role !== "admin" ? (
+                      {room?.isChatLocked && !isHost ? (
                         <div className="w-full bg-[#050510] border border-red-500/30 rounded-xl px-4 py-3 text-center text-sm text-red-400 font-bold bg-opacity-50">
                           الدردشة مغلقة من قبل المشرف 🔒
                         </div>

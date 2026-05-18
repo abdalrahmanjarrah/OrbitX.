@@ -543,6 +543,16 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
 
+    match /admin_alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /global_notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     match /worlds/{worldId} {
       allow read: if isAuthenticated();
       

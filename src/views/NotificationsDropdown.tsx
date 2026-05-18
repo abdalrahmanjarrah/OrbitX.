@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -197,12 +197,6 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
     const unsub = onSnapshot(q, (snap) => {
       const notifs: any[] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       const unreadCount = notifs.filter((n) => !n.read).length;
-      if (
-        unreadCount > prevUnreadCountRef.current &&
-        prevUnreadCountRef.current > 0
-      ) {
-        playSound("notification");
-      }
       prevUnreadCountRef.current = unreadCount;
       setNotifications(notifs);
     });

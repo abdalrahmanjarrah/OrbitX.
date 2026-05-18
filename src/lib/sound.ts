@@ -9,7 +9,7 @@ const getAudioContext = () => {
   return sharedCtx;
 };
 
-export const playSound = (type: 'message' | 'timer' | 'levelup' | 'notification') => {
+export const playSound = (type: 'message' | 'timer' | 'levelup' | 'notification' | 'alert') => {
   try {
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
@@ -26,6 +26,16 @@ export const playSound = (type: 'message' | 'timer' | 'levelup' | 'notification'
       gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.2);
+    } else if (type === 'alert') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.5);
+      osc.frequency.linearRampToValueAtTime(200, ctx.currentTime + 1);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 1);
     } else if (type === 'notification') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(500, ctx.currentTime);

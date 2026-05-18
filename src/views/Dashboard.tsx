@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -458,6 +458,10 @@ export default function Dashboard({
         </div>
 
         <div className="flex items-center justify-end gap-3 pl-1">
+          <div className="md:border-l md:border-white/10 md:pl-2">
+            <NotificationsDropdown userId={user.uid} />
+          </div>
+
           {activeTab === "home" && (
             <button
                onClick={() => setShowRoleModal(true)}

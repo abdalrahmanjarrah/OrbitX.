@@ -27,7 +27,7 @@ export default function SupportView({ user }: { user: UserData }) {
       setTicketText("");
       alert("تم إرسال طلب الدعم بنجاح. سنقوم بالرد عليك قريباً.");
     } catch (e) {
-      handleFirestoreError(e, OperationType.ADD, 'support_tickets');
+      handleFirestoreError(e, OperationType.CREATE, 'support_tickets');
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +46,7 @@ export default function SupportView({ user }: { user: UserData }) {
       setSuggestionText("");
       alert("تم إرسال اقتراحك بنجاح. شكراً لمساهمتك في تطوير OrbitX!");
     } catch (e) {
-      handleFirestoreError(e, OperationType.ADD, 'suggestions');
+      handleFirestoreError(e, OperationType.CREATE, 'suggestions');
     } finally {
       setIsSubmitting(false);
     }

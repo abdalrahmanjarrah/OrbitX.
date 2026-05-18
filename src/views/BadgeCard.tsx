@@ -144,7 +144,7 @@ function onSnapshot(...args: any[]) {
         };
         return originalOnSnapshot(args[0], args[1], args[2]);
     }
-    return originalOnSnapshot(...args);
+    return (originalOnSnapshot as any)(...args);
 }
 
 
@@ -178,6 +178,13 @@ import BlackHolesView from './BlackHolesView';
 import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+
+interface BadgeCardProps {
+  icon: React.ReactNode;
+  title: string;
+  xp: number | string;
+  active?: boolean;
+}
 
 export default function BadgeCard({ icon, title, xp, active = false }: BadgeCardProps) {
   return (

@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "../lib/utils";
 import { db, handleFirestoreError, OperationType } from "../firebase";
-import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { UserData, Discussion } from "../shared";
 
 export default function AdminView({ user }: { user: UserData }) {
@@ -43,7 +43,23 @@ export default function AdminView({ user }: { user: UserData }) {
       setAnnouncementText("");
       alert("Annoucement dispatched to all users.");
     } catch(e) {
-      handleFirestoreError(e, OperationType.ADD, 'global_notifications');
+      handleFirestoreError(e, OperationType.CREATE, 'global_notifications');
+    }
+  };
+
+  const handleEmergencyAlert = async () => {
+    if (!announcementText.trim()) return;
+    if (!confirm("Are you sure you want to trigger a GLOBAL EMERGENCY ALERT? This will interrupt everyone!")) return;
+    try {
+      await addDoc(collection(db, "admin_alerts"), {
+        message: announcementText,
+        createdAt: serverTimestamp(),
+        adminId: user.uid
+      });
+      setAnnouncementText("");
+      alert("EMERGENCY ALERT dispatched!");
+    } catch(e) {
+      handleFirestoreError(e, OperationType.CREATE, 'admin_alerts');
     }
   };
 
@@ -177,6 +193,12 @@ export default function AdminView({ user }: { user: UserData }) {
                     className="w-full bg-yellow-600/20 text-yellow-400 border border-yellow-500 py-2 text-xs font-bold uppercase hover:bg-yellow-500 hover:text-[#020308] transition-all"
                  >
                     Execute Broadcast
+                 </button>
+                 <button 
+                    onClick={handleEmergencyAlert}
+                    className="w-full mt-2 bg-red-600/20 text-red-500 border border-red-600 py-2 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] animate-pulse"
+                 >
+                    TRIGGER EMERGENCY ALERT
                  </button>
              </div>
           </div>
