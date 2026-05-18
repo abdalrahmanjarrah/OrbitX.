@@ -706,8 +706,6 @@ if (fuelLeakIntervalRef.current) {
         }, 60000); // تكرار كل دقيقة
       }
     } else {
-      setShowFuelLeak(false);
-      setLeakedXP(0);
       if (fuelLeakIntervalRef.current) {
         clearInterval(fuelLeakIntervalRef.current);
         fuelLeakIntervalRef.current = null;
@@ -715,17 +713,9 @@ if (fuelLeakIntervalRef.current) {
     }
   };
 
-  useEffect(() => {
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleVisibilityChange);
-    window.addEventListener("focus", handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleVisibilityChange);
-      window.removeEventListener("focus", handleVisibilityChange);
-    }
-  }, []);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("blur", handleVisibilityChange);
+  window.addEventListener("focus", handleVisibilityChange);
 
     return () => {
       if (fuelLeakIntervalRef.current) {
@@ -734,6 +724,9 @@ if (fuelLeakIntervalRef.current) {
       }
       unsubscribeRoom();
       unsubscribeMessages();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
 
       // Use a more reliable cleanup
       const cleanup = async () => {
