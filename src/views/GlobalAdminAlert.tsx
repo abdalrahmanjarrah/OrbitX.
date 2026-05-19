@@ -33,6 +33,8 @@ export default function GlobalAdminAlert() {
           }, 15000); // Auto hide after 15 seconds
         }
       }
+    }, (error) => {
+      console.warn("Global alert error:", error.message);
     });
 
     return () => unsub();

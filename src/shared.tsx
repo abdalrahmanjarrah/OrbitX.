@@ -544,6 +544,10 @@ export interface ScheduleItem {
   time: string;
   task: string;
   userId: string;
+  completed?: boolean;
+  priority?: "low" | "medium" | "high";
+  category?: string;
+  duration?: number; // minutes
 }
 
 export interface Room {
@@ -598,6 +602,8 @@ export interface Message {
   timestamp: any;
   type: "text" | "image" | "video" | "file";
   fileUrl?: string;
+  replyTo?: { id: string; text: string; userName: string };
+  mentions?: string[];
 }
 
 // --- Main App Component ---

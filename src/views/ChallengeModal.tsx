@@ -197,7 +197,7 @@ export default function ChallengeModal({
         try {
           const friendsQuery = query(
             collection(db, "profiles"),
-            where("__name__", "in", friendIds),
+            where("uid", "in", friendIds),
           );
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));

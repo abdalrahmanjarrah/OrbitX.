@@ -287,6 +287,7 @@ export default function HomeView({
       collection(db, "challenges"),
       where("challengedId", "==", user.uid),
       where("status", "==", "pending"),
+      limit(20)
     );
     const unsubscribeChallenges = onSnapshot(
       challengesQuery,

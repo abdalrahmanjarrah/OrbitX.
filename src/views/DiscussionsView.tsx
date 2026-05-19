@@ -1,135 +1,19 @@
-import { Joyride } from "react-joyride";
-import { playSound } from "../lib/sound";
-import Markdown from "react-markdown";
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import Globe from "react-globe.gl";
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Leaf,
-  Swords,
-  ChevronLeft,
-  Rocket,
-  Timer,
-  Users,
-  Zap,
-  Star,
-  LogOut,
-  LayoutDashboard,
-  MessageSquare,
-  User as UserIcon,
-  Heart,
-  ShieldAlert,
-  AlertTriangle,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Lock,
-  Send,
-  Image as ImageIcon,
-  Plus,
-  X,
-  MessageCircle,
-  Calendar,
-  Shield,
-  Trash2,
-  Music,
-  CloudRain,
-  Flame,
-  Wind,
-  Bird,
-  ChevronDown,
-  PlayCircle,
-  PauseCircle,
-  CheckCircle,
-  Info,
-  Keyboard,
-  Waves,
-  TrainFront,
-  Mic,
-  MicOff,
-  Headphones,
-  Settings,
-  Radio,
-  Trophy,
-  Menu,
-  Square,
-  Store,
-  BookOpen,
-  Target,
-  Telescope,
-  Award,
-  Activity,
-  Eye,
-  Terminal as TerminalIcon,
-  Cpu,
-  CheckSquare,
-  Bell,
-  BarChart3,
-  Search, Globe2, UserCircle,
+  MessageCircle, Plus, X, Trash2, Heart, Flame, Rocket, SkipBack, Eye, ChevronRight, Hash, Pin, MessageSquare
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
 import { motion, AnimatePresence } from "motion/react";
-import StarBackground from "../components/StarBackground";
-
-import { cn } from "../lib/utils";
+import { db, handleFirestoreError, OperationType } from "../firebase";
 import {
-  auth,
-  db,
-  signInWithGoogle,
-  logout,
-  handleFirestoreError,
-  OperationType,
-} from "../firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  onSnapshot as originalOnSnapshot,
-  query,
-  orderBy,
-  limit,
-  addDoc,
-  serverTimestamp,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  where,
-  deleteDoc,
-  deleteField,
-  writeBatch,
+  collection, doc, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
+  query, orderBy, limit as firestoreLimit, onSnapshot as originalOnSnapshot, 
+  where, getDocs // Fallback for batch fetch if needed
 } from "firebase/firestore";
-import { UserSearchView } from "../components/UserSearchView";
+import { Discussion, Reply, UserData } from "../shared";
+import { cn } from "../lib/utils";
 
-import { FirestoreError } from 'firebase/firestore';
-
+// Custom wrapper to intercept onSnapshot errors safely
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
     if (args.length === 2 && typeof args[1] === 'function') {
         return originalOnSnapshot(args[0], args[1], (e: any) => {
             console.error('Intercepted onSnapshot error', e, args[0]);
@@ -147,93 +31,68 @@ function onSnapshot(...args: any[]) {
     return (originalOnSnapshot as any)(...args);
 }
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
-
 export default function DiscussionsView({ user }: { user: UserData }) {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [selectedDiscussion, setSelectedDiscussion] =
-    useState<Discussion | null>(null);
+  const [selectedDiscussion, setSelectedDiscussion] = useState<Discussion | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
+  
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newReply, setNewReply] = useState("");
+  const [category, setCategory] = useState("عام");
   const [isCreating, setIsCreating] = useState(false);
-  const [deletingDiscussionId, setDeletingDiscussionId] = useState<
-    string | null
-  >(null);
-  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [repliesLoading, setRepliesLoading] = useState(false);
+  const [limitCount, setLimitCount] = useState(20);
+  const [sortBy, setSortBy] = useState<"newest" | "trending">("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const q = query(
-      collection(db, "discussions"),
-      orderBy("timestamp", "desc"),
-      limit(50),
-    );
+    setLoading(true);
+    let q;
+    if (sortBy === "trending") {
+      q = query(collection(db, "discussions"), orderBy("repliesCount", "desc"), firestoreLimit(limitCount));
+    } else {
+      q = query(collection(db, "discussions"), orderBy("timestamp", "desc"), firestoreLimit(limitCount));
+    }
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         setDiscussions(
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Discussion,
-          ),
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Discussion)
         );
+        setLoading(false);
       },
-      (e) => handleFirestoreError(e, OperationType.GET, "discussions"),
+      (e) => {
+        handleFirestoreError(e, OperationType.GET, "discussions");
+        setLoading(false);
+      }
     );
     return () => unsubscribe();
-  }, []);
+  }, [limitCount, sortBy]);
 
   useEffect(() => {
     if (selectedDiscussion) {
+      setRepliesLoading(true);
       const q = query(
         collection(db, "discussions", selectedDiscussion.id, "replies"),
         orderBy("timestamp", "asc"),
+        firestoreLimit(100)
       );
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
           setReplies(
-            snapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() }) as Reply,
-            ),
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Reply)
           );
+          setRepliesLoading(false);
         },
-        (e) =>
-          handleFirestoreError(
-            e,
-            OperationType.GET,
-            `discussions/${selectedDiscussion.id}/replies`,
-          ),
+        (e) => {
+          handleFirestoreError(e, OperationType.GET, `discussions/${selectedDiscussion.id}/replies`);
+          setRepliesLoading(false);
+        }
       );
       return () => unsubscribe();
     }
@@ -242,18 +101,21 @@ export default function DiscussionsView({ user }: { user: UserData }) {
   const handleCreateDiscussion = async () => {
     if (!newTitle.trim() || !newContent.trim()) return;
     try {
+      setIsCreating(false);
       await addDoc(collection(db, "discussions"), {
         title: newTitle,
         content: newContent,
+        category: category,
         userId: user.uid,
         userName: user.displayName,
         userPhoto: user.photoURL,
         timestamp: serverTimestamp(),
         repliesCount: 0,
+        likesCount: 0,
       });
       setNewTitle("");
       setNewContent("");
-      setIsCreating(false);
+      setCategory("عام");
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "discussions");
     }
@@ -270,29 +132,24 @@ export default function DiscussionsView({ user }: { user: UserData }) {
           userName: user.displayName,
           userPhoto: user.photoURL,
           timestamp: serverTimestamp(),
-        },
+        }
       );
       await updateDoc(doc(db, "discussions", selectedDiscussion.id), {
         repliesCount: increment(1),
+        lastActivity: serverTimestamp(),
       });
+      
       if (selectedDiscussion.userId !== user.uid) {
-        addDoc(
-          collection(db, "users", selectedDiscussion.userId, "notifications"),
-          {
-            type: "reply",
-            content: `رد ${user.displayName} على نقاشك: ${selectedDiscussion.title}`,
-            read: false,
-            timestamp: serverTimestamp(),
-          },
-        ).catch(console.error);
+        addDoc(collection(db, "users", selectedDiscussion.userId, "notifications"), {
+          type: "reply",
+          content: `رد ${user.displayName} على موضوعك: ${selectedDiscussion.title}`,
+          read: false,
+          timestamp: serverTimestamp(),
+        }).catch(() => {});
       }
       setNewReply("");
     } catch (e) {
-      handleFirestoreError(
-        e,
-        OperationType.WRITE,
-        `discussions/${selectedDiscussion.id}/replies`,
-      );
+      handleFirestoreError(e, OperationType.WRITE, `discussions/${selectedDiscussion.id}/replies`);
     }
   };
 
@@ -301,275 +158,396 @@ export default function DiscussionsView({ user }: { user: UserData }) {
     try {
       await deleteDoc(doc(db, "discussions", id));
       if (selectedDiscussion?.id === id) setSelectedDiscussion(null);
-      setDeletingDiscussionId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `discussions/${id}`);
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          className="px-6 py-2 bg-indigo-500 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-        >
-          {isCreating ? <X size={18} /> : <Plus size={18} />}
-          {isCreating ? "إلغاء" : "بدء نقاش جديد"}
-        </button>
-        <h2 className="text-3xl font-bold flex items-center gap-3">
-          <MessageCircle className="w-8 h-8 text-indigo-500" />
-          ساحة النقاش
-        </h2>
-      </div>
+  const handleLike = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "discussions", id), {
+        likesCount: increment(1)
+      });
+    } catch (e) {
+      // ignore silently
+    }
+  };
 
-      {isCreating && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-3xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 space-y-4"
-        >
-          <input
-            type="text"
-            placeholder="عنوان الموضوع..."
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
-            dir="rtl"
-          />
-          <textarea
-            placeholder="محتوى النقاش..."
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-xl px-4 py-3 text-right h-32 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-            dir="rtl"
-          />
-          <button
-            onClick={handleCreateDiscussion}
-            className="w-full py-3 bg-indigo-500 rounded-xl font-bold hover:bg-indigo-700 transition-all"
-          >
-            نشر الموضوع
-          </button>
-        </motion.div>
+  const filteredDiscussions = discussions.filter(d => 
+    d.title.includes(searchQuery) || d.content.includes(searchQuery) || (d as any).category?.includes(searchQuery)
+  );
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-8 pb-20 relative min-h-screen">
+      {/* Background ambient gradient */}
+      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent -z-10 rounded-3xl" />
+
+      {/* Header section */}
+      {!selectedDiscussion && (
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-[#0a0b16]/80 backdrop-blur-md p-4 rounded-3xl shadow-xl shadow-black/5 border border-white/5">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <h2 className="text-3xl font-black flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+              <MessageCircle className="w-8 h-8 text-indigo-400" />
+              النقاشات
+            </h2>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <input
+              type="text"
+              placeholder="ابحث في النقاشات..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-right text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 w-full md:w-64 transition-all"
+              dir="rtl"
+            />
+            <button
+              onClick={() => setIsCreating(!isCreating)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20 whitespace-nowrap"
+            >
+              {isCreating ? <X size={18} /> : <Plus size={18} />}
+              <span className="hidden sm:inline">{isCreating ? "إلغاء" : "موضوع جديد"}</span>
+            </button>
+          </div>
+        </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4">
+      {/* Sort / Filters */}
+      {!selectedDiscussion && !isCreating && (
+        <div className="flex items-center justify-end gap-2 text-sm font-medium">
+          <button 
+            onClick={() => setSortBy("newest")}
+            className={cn("px-4 py-1.5 rounded-full transition-all border", sortBy === "newest" ? "bg-white/10 border-white/20 text-white" : "border-transparent text-gray-500 hover:text-gray-300")}
+          >
+            الأحدث
+          </button>
+          <button 
+            onClick={() => setSortBy("trending")}
+            className={cn("px-4 py-1.5 rounded-full flex items-center gap-1.5 transition-all border", sortBy === "trending" ? "bg-red-500/10 border-red-500/20 text-red-400" : "border-transparent text-gray-500 hover:text-gray-300")}
+          >
+            <Flame size={14} />
+            شائع
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence mode="wait">
+        {isCreating && !selectedDiscussion && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -20 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -20 }}
+            className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#101223] to-[#0a0b16] shadow-xl shadow-indigo-900/10 border border-indigo-500/20 space-y-5 overflow-hidden"
+          >
+            <h3 className="text-xl font-bold text-right text-indigo-300">بدء موضوع جديد</h3>
+            
+            <div className="flex gap-4 flex-row-reverse">
+              <input
+                type="text"
+                placeholder="عنوان الموضوع..."
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="flex-1 bg-black/40 border border-indigo-500/30 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 transition-all font-bold placeholder:font-normal placeholder:text-gray-600"
+                dir="rtl"
+              />
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-right focus:outline-none text-sm text-gray-300 w-32"
+                dir="rtl"
+              >
+                <option value="عام">عام</option>
+                <option value="دراسة">دراسة</option>
+                <option value="سؤال">سؤال</option>
+                <option value="شطحة">شطحة</option>
+              </select>
+            </div>
+
+            <textarea
+              placeholder="اكتب ما يدور في ذهنك هنا..."
+              value={newContent}
+              onChange={(e) => setNewContent(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-right min-h-[140px] focus:outline-none focus:ring-1 focus:ring-indigo-400 transition-all resize-y"
+              dir="rtl"
+            />
+            
+            <div className="flex justify-end">
+              <button
+                onClick={handleCreateDiscussion}
+                disabled={!newTitle.trim() || !newContent.trim()}
+                className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all text-white disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2"
+              >
+                <Rocket size={18} />
+                نشر الان
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid grid-cols-1 gap-5">
         {selectedDiscussion ? (
-          <div className="space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
             <button
               onClick={() => setSelectedDiscussion(null)}
-              className="text-indigo-500 font-bold flex items-center gap-2 hover:underline"
+              className="text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors bg-[#0a0b16] px-4 py-2 rounded-xl border border-white/5 w-max"
             >
-              <SkipBack size={18} className="rotate-180" />
-              العودة للنقاشات
+              <ChevronRight size={18} />
+              العودة للساحة
             </button>
-            <div className="p-8 rounded-3xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 space-y-6 relative overflow-hidden">
-              <div className="atmosphere-bg opacity-10" />
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
+            
+            <div className="p-6 md:p-8 rounded-3xl bg-[#0e1021] shadow-2xl shadow-black/40 border border-white/10 space-y-6 relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
+              
+              <div className="flex items-start justify-between relative z-10 flex-row-reverse text-right">
+                <div className="flex items-center gap-4 flex-row-reverse">
                   <img
                     src={selectedDiscussion.userPhoto}
-                    className="w-12 h-12 rounded-2xl border border-white/10"
+                    className="w-14 h-14 rounded-2xl border-2 border-indigo-500/20 shadow-lg"
                     referrerPolicy="no-referrer"
+                    alt={selectedDiscussion.userName}
                   />
-                  <div className="text-left">
-                    <p className="font-bold text-base">
+                  <div>
+                    <p className="font-bold text-lg text-white">
                       {selectedDiscussion.userName}
                     </p>
-                    <p className="text-[10px] text-gray-500">
-                      {selectedDiscussion.timestamp
-                        ?.toDate()
-                        .toLocaleString("ar-EG")}
+                    <p className="text-xs text-gray-400 font-mono">
+                      {selectedDiscussion.timestamp?.toDate().toLocaleString("ar-EG")}
                     </p>
                   </div>
                 </div>
-                <h3 className="text-2xl font-black">
-                  {selectedDiscussion.title}
-                </h3>
+                
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-white/5 rounded-full text-xs text-indigo-300 font-medium border border-indigo-500/10 flex items-center gap-1">
+                    <Hash size={12} />
+                    {(selectedDiscussion as any).category || 'عام'}
+                  </span>
+                </div>
               </div>
+              
+              <h3 className="text-2xl md:text-3xl font-black text-right mt-4 leading-tight">
+                {selectedDiscussion.title}
+              </h3>
+              
+              <div className="w-12 h-1 bg-indigo-500/50 rounded-full ml-auto" />
+              
               <p
-                className="text-gray-200 leading-relaxed text-right relative z-10 text-lg"
+                className="text-gray-200 leading-relaxed text-right relative z-10 text-lg md:text-xl whitespace-pre-wrap font-medium"
                 dir="rtl"
               >
                 {selectedDiscussion.content}
               </p>
+
+              <div className="flex items-center justify-between pt-6 mt-6 border-t border-white/5 text-sm text-gray-500">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => handleLike(selectedDiscussion.id)}
+                    className="flex items-center gap-1.5 hover:text-pink-400 transition-colors"
+                  >
+                    <Heart size={18} />
+                    <span>{(selectedDiscussion as any).likesCount || 0}</span>
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <MessageSquare size={18} />
+                    <span>{selectedDiscussion.repliesCount} ردود</span>
+                  </div>
+                </div>
+                
+                {(user.role === "admin" || selectedDiscussion.userId === user.uid) && (
+                  <button
+                    onClick={() => {
+                      handleDeleteDiscussion(selectedDiscussion.id, selectedDiscussion.userId);
+                    }}
+                    className="text-red-500/70 hover:text-red-400 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 size={16} />
+                    <span className="hidden sm:inline">حذف</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-4 pr-6 border-r-2 border-white/5">
-              {replies.map((reply) => (
-                <div
+            <div className="space-y-4 pr-4 md:pr-12 relative before:content-[''] before:absolute before:right-0 before:top-4 before:bottom-0 before:w-0.5 before:bg-gradient-to-b before:from-indigo-500/50 before:to-transparent">
+              {repliesLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="p-5 rounded-2xl bg-[#0a0b16]/50 animate-pulse border border-white/5 h-20" />
+                  ))}
+                </div>
+              ) : replies.map((reply) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   key={reply.id}
-                  className="p-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 space-y-2"
+                  className="p-5 rounded-3xl bg-[#0e1021]/80 shadow-md border border-white/5 space-y-3 ms-auto max-w-[95%] relative before:content-[''] before:absolute before:-right-4 md:before:-right-12 before:top-8 before:w-4 md:before:w-12 before:h-0.5 before:bg-indigo-500/30"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">
-                        {reply.timestamp?.toDate().toLocaleString("ar-EG")}
-                      </span>
-                      {(user.role === "admin" || reply.userId === user.uid) &&
-                        (deletingReplyId === reply.id ? (
-                          <div
-                            className="flex items-center gap-1.5 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/30"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteDoc(
-                                  doc(
-                                    db,
-                                    "discussions",
-                                    selectedDiscussion.id,
-                                    "replies",
-                                    reply.id,
-                                  ),
-                                );
-                                setDeletingReplyId(null);
-                              }}
-                              className="text-[9px] text-red-500 hover:text-white font-bold"
-                            >
-                              نعم
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingReplyId(null);
-                              }}
-                              className="text-[9px] text-gray-400"
-                            >
-                              لا
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingReplyId(reply.id);
-                            }}
-                            className="p-1 text-gray-500 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs">
-                        {reply.userName}
-                      </span>
+                  <div className="flex items-center justify-between flex-row-reverse">
+                    <div className="flex items-center gap-3 flex-row-reverse">
                       <img
                         src={reply.userPhoto}
-                        className="w-6 h-6 rounded-full"
+                        className="w-8 h-8 rounded-full border border-white/10"
                         referrerPolicy="no-referrer"
                       />
+                      <span className="font-bold text-sm text-gray-200">
+                        {reply.userName}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 font-mono">
+                        {reply.timestamp?.toDate().toLocaleString("ar-EG")}
+                      </span>
+                      {(user.role === "admin" || reply.userId === user.uid) && (
+                        <button
+                          onClick={() => deleteDoc(doc(db, "discussions", selectedDiscussion.id, "replies", reply.id))}
+                          className="text-gray-600 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-300 text-right" dir="rtl">
+                  <p className="text-base text-gray-300 text-right leading-relaxed whitespace-pre-wrap" dir="rtl">
                     {reply.text}
                   </p>
-                </div>
+                </motion.div>
               ))}
             </div>
 
-            <div className="relative">
-              <textarea
-                placeholder="أضف رداً..."
-                value={newReply}
-                onChange={(e) => setNewReply(e.target.value)}
-                className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-2xl px-6 py-4 text-right h-24 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                dir="rtl"
-              />
-              <button
-                onClick={handleSendReply}
-                className="absolute left-2 bottom-2 px-6 py-2 bg-indigo-500 rounded-xl font-bold hover:bg-indigo-700 transition-all"
-              >
-                رد
-              </button>
-            </div>
-          </div>
-        ) : (
-          discussions.map((disc) => (
-            <motion.div
-              key={disc.id}
-              whileHover={{ scale: 1.01 }}
-              className="p-6 rounded-3xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 hover:bg-white/5 transition-all cursor-pointer group"
-              onClick={() => setSelectedDiscussion(disc)}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs">
-                    <MessageSquare size={14} />
-                    {disc.repliesCount} ردود
-                  </div>
-                  {(user.role === "admin" || disc.userId === user.uid) &&
-                    (deletingDiscussionId === disc.id ? (
-                      <div
-                        className="flex items-center gap-2 bg-red-500/10 px-2 py-1 rounded border border-red-500/30"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-[10px] text-red-400">حذف؟</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDiscussion(disc.id, disc.userId);
-                          }}
-                          className="text-[10px] text-red-500 hover:text-white font-bold"
-                        >
-                          نعم
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingDiscussionId(null);
-                          }}
-                          className="text-[10px] text-gray-400"
-                        >
-                          لا
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingDiscussionId(disc.id);
-                        }}
-                        className="p-2 text-gray-500 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="font-bold text-sm">{disc.userName}</p>
-                    <p className="text-[10px] text-gray-500">
-                      {disc.timestamp?.toDate().toLocaleDateString("ar-EG")}
-                    </p>
-                  </div>
-                  <img
-                    src={disc.userPhoto}
-                    className="w-10 h-10 rounded-full border border-white/10"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+            <div className="sticky bottom-4 z-20">
+              <div className="relative p-2 bg-[#0e1021]/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex gap-2 w-full mx-auto shadow-black/50">
+                <input
+                  type="text"
+                  placeholder="أكتب ردك هنا..."
+                  value={newReply}
+                  onChange={(e) => setNewReply(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendReply();
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-4 py-3 text-right focus:outline-none text-white placeholder-gray-500"
+                  dir="rtl"
+                />
+                <button
+                  onClick={handleSendReply}
+                  disabled={!newReply.trim()}
+                  className="px-6 bg-indigo-500 hover:bg-indigo-600 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:hover:bg-indigo-500 flex items-center justify-center flex-shrink-0"
+                >
+                  إرسال
+                </button>
               </div>
-              <h3 className="text-lg font-bold text-right group-hover:text-indigo-500 transition-colors">
-                {disc.title}
-              </h3>
-              <p
-                className="text-sm text-gray-400 text-right mt-2 line-clamp-2"
-                dir="rtl"
-              >
-                {disc.content}
-              </p>
-            </motion.div>
-          ))
-        )}
-        {!selectedDiscussion && discussions.length === 0 && (
-          <div className="py-20 text-center border-2 border-dashed border-white/10 rounded-3xl">
-            <p className="text-gray-500 italic">لا توجد نقاشات حالياً</p>
-          </div>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            {loading ? (
+               <div className="space-y-4">
+                 {[1, 2, 3, 4, 5].map(i => (
+                   <div key={i} className="h-32 rounded-3xl bg-[#0a0b16] animate-pulse border border-white/5" />
+                 ))}
+               </div>
+            ) : filteredDiscussions.length === 0 ? (
+               <div className="py-24 text-center flex flex-col items-center justify-center gap-4 bg-[#0a0b16]/50 rounded-3xl border border-dashed border-white/10 mx-auto max-w-lg">
+                 <MessageCircle className="w-16 h-16 text-gray-600" />
+                 <p className="text-xl text-gray-400 font-bold">الساحة صامتة اليوم</p>
+                 <p className="text-gray-500 text-sm">كن أول من يفتح نقاشاً مثيراً للاهتمام!</p>
+                 <button onClick={() => setIsCreating(true)} className="mt-4 px-6 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all font-bold">إبدأ نقاشاً</button>
+               </div>
+            ) : (
+               filteredDiscussions.map((disc, index) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  key={disc.id}
+                  onClick={() => setSelectedDiscussion(disc)}
+                  className="p-5 md:p-6 rounded-3xl bg-[#0e1021] border border-white/5 hover:border-indigo-500/30 hover:bg-[#121528] transition-all cursor-pointer group shadow-sm hover:shadow-xl hover:shadow-indigo-900/20 relative"
+                >
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-l-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  
+                  <div className="flex flex-col md:flex-row-reverse items-start justify-between gap-4">
+                    {/* User Info & Category */}
+                    <div className="flex items-center gap-3 flex-row-reverse w-full md:w-auto justify-start">
+                      <img
+                        src={disc.userPhoto}
+                        className="w-10 h-10 rounded-xl border border-white/10 shadow-sm"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <p className="font-bold text-sm text-gray-200">{disc.userName}</p>
+                          <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-gray-400 w-max">
+                            {(disc as any).category || 'عام'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500">
+                          {disc.timestamp?.toDate().toLocaleDateString("ar-EG")}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Title & Stats */}
+                    <div className="flex-1 text-right flex flex-col items-end">
+                      <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1 mb-2">
+                        {disc.title}
+                      </h3>
+                      <p className="text-sm text-gray-400 line-clamp-2 md:w-3/4 mb-4" dir="rtl">
+                        {disc.content}
+                      </p>
+                      
+                      <div className="flex gap-4 items-center flex-row-reverse w-full justify-between md:justify-start">
+                        <div className="flex gap-4 items-center">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 group-hover:text-indigo-300 transition-colors">
+                            <MessageSquare size={14} />
+                            {disc.repliesCount}
+                          </div>
+                          {((disc as any).likesCount > 0) && (
+                            <div className="flex items-center gap-1text-xs font-semibold text-pink-400/80">
+                              <Heart size={14} className="fill-pink-500/20" />
+                              {(disc as any).likesCount}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {(user.role === "admin" || disc.userId === user.uid) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDiscussion(disc.id, disc.userId);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+            
+            {!loading && discussions.length >= limitCount && !searchQuery && (
+              <div className="flex justify-center pt-4 pb-10">
+                <button 
+                  onClick={() => setLimitCount(prev => prev + 20)}
+                  className="px-6 py-2 rounded-full border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold"
+                >
+                  تحميل المزيد
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
+

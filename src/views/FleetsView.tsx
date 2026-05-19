@@ -123,6 +123,7 @@ import {
   deleteDoc,
   deleteField,
   writeBatch,
+  documentId,
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
@@ -210,7 +211,7 @@ export default function FleetsView({ user }: { user: UserData }) {
     if (user.fleetInvites && user.fleetInvites.length > 0 && !user.fleetId) {
       const q = query(
         collection(db, "fleets"),
-        where("__name__", "in", user.fleetInvites.slice(0, 10)),
+        where(documentId(), "in", user.fleetInvites.slice(0, 10)),
       );
       const unsub = onSnapshot(q, (snap) => {
         setInvitedFleets(
@@ -298,7 +299,7 @@ export default function FleetsView({ user }: { user: UserData }) {
           for (const chunk of chunks) {
             const q = query(
               collection(db, "profiles"),
-              where("__name__", "in", chunk),
+              where("uid", "in", chunk),
             );
             const snap = await getDocs(q);
             allMems = [

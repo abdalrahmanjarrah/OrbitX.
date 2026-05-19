@@ -261,7 +261,10 @@ service cloud.firestore {
              data.userName is string &&
              (!('userPhoto' in data) || isValidUrl(data.userPhoto)) &&
              data.timestamp is timestamp &&
-             data.repliesCount is number && data.repliesCount >= 0;
+             data.repliesCount is number && data.repliesCount >= 0 &&
+             (!('category' in data) || data.category is string) &&
+             (!('likesCount' in data) || data.likesCount is number) &&
+             (!('lastActivity' in data) || data.lastActivity is timestamp);
     }
 
     function isValidChallenge(data) {
@@ -464,9 +467,11 @@ service cloud.firestore {
                       isValidDiscussion(request.resource.data) && 
                       request.resource.data.userId == request.auth.uid &&
                       isRecent(request.resource.data.timestamp);
-      allow update: if isAuthenticated() && 
-                      request.auth.uid == resource.data.userId && 
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userPhoto']);
+      allow update: if isAuthenticated() && (
+                      (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userPhoto'])) ||
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']) && request.resource.data.likesCount == resource.data.likesCount + 1) ||
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['repliesCount', 'lastActivity']) && request.resource.data.repliesCount == resource.data.repliesCount + 1)
+                    );
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId) || isAdmin();
 
       match /replies/{replyId} {
@@ -543,8 +548,12 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
 
+    match /support_tickets/{ticketId} {
+      allow read, write: if isAdmin();
+    }
+
     match /admin_alerts/{alertId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isAdmin();
     }
 

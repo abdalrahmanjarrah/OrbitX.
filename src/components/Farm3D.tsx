@@ -10,7 +10,7 @@ class ModelErrorBoundary extends React.Component<{ children: React.ReactNode; fa
   render() { return this.state.hasError ? this.props.fallback : this.props.children; }
 }
 import Ecctrl from 'ecctrl';
-import { doc, updateDoc, increment, onSnapshot, collection, setDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, increment, onSnapshot, collection, setDoc, arrayUnion, query, limit } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { X, Store, MousePointer2, Leaf, Bird, Settings, Star } from 'lucide-react';
 import * as THREE from 'three';
@@ -459,18 +459,32 @@ export function Farm3D({
 
   // Sync player position
   const myPosRef = useRef([0, 2, 0]);
+  const lastSentPosRef = useRef([0, 2, 0]);
+  
   useEffect(() => {
     if (!auth.currentUser) return;
     const uid = auth.currentUser.uid;
     const interval = setInterval(() => {
-      setDoc(doc(db, `worlds/${worldId}/players/${uid}`), {
-        name: currentUserName,
-        position: myPosRef.current,
-        timestamp: Date.now()
-      }, { merge: true }).catch(err => console.error("Error updating player pos:", err));
+      const currentPos = myPosRef.current;
+      const lastPos = lastSentPosRef.current;
+      
+      // Calculate distance to see if player moved significantly (e.g. > 0.1 units)
+      const distSq = 
+        Math.pow(currentPos[0] - lastPos[0], 2) + 
+        Math.pow(currentPos[1] - lastPos[1], 2) + 
+        Math.pow(currentPos[2] - lastPos[2], 2);
+        
+      if (distSq > 0.01) {
+        lastSentPosRef.current = [...currentPos];
+        setDoc(doc(db, `worlds/${worldId}/players/${uid}`), {
+          name: currentUserName,
+          position: currentPos,
+          timestamp: Date.now()
+        }, { merge: true }).catch(err => console.error("Error updating player pos:", err));
+      }
     }, 2000);
 
-    const unsub = onSnapshot(collection(db, `worlds/${worldId}/players`), (snapshot) => {
+    const unsub = onSnapshot(query(collection(db, `worlds/${worldId}/players`), limit(20)), (snapshot) => {
       const players: any[] = [];
       const now = Date.now();
       snapshot.forEach(doc => {

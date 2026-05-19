@@ -240,6 +240,7 @@ export default function UserModal({
       collection(db, "exhibitions"),
       where("userId", "==", userId),
       orderBy("timestamp", "desc"),
+      limit(10)
     );
     const unsubscribe = onSnapshot(
       q,
@@ -268,7 +269,7 @@ export default function UserModal({
           try {
             const friendsQuery = query(
               collection(db, "profiles"),
-              where("__name__", "in", friendIds),
+              where("uid", "in", friendIds),
             );
             const friendsSnap = await getDocs(friendsQuery);
             setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
