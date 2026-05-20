@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "../lib/utils";
 import { db, handleFirestoreError, OperationType } from "../firebase";
-import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, limit, getDocs, getDoc } from "firebase/firestore";
 import { UserData, Discussion } from "../shared";
 
 export default function AdminView({ user }: { user: UserData }) {
@@ -64,14 +64,33 @@ export default function AdminView({ user }: { user: UserData }) {
   };
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(query(collection(db, "profiles"), orderBy("lastActiveTime", "desc"), limit(100)), (snap) => setUsers(snap.docs.map(doc => doc.data() as UserData)), (e) => console.warn(e));
-    const unsubSuggestions = onSnapshot(query(collection(db, "suggestions"), orderBy("timestamp", "desc"), limit(50)), (snap) => setSuggestions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), (e) => console.warn(e));
-    const unsubExhibitions = onSnapshot(query(collection(db, "exhibitions"), orderBy("timestamp", "desc"), limit(50)), (snap) => setExhibitions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), (e) => console.warn(e));
-    const unsubDiscussions = onSnapshot(query(collection(db, "discussions"), orderBy("timestamp", "desc"), limit(50)), (snap) => setDiscussions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Discussion)), (e) => console.warn(e));
-    const unsubSettings = onSnapshot(doc(db, "system", "settings"), (docSnap) => { if (docSnap.exists()) setIsChatEnabled(docSnap.data().isChatEnabled !== false); }, (e) => console.warn(e));
-    const unsubSupport = onSnapshot(query(collection(db, "support_tickets"), orderBy("createdAt", "desc"), limit(50)), (snap) => setSupportTickets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))), (e) => console.warn(e));
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        const usersSnap = await getDocs(query(collection(db, "profiles"), orderBy("lastActiveTime", "desc"), limit(100)));
+        if (isMounted) setUsers(usersSnap.docs.map(doc => doc.data() as UserData));
 
-    return () => { unsubUsers(); unsubSuggestions(); unsubExhibitions(); unsubDiscussions(); unsubSettings(); unsubSupport(); };
+        const suggestionsSnap = await getDocs(query(collection(db, "suggestions"), orderBy("timestamp", "desc"), limit(50)));
+        if (isMounted) setSuggestions(suggestionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        const exhibitionsSnap = await getDocs(query(collection(db, "exhibitions"), orderBy("timestamp", "desc"), limit(50)));
+        if (isMounted) setExhibitions(exhibitionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        const discussionsSnap = await getDocs(query(collection(db, "discussions"), orderBy("timestamp", "desc"), limit(50)));
+        if (isMounted) setDiscussions(discussionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Discussion));
+
+        const settingsSnap = await getDoc(doc(db, "system", "settings"));
+        if (isMounted && settingsSnap.exists()) setIsChatEnabled(settingsSnap.data().isChatEnabled !== false);
+
+        const supportSnap = await getDocs(query(collection(db, "support_tickets"), orderBy("createdAt", "desc"), limit(50)));
+        if (isMounted) setSupportTickets(supportSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (e) {
+        console.warn(e);
+      }
+    };
+    fetchData();
+
+    return () => { isMounted = false; };
   }, []);
 
   const toggleChat = async () => {

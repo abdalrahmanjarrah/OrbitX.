@@ -125,6 +125,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
+import { ChallengeDebugger } from "../challengeDebug";
 
 import { FirestoreError } from 'firebase/firestore';
 
@@ -188,45 +189,77 @@ export default function ChallengeModal({
 }) {
   const [friends, setFriends] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDuration, setSelectedDuration] = useState<number>(60);
+  const [customDuration, setCustomDuration] = useState<string>("");
+
+  const DURATION_OPTIONS = [
+    { label: "ساعة واحدة", value: 60 },
+    { label: "ساعتان", value: 120 },
+    { label: "3 ساعات", value: 180 },
+    { label: "5 ساعات", value: 300 },
+    { label: "مخصص", value: -1 },
+  ];
 
   useEffect(() => {
-    const q = query(collection(db, "users", user.uid, "friends"), limit(20));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const friendIds = snapshot.docs.map((doc) => doc.id);
-      if (friendIds.length > 0) {
-        try {
+    let isMounted = true;
+    const fetchFriends = async () => {
+      try {
+        const q = query(collection(db, "users", user.uid, "friends"), limit(20));
+        const snapshot = await getDocs(q);
+        const friendIds = snapshot.docs.map((doc) => doc.id);
+        if (friendIds.length > 0 && isMounted) {
           const friendsQuery = query(
             collection(db, "profiles"),
             where("uid", "in", friendIds),
           );
           const friendsSnap = await getDocs(friendsQuery);
-          setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
-        } catch (e) {
-          console.error("Error fetching friends details:", e);
+          if (isMounted) setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
+        } else if (isMounted) {
+          setFriends([]);
         }
-      } else {
-        setFriends([]);
+        if (isMounted) setLoading(false);
+      } catch (e) {
+        console.error("Error fetching friends details:", e);
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    };
+    fetchFriends();
+    return () => { isMounted = false; };
   }, [user.uid]);
 
-  const sendChallenge = async (friendId: string) => {
+  const sendChallenge = async (friend: UserData) => {
+    let duration = selectedDuration;
+    if (duration === -1) {
+      duration = parseInt(customDuration, 10);
+      if (isNaN(duration) || duration < 10) {
+        alert("الرجاء إدخال مدة صحيحة (أقل شيء 10 دقائق).");
+        return;
+      }
+    }
+
     try {
-      await addDoc(collection(db, "challenges"), {
+      const docRef = await addDoc(collection(db, "challenges"), {
         challengerId: user.uid,
         challengerName: user.displayName,
-        challengedId: friendId,
+        challengedId: friend.uid,
+        challengedName: friend.displayName || "صديق",
         status: "pending",
-        createdAt: serverTimestamp(),
+        createdAt: Date.now(),
+        durationMinutes: duration,
+        progressPlayer1: 0,
+        progressPlayer2: 0,
+        rewardsClaimed: []
       });
-      addDoc(collection(db, "users", friendId, "notifications"), {
+      
+      ChallengeDebugger.logCreation(docRef.id, duration);
+
+      addDoc(collection(db, "users", friend.uid, "notifications"), {
         type: "challenge",
-        content: `دعاك ${user.displayName} لتحدي دراسي جديد!`,
+        content: `دعاك ${user.displayName} لتحدي دراسي لمدة ${duration} دقيقة!`,
         read: false,
         timestamp: serverTimestamp(),
       }).catch(console.error);
+      
       alert("تم إرسال طلب التحدي بنجاح!");
       onClose();
     } catch (e) {
@@ -235,11 +268,11 @@ export default function ChallengeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#0a0b16] rounded-3xl p-6 md:p-8 w-full max-w-md border border-white/10 shadow-2xl shadow-indigo-900/20 relative"
+        className="bg-[#0a0b16] rounded-3xl p-6 md:p-8 w-full max-w-md border border-white/10 shadow-2xl shadow-indigo-900/20 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
       >
         <button
           onClick={onClose}
@@ -251,6 +284,38 @@ export default function ChallengeModal({
           اختر صديق للتحدي 🎯
         </h2>
 
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-gray-300 mb-2">
+            مدة التحدي (مين يخلصها أول بيفوز)
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            {DURATION_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedDuration(opt.value)}
+                className={cn(
+                  "px-3 py-2 text-sm font-bold rounded-xl border transition-all",
+                  selectedDuration === opt.value
+                    ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                    : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {selectedDuration === -1 && (
+            <input
+              type="number"
+              placeholder="المدة بالدقائق (مثال: 45)"
+              value={customDuration}
+              onChange={(e) => setCustomDuration(e.target.value)}
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500 text-sm"
+              min="10"
+            />
+          )}
+        </div>
+
         {loading ? (
           <div className="py-8 text-center text-gray-500">
             جاري تحميل الأصدقاء...
@@ -260,11 +325,11 @@ export default function ChallengeModal({
             لا يوجد أصدقاء. ابحث عن رواد لتضيفهم!
           </div>
         ) : (
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+          <div className="space-y-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
             {friends.map((friend) => (
               <div
                 key={friend.uid}
-                className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5"
+                className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 flex-wrap gap-2"
               >
                 <div className="flex items-center gap-3">
                   <div className="relative">
@@ -292,10 +357,10 @@ export default function ChallengeModal({
                   </div>
                 </div>
                 <button
-                  onClick={() => sendChallenge(friend.uid)}
+                  onClick={() => sendChallenge(friend)}
                   className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 text-white"
                 >
-                  تحدي
+                  إرسال تحدي
                 </button>
               </div>
             ))}

@@ -220,68 +220,70 @@ export default function HomeView({
   const [pendingChallenges, setPendingChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
-    const roomsQuery = query(
-      collection(db, "rooms"),
-      orderBy("createdAt", "desc"),
-      limit(50),
-    );
-    const unsubscribeRooms = onSnapshot(
-      roomsQuery,
-      (snapshot) => {
+    let unsubscribeChallenges: () => void;
+    let unsubscribeUsers: () => void;
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        const roomsQuery = query(
+          collection(db, "rooms"),
+          orderBy("createdAt", "desc"),
+          limit(50),
+        );
+        const roomsSnap = await getDocs(roomsQuery);
         const fetchedRooms: Room[] = [];
         const now = Date.now();
         
-        snapshot.docs.forEach((docSnap) => {
-          // تأكيد أن المستند موجود وله بيانات فعلاً قبل أي فحص لقطع الشك باليقين
+        roomsSnap.docs.forEach((docSnap) => {
           if (!docSnap.exists()) return;
-          
           const data = docSnap.data() as Room;
-          
-          // تأمين كود الحذف التلقائي للغرف الفارغة لمنع تعليق قاعدة البيانات
+          if (data && data.isChallenge) {
+             if (data.participants?.includes(user?.uid)) {
+                fetchedRooms.push({ id: docSnap.id, ...data });
+             }
+             return;
+          }
           if (data && data.participants?.length === 0 && data.emptyAt) {
             const emptyMs = data.emptyAt.toMillis
               ? data.emptyAt.toMillis()
               : data.emptyAt.seconds * 1000;
-              
-            // إذا مرت 5 دقائق وهي فارغة يحذفها، بشرط ألا نكون نحن من يحذفها يدوياً الآن
             if (now - emptyMs > 300000) {
               deleteDoc(docSnap.ref).catch(() => {});
-              return; // توقف هنا ولا تضفها للغرف المعروضة
+              return;
             }
           }
-          
-          if (data) {
-            fetchedRooms.push({ id: docSnap.id, ...data });
+          if (data) fetchedRooms.push({ id: docSnap.id, ...data });
+        });
+        if (isMounted) setRooms(fetchedRooms);
+
+        const adviceQuery = query(
+          collection(db, "advices"),
+          orderBy("timestamp", "desc"),
+          limit(1),
+        );
+        const adviceSnap = await getDocs(adviceQuery);
+        if (!adviceSnap.empty && isMounted) {
+          setAdvice(adviceSnap.docs[0].data().text);
+        }
+
+        const usersQuery = query(collection(db, "profiles"), orderBy("lastActiveTime", "desc"), limit(15));
+        unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+          if (isMounted) {
+            setActiveUsers(
+              snapshot.docs
+                .map((doc) => doc.data() as UserData)
+                .filter((u) => u.uid !== user.uid),
+            );
           }
         });
-        setRooms(fetchedRooms);
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "rooms"),
-    );
 
-    const adviceQuery = query(
-      collection(db, "advices"),
-      orderBy("timestamp", "desc"),
-      limit(1),
-    );
-    const unsubscribeAdvice = onSnapshot(
-      adviceQuery,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          setAdvice(snapshot.docs[0].data().text);
-        }
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "advices"),
-    );
-
-    const usersQuery = query(collection(db, "profiles"), limit(10));
-    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-      setActiveUsers(
-        snapshot.docs
-          .map((doc) => doc.data() as UserData)
-          .filter((u) => u.uid !== user.uid),
-      );
-    });
+      } catch (e) {
+        console.error("Error fetching home data:", e);
+      }
+    };
+    
+    fetchData();
 
     const challengesQuery = query(
       collection(db, "challenges"),
@@ -289,7 +291,7 @@ export default function HomeView({
       where("status", "==", "pending"),
       limit(20)
     );
-    const unsubscribeChallenges = onSnapshot(
+    unsubscribeChallenges = onSnapshot(
       challengesQuery,
       (snapshot) => {
         setPendingChallenges(
@@ -302,10 +304,9 @@ export default function HomeView({
     );
 
     return () => {
-      unsubscribeRooms();
-      unsubscribeAdvice();
-      unsubscribeUsers();
-      unsubscribeChallenges();
+      isMounted = false;
+      if (unsubscribeChallenges) unsubscribeChallenges();
+      if (unsubscribeUsers) unsubscribeUsers();
     };
   }, [user.uid]);;
 
@@ -519,7 +520,7 @@ export default function HomeView({
                         <div className="flex gap-2">
                            <button 
                              onClick={async () => {
-                               await updateDoc(doc(db, "challenges", challenge.id), { status: "accepted" });
+                               await updateDoc(doc(db, "challenges", challenge.id), { status: "active" });
                                const roomData = {
                                  name: `تحدي: ${challenge.challengerName} ⚔️ ${user.displayName}`,
                                  task: "تحدي التركيز العميق",
@@ -527,15 +528,18 @@ export default function HomeView({
                                  creatorName: user.displayName,
                                  participants: [user.uid, challenge.challengerId],
                                  maxParticipants: 2,
-                                 timerStatus: "idle", timerDuration: 25, breakDuration: 5,
+                                 timerStatus: "idle", timerDuration: challenge.durationMinutes || 60, breakDuration: 5,
                                  createdAt: serverTimestamp(),
+                                 isChallenge: true,
+                                 challengeId: challenge.id,
+                                 challengeDurationMinutes: challenge.durationMinutes || 60
                                };
                                const roomRef = await addDoc(collection(db, "rooms"), roomData);
                                onEnterStation(roomRef.id);
                              }}
                              className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg text-xs font-bold transition-colors"
                            >
-                             قبول
+                             قبول ودخول
                            </button>
                            <button
                              onClick={() => updateDoc(doc(db, "challenges", challenge.id), { status: "declined" })}

@@ -94,6 +94,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { Debugger } from "../firebaseDebug";
 import {
   auth,
   db,
@@ -197,6 +198,64 @@ export default function StudyRoomView({
       await updateDoc(doc(db, "rooms", stationId), data);
     } catch (e) {}
   };
+
+  const checkChallengeCompletion = async (cId: string) => {
+    try {
+      const snap = await getDoc(doc(db, "challenges", cId));
+      if (!snap.exists()) return;
+      const cData = snap.data() as Challenge;
+      
+      if (cData.status !== "active") return;
+      
+      const target = cData.durationMinutes;
+      const p1 = cData.progressPlayer1 || 0;
+      const p2 = cData.progressPlayer2 || 0;
+      
+      if (p1 >= target || p2 >= target) {
+         let winnerId = "";
+         if (p1 >= target && p2 >= target) {
+           winnerId = p1 > p2 ? cData.challengerId : (p2 > p1 ? cData.challengedId : "tie");
+         } else if (p1 >= target) {
+           winnerId = cData.challengerId;
+         } else {
+           winnerId = cData.challengedId;
+         }
+         
+         await updateDoc(doc(db, "challenges", cId), {
+           status: "completed",
+           winnerId
+         });
+         
+         const isUserWinner = winnerId === user.uid;
+         if (winnerId !== "tie") {
+            if (isUserWinner) {
+               await updateDoc(doc(db, "users", user.uid), {
+                  xp: increment(50),
+                  coins: increment(50)
+               });
+               addDoc(collection(db, "users", user.uid, "notifications"), {
+                 type: "challenge_win",
+                 content: `مبروك! لقد فزت بتحدي التركيز. تم إضافة 50 XP لعملك الرائع!`,
+                 read: false,
+                 timestamp: serverTimestamp(),
+               }).catch(() => {});
+            }
+         }
+         
+         addDoc(collection(db, "rooms", stationId, "messages"), {
+            text: winnerId === "tie" ? "انتهى التحدي بالتعادل!" : `🏆 انتهى التحدي! الفائز هو ${winnerId === cData.challengerId ? cData.challengerName : cData.challengedName}`,
+            userId: "system",
+            userName: "نظام التحديات",
+            userPhoto: "",
+            timestamp: serverTimestamp(),
+            type: "text",
+         });
+      }
+    } catch(e) {
+      console.error(`Failed to check challenge: ${e}`);
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeAlerts, setActiveAlerts] = useState<{id: string, text: string, type: 'distraction' | 'presence'}[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -207,6 +266,7 @@ export default function StudyRoomView({
   const lastTypingUpdate = useRef(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [participantsData, setParticipantsData] = useState<UserData[]>([]);
+  const [challengeData, setChallengeData] = useState<Challenge | null>(null);
   const [showAlert, setShowAlert] = useState(false);
   const [showFuelLeak, setShowFuelLeak] = useState(false);
   const [leakedXP, setLeakedXP] = useState(0);
@@ -222,6 +282,7 @@ export default function StudyRoomView({
   const [hasJoinedStation, setHasJoinedStation] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const isJoinedRef = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -237,9 +298,16 @@ export default function StudyRoomView({
   const sessionXpCountRef = useRef<number>(0);
   const MAX_XP_PER_SESSION = 120;
 
+  const xpIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!isJoined || room?.timerStatus !== "focus") {
       lastXpUpdateTimeRef.current = null;
+      if (xpIntervalRef.current) {
+        Debugger.logClearInterval("XP Loop (Not Joined)", xpIntervalRef.current);
+        clearInterval(xpIntervalRef.current);
+        xpIntervalRef.current = null;
+      }
       return;
     }
 
@@ -249,51 +317,70 @@ export default function StudyRoomView({
       afkFailCountRef.current = 0;
     }
 
-    const intervalId = setInterval(() => {
+    if (xpIntervalRef.current) {
+      Debugger.logClearInterval("XP Loop", xpIntervalRef.current);
+      clearInterval(xpIntervalRef.current);
+    }
+
+    xpIntervalRef.current = setInterval(() => {
       const now = Date.now();
       const secondsSpent = Math.floor(
         (now - (lastXpUpdateTimeRef.current || now)) / 1000
       );
 
       if (secondsSpent >= 60) {
-        const safeMinutes = 1;
-        lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + safeMinutes * 60000;
+        const elapsedMinutes = Math.floor(secondsSpent / 60);
+        lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
 
-        // Ensure no multiple tabs can grind XP faster than 1 per minute globally.
-        // We use user.lastXpUpdate (if present) to enforce this across all instances.
         const globalLastGrant = (user as any).lastXpUpdate || 0;
         const lastGrant = Math.max(lastXpGrantTimestampRef.current || 0, globalLastGrant);
         
-        if (
-          now - lastGrant >= 55000 &&
-          sessionXpCountRef.current < MAX_XP_PER_SESSION
-        ) {
-          lastXpGrantTimestampRef.current = now;
+        const globalElapsedMinutes = Math.floor((now - lastGrant + 5000) / 60000); // 5s grace period
 
-          const xpToGrant = Math.min(
-            safeMinutes,
-            MAX_XP_PER_SESSION - sessionXpCountRef.current
-          );
-          if (xpToGrant > 0) {
-            sessionXpCountRef.current += xpToGrant;
-            updateDoc(doc(db, "users", user.uid), {
+        const maxAllowedXp = MAX_XP_PER_SESSION - sessionXpCountRef.current;
+        let xpToGrant = Math.min(elapsedMinutes, globalElapsedMinutes, maxAllowedXp);
+
+        if (xpToGrant > 0) {
+          lastXpGrantTimestampRef.current = now;
+          sessionXpCountRef.current += xpToGrant;
+          Debugger.logXP(xpToGrant, `Focus Interval (Elapsed: ${elapsedMinutes}m)`);
+          
+          updateDoc(doc(db, "users", user.uid), {
+            xp: increment(xpToGrant),
+            lastXpUpdate: now,
+          }).catch(() => {});
+          
+          if (room?.isChallenge && room?.challengeId) {
+             const isPlayer1 = user.uid === room.creatorId;
+             const updateField = isPlayer1 ? "progressPlayer1" : "progressPlayer2";
+             updateDoc(doc(db, "challenges", room.challengeId), {
+                [updateField]: increment(xpToGrant)
+             }).then(() => checkChallengeCompletion(room.challengeId))
+               .catch((e) => console.error("Failed to update challenge progress:", e));
+          }
+
+          if (user.fleetId) {
+            updateDoc(doc(db, "fleets", user.fleetId), {
               xp: increment(xpToGrant),
-              lastXpUpdate: now,
             }).catch(() => {});
-            if (user.fleetId) {
-              updateDoc(doc(db, "fleets", user.fleetId), {
-                xp: increment(xpToGrant),
-              }).catch(() => {});
-            }
           }
         }
       }
     }, 1000);
+    Debugger.logInterval("XP Loop", xpIntervalRef.current);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      if (xpIntervalRef.current) {
+        Debugger.logClearInterval("XP Loop (Cleanup)", xpIntervalRef.current);
+        clearInterval(xpIntervalRef.current);
+        xpIntervalRef.current = null;
+      }
+    };
   }, [isJoined, room?.timerStatus, user.uid, user.fleetId]);
 
   const handleConfirmExit = async () => {
+    if (isExiting) return;
+    setIsExiting(true);
     setShowExitDialog(false);
 
     let isExitPenalty = false;
@@ -308,18 +395,21 @@ export default function StudyRoomView({
             xp: increment(-10)
           });
         }
-
-        await updateDoc(doc(db, 'rooms', stationId), {
-  participants: arrayRemove(user.uid)
-});
-
-if (fuelLeakIntervalRef.current) {
-  clearInterval(fuelLeakIntervalRef.current);
-  fuelLeakIntervalRef.current = null;
-}
       } catch (e) {
         console.error("Failed to apply exit penalty:", e);
       }
+    }
+
+    try {
+      await updateDoc(doc(db, 'rooms', stationId), {
+        participants: arrayRemove(user.uid)
+      });
+      if (fuelLeakIntervalRef.current) {
+        clearInterval(fuelLeakIntervalRef.current);
+        fuelLeakIntervalRef.current = null;
+      }
+    } catch (e) {
+      console.error("Failed to remove user from room:", e);
     }
 
     // Broadcast exit to chat
@@ -444,6 +534,26 @@ if (fuelLeakIntervalRef.current) {
     const autoJoin = async () => {
       if (!autoJoinAttempted.current) {
         autoJoinAttempted.current = true;
+        
+        let isAllowed = true;
+        try {
+          const docSnap = await getDoc(doc(db, "rooms", stationId));
+          if (docSnap.exists()) {
+            const data = docSnap.data() as Room;
+            if (data.isChallenge) {
+              isAllowed = (user.uid === data.creatorId) || (data.participants && data.participants.includes(user.uid));
+            }
+          }
+        } catch (e) {
+          console.error("error checking challenge status", e);
+        }
+
+        if (!isAllowed) {
+          alert("هذا التحدي خاص. لا يمكنك الدخول.");
+          onExit();
+          return;
+        }
+
         setHasJoinedStation(true);
         setIsJoined(true);
         try {
@@ -458,7 +568,7 @@ if (fuelLeakIntervalRef.current) {
             Notification.requestPermission();
           }
           await updateDoc(doc(db, "users", user.uid), {
-            currentActivity: `في مدار محطة: ${room?.name}`,
+            currentActivity: `في مدار محطة: ${room?.name || "خاصة"}`,
           });
         } catch (e) {
           console.error(e);
@@ -529,6 +639,20 @@ if (fuelLeakIntervalRef.current) {
   }, [room?.timerStatus]);
 
   useEffect(() => {
+    let unsubChallenge: () => void;
+    if (room?.isChallenge && room?.challengeId) {
+      unsubChallenge = onSnapshot(doc(db, "challenges", room.challengeId), (docSnap) => {
+         if (docSnap.exists()) {
+             setChallengeData({ id: docSnap.id, ...docSnap.data() } as Challenge);
+         }
+      });
+    }
+    return () => {
+      if (unsubChallenge) unsubChallenge();
+    };
+  }, [room?.isChallenge, room?.challengeId]);
+
+  useEffect(() => {
     const roomRef = doc(db, "rooms", stationId);
     const unsubscribeRoom = onSnapshot(
       roomRef,
@@ -569,18 +693,18 @@ if (fuelLeakIntervalRef.current) {
 
     const messagesQuery = query(
       collection(db, "rooms", stationId, "messages"),
-      orderBy("timestamp", "asc"),
+      orderBy("timestamp", "desc"),
       limit(50),
     );
     let initialLoadMsgs = true;
     const unsubscribeMessages = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        setMessages(
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Message,
-          ),
+        let msgs = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as Message,
         );
+        msgs = msgs.reverse();
+        setMessages(msgs);
 
         snapshot.docChanges().forEach((change) => {
           if (change.type === "added") {
@@ -788,6 +912,7 @@ if (fuelLeakIntervalRef.current) {
             !e?.message?.includes("No document to update")
           ) {
             console.error('Cleanup safely bypassed:', e);
+            Debugger.logCleanupError(`StudyRoom cleanup failed: ${e?.message}`);
           }
         }
       };
@@ -932,21 +1057,22 @@ if (fuelLeakIntervalRef.current) {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (showAFKCheck && afkTimeLeft > 0) {
+    if (showAFKCheck) {
       interval = setInterval(() => {
         setAfkTimeLeft((prev) => {
           if (prev <= 1) {
-            handleAFKFailure();
+            clearInterval(interval);
+            setTimeout(() => handleAFKFailure(), 0);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-    } else if (!showAFKCheck && afkTimeLeft <= 0) {
-      // Just safeguard
     }
-    return () => clearInterval(interval);
-  }, [showAFKCheck, afkTimeLeft]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showAFKCheck]);
 
   const handleAFKFailure = async () => {
     afkFailCountRef.current += 1;
@@ -1563,11 +1689,11 @@ if (fuelLeakIntervalRef.current) {
                 if (room.timerStatus === "focus") {
                   setShowExitDialog(true);
                 } else {
-                  // Cleanup handles leaving participants list
-                  onExit();
+                  handleConfirmExit();
                 }
               }}
-              className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2 group"
+              disabled={isExiting}
+              className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               title="خروج"
             >
               <span className="text-xs font-bold hidden sm:block">خروج</span>
@@ -1576,6 +1702,36 @@ if (fuelLeakIntervalRef.current) {
           </div>
         </div>
       </nav>
+
+      {/* Challenge UI Panel */}
+      {room?.isChallenge && challengeData && (
+         <div className="z-20 px-8 pt-4 w-full max-w-5xl mx-auto flex flex-col md:flex-row gap-4">
+            <div className="flex-1 bg-[#131526]/80 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-2xl flex items-center justify-between">
+                <div>
+                   <h3 className="font-bold text-fuchsia-400 flex items-center gap-2 text-sm mb-1">
+                      <Swords size={16} /> تحدي خاص
+                   </h3>
+                   <p className="text-xs text-gray-400">الهدف: {challengeData.durationMinutes} دقيقة تركيز</p>
+                </div>
+                {challengeData.status === "completed" ? (
+                   <div className="text-sm font-bold text-green-400">
+                     انتهى التحدي 🏆 الفائز: {challengeData.winnerId === challengeData.challengerId ? challengeData.challengerName : (challengeData.winnerId === challengeData.challengedId ? challengeData.challengedName : 'تعادل')}
+                   </div>
+                ) : (
+                   <div className="flex gap-8">
+                      <div className="flex flex-col items-center">
+                         <span className="text-[10px] text-gray-400 mb-1">{challengeData.challengerName}</span>
+                         <span className="font-black text-xl text-white">{challengeData.progressPlayer1 || 0}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                         <span className="text-[10px] text-gray-400 mb-1">{challengeData.challengedName}</span>
+                         <span className="font-black text-xl text-white">{challengeData.progressPlayer2 || 0}</span>
+                      </div>
+                   </div>
+                )}
+            </div>
+         </div>
+      )}
 
       {/* Active Alerts Banner */}
       <AnimatePresence>
@@ -2279,9 +2435,10 @@ if (fuelLeakIntervalRef.current) {
                 </button>
                 <button
                   onClick={handleConfirmExit}
-                  className="px-4 py-3 bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all text-sm whitespace-nowrap"
+                  disabled={isExiting}
+                  className="px-4 py-3 bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  مغادرة الآن
+                  {isExiting ? "جاري المغادرة..." : "مغادرة الآن"}
                 </button>
               </div>
             </div>

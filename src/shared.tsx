@@ -491,6 +491,8 @@ export interface UserData {
   streak?: number;
   lastActiveDate?: string;
   lastStudyDate?: string;
+  totalFocusTime?: number;
+  focusSessions?: number;
   completedTasks?: number;
   hearts?: number;
   totalFocusSessions?: number;
@@ -569,6 +571,9 @@ export interface Room {
   sharedNotes?: string;
   accumulatedFocusSeconds?: number;
   isChatLocked?: boolean;
+  isChallenge?: boolean;
+  challengeId?: string;
+  challengeDurationMinutes?: number;
 }
 
 export interface Challenge {
@@ -576,8 +581,14 @@ export interface Challenge {
   challengerId: string;
   challengerName: string;
   challengedId: string;
-  status: "pending" | "accepted" | "declined";
-  createdAt: any;
+  challengedName: string;
+  status: "pending" | "accepted" | "active" | "completed" | "cancelled" | "expired" | "declined";
+  createdAt: number;
+  durationMinutes: number;
+  progressPlayer1: number;
+  progressPlayer2: number;
+  winnerId?: string;
+  rewardsClaimed?: string[];
 }
 
 export interface AwarenessSignal {

@@ -33,40 +33,40 @@ export default function ProfileView({
   const fileInputExhibitionRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "exhibitions"),
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => setExhibitions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))),
-      (e) => handleFirestoreError(e, OperationType.GET, `exhibitions_user_${user.uid}`)
-    );
-    return () => unsubscribe();
+    const fetchExhibitions = async () => {
+      try {
+        const q = query(
+          collection(db, "exhibitions"),
+          where("userId", "==", user.uid),
+          orderBy("timestamp", "desc")
+        );
+        const snapshot = await getDocs(q);
+        setExhibitions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, `exhibitions_user_${user.uid}`);
+      }
+    };
+    fetchExhibitions();
   }, [user.uid]);
 
   useEffect(() => {
-    const q = query(collection(db, "users", user.uid, "friends"), limit(20));
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
+    const fetchFriends = async () => {
+      try {
+        const q = query(collection(db, "users", user.uid, "friends"), limit(20));
+        const snapshot = await getDocs(q);
         const friendIds = snapshot.docs.map((doc) => doc.id);
         if (friendIds.length > 0) {
-          try {
-            const friendsQuery = query(collection(db, "profiles"), where("uid", "in", friendIds));
-            const friendsSnap = await getDocs(friendsQuery);
-            setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
-          } catch (e) {
-            console.error("Error fetching friends details:", e);
-          }
+          const friendsQuery = query(collection(db, "profiles"), where("uid", "in", friendIds));
+          const friendsSnap = await getDocs(friendsQuery);
+          setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
         } else {
           setFriends([]);
         }
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/friends`)
-    );
-    return () => unsubscribe();
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, `users/${user.uid}/friends`);
+      }
+    };
+    fetchFriends();
   }, [user.uid]);
 
   const handleUpdateBio = async () => {

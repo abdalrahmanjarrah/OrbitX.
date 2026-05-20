@@ -270,6 +270,11 @@ export default function StationCard({
 
       {/* Main Content */}
       <div className="relative z-10 mt-auto pb-4">
+         {room.isChallenge && (
+            <div className="inline-flex items-center gap-1.5 bg-fuchsia-600 font-bold text-white px-2 py-1 rounded-md text-[10px] mb-2 shadow-sm shadow-fuchsia-600/30">
+               <Swords size={12} /> تحدي خاص
+            </div>
+         )}
          <h4 className="text-2xl sm:text-3xl font-black font-display text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-l group-hover:from-white group-hover:to-cyan-300 transition-all duration-500 leading-tight">
             {room.name}
          </h4>

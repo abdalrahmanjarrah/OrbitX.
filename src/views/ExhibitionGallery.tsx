@@ -183,21 +183,26 @@ export default function ExhibitionGallery() {
   const [exhibitions, setExhibitions] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "exhibitions"),
-      orderBy("timestamp", "desc"),
-      limit(8),
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setExhibitions(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+    let isMounted = true;
+    const fetchExhibitions = async () => {
+      try {
+        const q = query(
+          collection(db, "exhibitions"),
+          orderBy("timestamp", "desc"),
+          limit(8),
         );
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "exhibitions_global"),
-    );
-    return () => unsubscribe();
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          setExhibitions(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+          );
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "exhibitions_global");
+      }
+    };
+    fetchExhibitions();
+    return () => { isMounted = false; };
   }, []);
 
   return (

@@ -197,16 +197,17 @@ export default function UserModal({
   const [myFleet, setMyFleet] = useState<Fleet | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (currentUser?.fleetId) {
-      const unsub = onSnapshot(
-        doc(db, "fleets", currentUser.fleetId),
-        (snap) => {
-          if (snap.exists())
-            setMyFleet({ id: snap.id, ...snap.data() } as Fleet);
-        },
-      );
-      return () => unsub();
+      getDoc(doc(db, "fleets", currentUser.fleetId)).then((snap) => {
+        if (isMounted && snap.exists()) {
+          setMyFleet({ id: snap.id, ...snap.data() } as Fleet);
+        }
+      });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [currentUser?.fleetId]);
 
   const handleInviteToFleet = async () => {
@@ -220,74 +221,69 @@ export default function UserModal({
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "profiles", userId), (snap) => {
-      if (snap.exists()) setUserData(snap.data() as UserData);
+    let isMounted = true;
+    getDoc(doc(db, "profiles", userId)).then((snap) => {
+      if (isMounted && snap.exists()) setUserData(snap.data() as UserData);
     });
-    const friendUnsub = onSnapshot(
-      doc(db, "users", currentUserId, "friends", userId),
-      (snap) => {
-        setIsFriend(snap.exists());
-      },
-    );
+    getDoc(doc(db, "users", currentUserId, "friends", userId)).then((snap) => {
+      if (isMounted) setIsFriend(snap.exists());
+    });
     return () => {
-      unsub();
-      friendUnsub();
+      isMounted = false;
     };
   }, [userId, currentUserId]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "exhibitions"),
-      where("userId", "==", userId),
-      orderBy("timestamp", "desc"),
-      limit(10)
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setExhibitions(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+    let isMounted = true;
+    const fetchExhibitions = async () => {
+      try {
+        const q = query(
+          collection(db, "exhibitions"),
+          where("userId", "==", userId),
+          orderBy("timestamp", "desc"),
+          limit(10)
         );
-      },
-      (e) =>
-        handleFirestoreError(
-          e,
-          OperationType.GET,
-          "exhibitions_user_" + userId,
-        ),
-    );
-    return () => unsubscribe();
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          setExhibitions(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+          );
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "exhibitions_user_" + userId);
+      }
+    };
+    fetchExhibitions();
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   useEffect(() => {
-    const q = query(collection(db, "users", userId, "friends"), limit(20));
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
+    let isMounted = true;
+    const fetchFriends = async () => {
+      try {
+        const q = query(collection(db, "users", userId, "friends"), limit(20));
+        const snapshot = await getDocs(q);
         const friendIds = snapshot.docs.map((doc) => doc.id);
-        if (friendIds.length > 0) {
-          try {
-            const friendsQuery = query(
-              collection(db, "profiles"),
-              where("uid", "in", friendIds),
-            );
-            const friendsSnap = await getDocs(friendsQuery);
-            setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
-          } catch (e) {
-            console.error("Error fetching friends details:", e);
-          }
-        } else {
+        if (friendIds.length > 0 && isMounted) {
+          const friendsQuery = query(
+            collection(db, "profiles"),
+            where("uid", "in", friendIds),
+          );
+          const friendsSnap = await getDocs(friendsQuery);
+          if (isMounted) setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
+        } else if (isMounted) {
           setFriends([]);
         }
-      },
-      (e) =>
-        handleFirestoreError(
-          e,
-          OperationType.GET,
-          "users/" + userId + "/friends",
-        ),
-    );
-    return () => unsubscribe();
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "users/" + userId + "/friends");
+      }
+    };
+    fetchFriends();
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   const handleSendFriendRequest = async () => {

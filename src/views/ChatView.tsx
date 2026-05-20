@@ -76,15 +76,16 @@ export default function ChatView({
     setLoading(true);
     const q = query(
       collection(db, "global_chat"),
-      orderBy("timestamp", "asc"),
-      firestoreLimit(50),
+      orderBy("timestamp", "desc"),
+      firestoreLimit(30),
     );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const msgs = snapshot.docs.map(
+        let msgs = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() }) as Message,
         );
+        msgs = msgs.reverse();
 
         if (!initialLoad.current && msgs.length > prevCount.current) {
           const lastMsg = msgs[msgs.length - 1];

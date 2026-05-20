@@ -208,20 +208,27 @@ export default function FleetsView({ user }: { user: UserData }) {
   const [kickingMemberId, setKickingMemberId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user.fleetInvites && user.fleetInvites.length > 0 && !user.fleetId) {
-      const q = query(
-        collection(db, "fleets"),
-        where(documentId(), "in", user.fleetInvites.slice(0, 10)),
-      );
-      const unsub = onSnapshot(q, (snap) => {
-        setInvitedFleets(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Fleet),
-        );
-      });
-      return () => unsub();
-    } else {
-      setInvitedFleets([]);
-    }
+    let isMounted = true;
+    const fetchInvites = async () => {
+      if (user.fleetInvites && user.fleetInvites.length > 0 && !user.fleetId) {
+        try {
+          const q = query(
+            collection(db, "fleets"),
+            where(documentId(), "in", user.fleetInvites.slice(0, 10)),
+          );
+          const snap = await getDocs(q);
+          if (isMounted) {
+            setInvitedFleets(
+              snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Fleet),
+            );
+          }
+        } catch (e) {}
+      } else if (isMounted) {
+        setInvitedFleets([]);
+      }
+    };
+    fetchInvites();
+    return () => { isMounted = false; };
   }, [user.fleetInvites, user.fleetId]);
 
   const handleAcceptInvite = async (fleetId: string) => {
@@ -247,45 +254,56 @@ export default function FleetsView({ user }: { user: UserData }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let unsub = () => {};
     if (user.fleetId) {
-      const unsub = onSnapshot(doc(db, "fleets", user.fleetId), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as Fleet;
-          if (!data.members.includes(user.uid)) {
+      unsub = onSnapshot(doc(db, "fleets", user.fleetId), (snap) => {
+        if (isMounted) {
+          if (snap.exists()) {
+            const data = snap.data() as Fleet;
+            if (!data.members.includes(user.uid)) {
+              setActiveFleet(null);
+              updateDoc(doc(db, "users", user.uid), {
+                fleetId: deleteField(),
+              }).catch(() => {});
+            } else {
+              setActiveFleet({ id: snap.id, ...data });
+            }
+          } else {
             setActiveFleet(null);
             updateDoc(doc(db, "users", user.uid), {
               fleetId: deleteField(),
             }).catch(() => {});
-          } else {
-            setActiveFleet({ id: snap.id, ...data });
           }
-        } else {
-          setActiveFleet(null);
-          updateDoc(doc(db, "users", user.uid), {
-            fleetId: deleteField(),
-          }).catch(() => {});
         }
       });
-      return () => unsub();
-    } else {
-      setActiveFleet(null);
+    } else if (isMounted) {
+       setActiveFleet(null);
     }
+    return () => { isMounted = false; unsub(); };
   }, [user.fleetId]);
 
   useEffect(() => {
-    if (!user.fleetId) {
-      const q = query(
-        collection(db, "fleets"),
-        orderBy("xp", "desc"),
-        limit(20),
-      );
-      const unsub = onSnapshot(q, (snap) => {
-        setAllFleets(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Fleet),
-        );
-      });
-      return () => unsub();
-    }
+    let isMounted = true;
+    const fetchAllFleets = async () => {
+      if (!user.fleetId) {
+        try {
+          const q = query(
+            collection(db, "fleets"),
+            orderBy("xp", "desc"),
+            limit(20),
+          );
+          const snap = await getDocs(q);
+          if (isMounted) {
+            setAllFleets(
+              snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Fleet),
+            );
+          }
+        } catch (e) {}
+      }
+    };
+    fetchAllFleets();
+    return () => { isMounted = false; };
   }, [user.fleetId]);
 
   useEffect(() => {

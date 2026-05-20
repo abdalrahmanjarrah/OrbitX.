@@ -11,7 +11,7 @@ import {
 import {
   collection, doc, addDoc, serverTimestamp, updateDoc, deleteDoc,
   query, orderBy, limit as firestoreLimit, onSnapshot as originalOnSnapshot, 
-  increment
+  increment, getDocs
 } from "firebase/firestore";
 import { ScheduleItem, UserData } from "../shared";
 
@@ -64,36 +64,37 @@ export default function ScheduleView({ user }: { user: UserData }) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    // Limit to 200 items to avoid quota issues. Sorting locally by time and day since we only have single composite index.
-    const q = query(
-      collection(db, "users", user.uid, "schedule"),
-      firestoreLimit(200)
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedItems = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as ScheduleItem
+    const fetchSchedule = async () => {
+      try {
+        const q = query(
+          collection(db, "users", user.uid, "schedule"),
+          firestoreLimit(200)
         );
-        // Sort explicitly by time
-        fetchedItems.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
-        setItems(fetchedItems);
-        setLoading(false);
-      },
-      (e) => {
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          const fetchedItems = snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as ScheduleItem
+          );
+          fetchedItems.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+          setItems(fetchedItems);
+          setLoading(false);
+        }
+      } catch (e) {
         handleFirestoreError(e, OperationType.GET, `users/${user.uid}/schedule`);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
-    );
-    return () => unsubscribe();
+    };
+    fetchSchedule();
+    return () => { isMounted = false; };
   }, [user.uid]);
 
   const handleAddItem = async () => {
     if (!time || !task) return;
     try {
       setIsCreating(false);
-      await addDoc(collection(db, "users", user.uid, "schedule"), {
+      const newItemData = {
         day,
         time,
         task,
@@ -103,7 +104,15 @@ export default function ScheduleView({ user }: { user: UserData }) {
         priority,
         category,
         timestamp: serverTimestamp()
+      };
+      const docRef = await addDoc(collection(db, "users", user.uid, "schedule"), newItemData);
+      
+      setItems(prev => {
+        const next = [...prev, { id: docRef.id, ...newItemData, timestamp: null } as any as ScheduleItem];
+        next.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+        return next;
       });
+
       setTime("");
       setTask("");
       setDuration("");

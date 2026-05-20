@@ -189,19 +189,24 @@ export default function LeaderboardView({
   const [leaders, setLeaders] = useState<UserData[]>([]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "profiles"),
-      orderBy("xp", "desc"),
-      limit(50),
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setLeaders(snapshot.docs.map((doc) => doc.data() as UserData));
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "profiles_leaderboard"),
-    );
-    return () => unsubscribe();
+    let isMounted = true;
+    const fetchLeaders = async () => {
+      try {
+        const q = query(
+          collection(db, "profiles"),
+          orderBy("xp", "desc"),
+          limit(50),
+        );
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          setLeaders(snapshot.docs.map((doc) => doc.data() as UserData));
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "profiles_leaderboard");
+      }
+    };
+    fetchLeaders();
+    return () => { isMounted = false; };
   }, []);
 
   return (

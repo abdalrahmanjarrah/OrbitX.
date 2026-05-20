@@ -207,21 +207,28 @@ export default function AwarenessView({ user }: { user: UserData }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
     const q = query(
       collection(db, "awareness_signals"),
       orderBy("timestamp", "desc"),
+      limit(20)
     );
-    const unsubscribe = onSnapshot(
+    const unsub = onSnapshot(
       q,
       (snapshot) => {
-        const fetched = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as AwarenessSignal,
-        );
-        setSignals([...fetched, ...DEFAULT_SIGNALS]);
+        if (isMounted) {
+          const fetched = snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as AwarenessSignal,
+          );
+          setSignals([...fetched, ...DEFAULT_SIGNALS]);
+        }
       },
       (e) => handleFirestoreError(e, OperationType.GET, "awareness_signals"),
     );
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, []);
 
   // force resize for globe on laptop

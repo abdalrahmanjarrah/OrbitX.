@@ -191,21 +191,26 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
   const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
-    const q = query(
-      collection(db, "suggestions"),
-      orderBy("timestamp", "desc"),
-      limit(20),
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setSuggestions(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+    let isMounted = true;
+    const fetchSuggestions = async () => {
+      try {
+        const q = query(
+          collection(db, "suggestions"),
+          orderBy("timestamp", "desc"),
+          limit(20),
         );
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "suggestions"),
-    );
-    return () => unsubscribe();
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          setSuggestions(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+          );
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "suggestions");
+      }
+    };
+    fetchSuggestions();
+    return () => { isMounted = false; };
   }, []);
 
   const handleSubmit = async () => {

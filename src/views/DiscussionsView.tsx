@@ -49,60 +49,66 @@ export default function DiscussionsView({ user }: { user: UserData }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    let q;
-    if (sortBy === "trending") {
-      q = query(collection(db, "discussions"), orderBy("repliesCount", "desc"), firestoreLimit(limitCount));
-    } else {
-      q = query(collection(db, "discussions"), orderBy("timestamp", "desc"), firestoreLimit(limitCount));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setDiscussions(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Discussion)
-        );
-        setLoading(false);
-      },
-      (e) => {
-        handleFirestoreError(e, OperationType.GET, "discussions");
-        setLoading(false);
+    const fetchDiscussions = async () => {
+      let q;
+      if (sortBy === "trending") {
+        q = query(collection(db, "discussions"), orderBy("repliesCount", "desc"), firestoreLimit(limitCount));
+      } else {
+        q = query(collection(db, "discussions"), orderBy("timestamp", "desc"), firestoreLimit(limitCount));
       }
-    );
-    return () => unsubscribe();
+
+      try {
+        const snapshot = await getDocs(q);
+        if (isMounted) {
+          setDiscussions(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }) as Discussion)
+          );
+          setLoading(false);
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "discussions");
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchDiscussions();
+    return () => { isMounted = false; };
   }, [limitCount, sortBy]);
 
   useEffect(() => {
+    let isMounted = true;
     if (selectedDiscussion) {
       setRepliesLoading(true);
-      const q = query(
-        collection(db, "discussions", selectedDiscussion.id, "replies"),
-        orderBy("timestamp", "asc"),
-        firestoreLimit(100)
-      );
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          setReplies(
-            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Reply)
-          );
-          setRepliesLoading(false);
-        },
-        (e) => {
+      const fetchReplies = async () => {
+        const q = query(
+          collection(db, "discussions", selectedDiscussion.id, "replies"),
+          orderBy("timestamp", "asc"),
+          firestoreLimit(100)
+        );
+        try {
+          const snapshot = await getDocs(q);
+          if (isMounted) {
+            setReplies(
+              snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Reply)
+            );
+            setRepliesLoading(false);
+          }
+        } catch (e) {
           handleFirestoreError(e, OperationType.GET, `discussions/${selectedDiscussion.id}/replies`);
-          setRepliesLoading(false);
+          if (isMounted) setRepliesLoading(false);
         }
-      );
-      return () => unsubscribe();
+      };
+      fetchReplies();
     }
+    return () => { isMounted = false; };
   }, [selectedDiscussion]);
 
   const handleCreateDiscussion = async () => {
     if (!newTitle.trim() || !newContent.trim()) return;
     try {
       setIsCreating(false);
-      await addDoc(collection(db, "discussions"), {
+      const docData = {
         title: newTitle,
         content: newContent,
         category: category,
@@ -112,7 +118,11 @@ export default function DiscussionsView({ user }: { user: UserData }) {
         timestamp: serverTimestamp(),
         repliesCount: 0,
         likesCount: 0,
-      });
+      };
+      const docRef = await addDoc(collection(db, "discussions"), docData);
+      
+      setDiscussions(prev => [{ id: docRef.id, ...docData } as any as Discussion, ...prev]);
+
       setNewTitle("");
       setNewContent("");
       setCategory("عام");
@@ -124,16 +134,21 @@ export default function DiscussionsView({ user }: { user: UserData }) {
   const handleSendReply = async () => {
     if (!newReply.trim() || !selectedDiscussion) return;
     try {
-      await addDoc(
+      const replyData = {
+        text: newReply,
+        userId: user.uid,
+        userName: user.displayName,
+        userPhoto: user.photoURL,
+        timestamp: serverTimestamp(),
+      };
+      const docRef = await addDoc(
         collection(db, "discussions", selectedDiscussion.id, "replies"),
-        {
-          text: newReply,
-          userId: user.uid,
-          userName: user.displayName,
-          userPhoto: user.photoURL,
-          timestamp: serverTimestamp(),
-        }
+        replyData
       );
+      
+      setReplies(prev => [...prev, { id: docRef.id, ...replyData } as any as Reply]);
+      setDiscussions(prev => prev.map(d => d.id === selectedDiscussion.id ? { ...d, repliesCount: (d.repliesCount || 0) + 1 } : d));
+
       await updateDoc(doc(db, "discussions", selectedDiscussion.id), {
         repliesCount: increment(1),
         lastActivity: serverTimestamp(),
