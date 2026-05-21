@@ -181,16 +181,101 @@ import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 
-export default function StudyRoomView({
+export default function StudyRoomView(props: {
+  user: UserData;
+  stationId: string;
+  onExit: () => void;
+  onSelectUser: (id: string) => void;
+}) {
+  const [authStatus, setAuthStatus] = useState<"loading" | "authorized" | "spectator" | "rejected">("loading");
+
+  useEffect(() => {
+    let active = true;
+    const checkAuth = async () => {
+      try {
+        const snap = await getDoc(doc(db, "rooms", props.stationId));
+        if (!snap.exists()) {
+          setAuthStatus("rejected");
+          props.onExit();
+          return;
+        }
+
+        const data = snap.data() as Room;
+        let allowed = true;
+        let spectator = false;
+        
+        // 1. Participant Eligibility (Private Challenge)
+        if (data.isChallenge) {
+          allowed = (props.user.uid === data.creatorId) || (data.participants && data.participants.includes(props.user.uid));
+        }
+
+        if (!allowed) {
+          if (props.user.role === "admin") {
+            spectator = true;
+            allowed = true;
+          } else {
+            alert("هذا التحدي خاص. لا يمكنك الدخول.");
+            setAuthStatus("rejected");
+            props.onExit();
+            return;
+          }
+        }
+
+        // 2. Capacity Validation
+        if (allowed && !spectator && data.maxParticipants && data.maxParticipants > 0) {
+          const currentCount = data.participants ? data.participants.length : 0;
+          if (currentCount >= data.maxParticipants && (!data.participants || !data.participants.includes(props.user.uid))) {
+            if (props.user.role === "admin") {
+              spectator = true;
+            } else {
+              alert("المحطة ممتلئة! لا يمكنك الدخول.");
+              setAuthStatus("rejected");
+              props.onExit();
+              return;
+            }
+          }
+        }
+
+        if (active) setAuthStatus(spectator ? "spectator" : "authorized");
+      } catch (err) {
+        if (active) {
+          setAuthStatus("rejected");
+          props.onExit();
+        }
+      }
+    };
+    checkAuth();
+    return () => { active = false; };
+  }, [props.stationId, props.user.uid, props.user.role, props.onExit]);
+
+  if (authStatus === "loading") {
+    return (
+      <div className="min-h-screen bg-[#070b14] flex items-center justify-center text-white relative z-50">
+        <div className="flex flex-col items-center space-y-4">
+          <Rocket className="w-12 h-12 animate-bounce text-blue-500" />
+          <p className="font-mono text-blue-300">يتم التحقق من التصريح...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (authStatus === "rejected") return null;
+
+  return <StudyRoomContent {...props} isSpectator={authStatus === "spectator"} />;
+}
+
+function StudyRoomContent({
   user,
   stationId,
   onExit,
   onSelectUser,
+  isSpectator,
 }: {
   user: UserData;
   stationId: string;
   onExit: () => void;
   onSelectUser: (id: string) => void;
+  isSpectator: boolean;
 }) {
   const [room, setRoom] = useState<Room | null>(null);
   const lastXpGrantTimestampRef = useRef<number | null>(null);
@@ -547,26 +632,8 @@ export default function StudyRoomView({
     const autoJoin = async () => {
       if (!autoJoinAttempted.current) {
         autoJoinAttempted.current = true;
+        if (isSpectator) return;
         
-        let isAllowed = true;
-        try {
-          const docSnap = await getDoc(doc(db, "rooms", stationId));
-          if (docSnap.exists()) {
-            const data = docSnap.data() as Room;
-            if (data.isChallenge) {
-              isAllowed = (user.uid === data.creatorId) || (data.participants && data.participants.includes(user.uid));
-            }
-          }
-        } catch (e) {
-          console.error("error checking challenge status", e);
-        }
-
-        if (!isAllowed) {
-          alert("هذا التحدي خاص. لا يمكنك الدخول.");
-          performSafeExit({ skipFirebaseUpdate: true });
-          return;
-        }
-
         setHasJoinedStation(true);
         setIsJoined(true);
         try {
@@ -592,6 +659,7 @@ export default function StudyRoomView({
   }, [stationId, room?.name, user.uid]);
 
   const toggleCall = async () => {
+    if (isSpectator) return;
     if (isJoined) {
       setIsJoined(false);
       try {
@@ -753,7 +821,7 @@ export default function StudyRoomView({
     );
 
     // Join automatically on mount
-    if (!isJoinedRef.current) {
+    if (!isJoinedRef.current && !isSpectator) {
       setIsJoined(true);
       setHasJoinedStation(true);
       updateDoc(roomRef, {
@@ -772,6 +840,7 @@ export default function StudyRoomView({
     // Using refs to share state between useEffect and normal functions
 
    const handleVisibilityChange = () => {
+    if (!isJoinedRef.current) return;
     if (document.visibilityState === "hidden" || !document.hasFocus()) {
       if (roomStatusRef.current !== "focus") return;
       
@@ -852,7 +921,7 @@ export default function StudyRoomView({
 
       // Use a more reliable cleanup
       const cleanup = async () => {
-        if (!user?.uid || !stationId) return;
+        if (!user?.uid || !stationId || isSpectator) return;
         try {
           const roomSnap = await getDoc(roomRef);
           
