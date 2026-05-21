@@ -15,6 +15,7 @@ import { db, auth } from '../firebase';
 import { X, Store, MousePointer2, Leaf, Bird, Settings, Star } from 'lucide-react';
 import * as THREE from 'three';
 import { FARM_PLANTS, FARM_ANIMALS, FARM_STRUCTURES, ALL_FARM_ITEMS } from '../lib/farm';
+import { purchaseItemXpDeduction } from '../lib/xpSystem';
 
 // --- Types ---
 export interface FarmItem {
@@ -538,11 +539,15 @@ export function Farm3D({
       return;
     }
     try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        xp: increment(-item.price), // Deducts XP to buy
-        items: arrayUnion(item.id)
-      });
-      alert(`تم إضافة ${item.name} إلى محفظتك!`);
+      const success = await purchaseItemXpDeduction(auth.currentUser.uid, item.price);
+      if (success) {
+         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+            items: arrayUnion(item.id)
+         });
+         alert(`تم إضافة ${item.name} إلى محفظتك!`);
+      } else {
+         alert("خطأ في عملية الشراء أو لا تملك ما يكفي من النقاط");
+      }
     } catch(e) {
       console.error("Purchase error", e);
     }

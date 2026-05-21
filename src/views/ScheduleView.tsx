@@ -14,6 +14,7 @@ import {
   increment, getDocs
 } from "firebase/firestore";
 import { ScheduleItem, UserData } from "../shared";
+import { requestXpGrant } from "../lib/xpSystem";
 
 // Custom wrapper to intercept onSnapshot errors safely
 function onSnapshot(...args: any[]) {
@@ -149,15 +150,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
       if (isNowCompleted && !(item as any).rewarded) {
          updates.rewarded = true;
          // Give XP to user
-         updateDoc(doc(db, "users", user.uid), {
-           xp: increment(10)
-         });
-         // Also fleet XP if applicable
-         if (user.fleetId) {
-             updateDoc(doc(db, "fleets", user.fleetId), {
-                 xp: increment(2)
-             }).catch(() => {});
-         }
+         requestXpGrant(user.uid, user.fleetId, null, false, 10, "task_completed", true);
       }
 
       await updateDoc(doc(db, "users", user.uid, "schedule", item.id), updates);

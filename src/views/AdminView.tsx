@@ -11,6 +11,7 @@ import { cn } from "../lib/utils";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc, addDoc, serverTimestamp, query, orderBy, limit, getDocs, getDoc } from "firebase/firestore";
 import { UserData, Discussion } from "../shared";
+import { adminSetXP } from "../lib/xpSystem";
 
 export default function AdminView({ user }: { user: UserData }) {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -353,8 +354,13 @@ export default function AdminView({ user }: { user: UserData }) {
               
               <div className="pt-4 flex gap-4">
                 <button onClick={async () => {
-                   await updateDoc(doc(db, "users", editingUser.uid), { xp: editingUser.xp, level: editingUser.level, currentActivity: editingUser.currentActivity, totalFocusSessions: editingUser.totalFocusSessions });
-                   await updateDoc(doc(db, "profiles", editingUser.uid), { xp: editingUser.xp, level: editingUser.level, totalFocusSessions: editingUser.totalFocusSessions });
+                   await adminSetXP(
+                      editingUser.uid,
+                      editingUser.xp,
+                      editingUser.level,
+                      editingUser.currentActivity,
+                      editingUser.totalFocusSessions
+                   );
                    setEditingUser(null);
                 }} className="flex-1 bg-cyan-600/20 border border-cyan-500 text-cyan-400 py-2 uppercase font-bold hover:bg-cyan-500 hover:text-[#020308] transition-all shadow-[0_0_15px_rgba(0,255,255,0.3)]">
                   Execute Protocol

@@ -95,6 +95,7 @@ import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
 import { Debugger } from "../firebaseDebug";
+import { requestXpGrant } from "../lib/xpSystem";
 import {
   auth,
   db,
@@ -230,9 +231,9 @@ export default function StudyRoomView({
          if (winnerId !== "tie") {
             if (isUserWinner) {
                await updateDoc(doc(db, "users", user.uid), {
-                  xp: increment(50),
                   coins: increment(50)
                });
+               requestXpGrant(user.uid, user.fleetId, null, false, 50, "challenge_win", true);
                addDoc(collection(db, "users", user.uid, "notifications"), {
                  type: "challenge_win",
                  content: `مبروك! لقد فزت بتحدي التركيز. تم إضافة 50 XP لعملك الرائع!`,
@@ -283,6 +284,7 @@ export default function StudyRoomView({
   const [isJoined, setIsJoined] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const isExitingRef = useRef(false);
   const isJoinedRef = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -343,27 +345,20 @@ export default function StudyRoomView({
         if (xpToGrant > 0) {
           lastXpGrantTimestampRef.current = now;
           sessionXpCountRef.current += xpToGrant;
-          Debugger.logXP(xpToGrant, `Focus Interval (Elapsed: ${elapsedMinutes}m)`);
           
-          updateDoc(doc(db, "users", user.uid), {
-            xp: increment(xpToGrant),
-            lastXpUpdate: now,
-          }).catch(() => {});
-          
-          if (room?.isChallenge && room?.challengeId) {
-             const isPlayer1 = user.uid === room.creatorId;
-             const updateField = isPlayer1 ? "progressPlayer1" : "progressPlayer2";
-             updateDoc(doc(db, "challenges", room.challengeId), {
-                [updateField]: increment(xpToGrant)
-             }).then(() => checkChallengeCompletion(room.challengeId))
-               .catch((e) => console.error("Failed to update challenge progress:", e));
-          }
-
-          if (user.fleetId) {
-            updateDoc(doc(db, "fleets", user.fleetId), {
-              xp: increment(xpToGrant),
-            }).catch(() => {});
-          }
+          requestXpGrant(
+             user.uid,
+             user.fleetId,
+             room?.isChallenge ? room.challengeId : null,
+             user.uid === room?.creatorId,
+             xpToGrant,
+             `Focus Interval (Elapsed: ${elapsedMinutes}m)`,
+             false // check lock!
+          ).then(granted => {
+             if (granted > 0 && room?.isChallenge && room.challengeId) {
+                checkChallengeCompletion(room.challengeId).catch(() => {});
+             }
+          });
         }
       }
     }, 1000);
@@ -378,60 +373,78 @@ export default function StudyRoomView({
     };
   }, [isJoined, room?.timerStatus, user.uid, user.fleetId]);
 
-  const handleConfirmExit = async () => {
-    if (isExiting) return;
+  const performSafeExit = async (options: {
+    isPenalty?: boolean;
+    penaltyReason?: string;
+    penaltyAmount?: number;
+    customExitMessage?: string;
+    skipFirebaseUpdate?: boolean;
+  } = {}) => {
+    if (isExitingRef.current) return;
+    isExitingRef.current = true;
     setIsExiting(true);
     setShowExitDialog(false);
 
-    let isExitPenalty = false;
-    if (room?.timerStatus === "focus") {
-      isExitPenalty = true;
+    // FREEZE TIMERS & INTERVALS INSTANTLY
+    if (xpIntervalRef.current) {
+      clearInterval(xpIntervalRef.current);
+      xpIntervalRef.current = null;
+    }
+    if (fuelLeakIntervalRef.current) {
+      clearInterval(fuelLeakIntervalRef.current);
+      fuelLeakIntervalRef.current = null;
+    }
+
+    console.log("[Exit] Exit started. Intervals cleared.");
+
+    if (options.isPenalty && options.penaltyReason) {
       try {
-        await updateDoc(doc(db, "users", user.uid), {
-          xp: increment(-10)
-        });
-        if (user.fleetId) {
-          await updateDoc(doc(db, "fleets", user.fleetId), {
-            xp: increment(-10)
-          });
-        }
+        console.log("[Exit] Applying penalty:", options.penaltyAmount, options.penaltyReason);
+        requestXpGrant(user.uid, user.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true);
       } catch (e) {
         console.error("Failed to apply exit penalty:", e);
       }
     }
 
-    try {
-      await updateDoc(doc(db, 'rooms', stationId), {
+    if (!options.skipFirebaseUpdate && participantsCountRef.current > 1) {
+      console.log("[Exit] Broadcasting exit message...");
+      addDoc(collection(db, "rooms", stationId, "messages"), {
+        text: options.customExitMessage || (options.isPenalty 
+          ? `🚀 غادر المحرك (${user.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
+          : `🚀 غادر المحرك (${user.displayName}) المحطة.`),
+        userId: "system",
+        userName: "نظام التنبيه",
+        userPhoto: "",
+        timestamp: serverTimestamp(),
+        type: "text",
+      }).catch(e => console.error("error broadcasting exit message", e));
+    }
+
+    if (!options.skipFirebaseUpdate) {
+      console.log("[Exit] Removing from database...");
+      updateDoc(doc(db, 'rooms', stationId), {
         participants: arrayRemove(user.uid)
+      }).catch(e => {
+        console.error("Failed to remove user from room:", e);
       });
-      if (fuelLeakIntervalRef.current) {
-        clearInterval(fuelLeakIntervalRef.current);
-        fuelLeakIntervalRef.current = null;
-      }
-    } catch (e) {
-      console.error("Failed to remove user from room:", e);
     }
 
-    // Broadcast exit to chat
-    if (participantsCountRef.current > 1) {
-      try {
-        await addDoc(collection(db, "rooms", stationId, "messages"), {
-          text: isExitPenalty 
-            ? `🚀 غادر المحرك (${user.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم 10 XP).`
-            : `🚀 غادر المحرك (${user.displayName}) المحطة.`,
-          userId: "system",
-          userName: "نظام التنبيه",
-          userPhoto: "",
-          timestamp: serverTimestamp(),
-          type: "text",
-        });
-      } catch (e) {
-        console.error("error broadcasting exit message", e);
-      }
-    }
-
+    console.log("[Exit] Navigation completed... triggering onExit.");
     onExit();
   };
+
+  const handleConfirmExit = async () => {
+    let isPenalty = false;
+    if (room?.timerStatus === "focus") {
+      isPenalty = true;
+    }
+    performSafeExit({
+      isPenalty,
+      penaltyReason: "self_exit_penalty",
+      penaltyAmount: -10
+    });
+  };
+
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [studyLink, setStudyLink] = useState("");
@@ -550,7 +563,7 @@ export default function StudyRoomView({
 
         if (!isAllowed) {
           alert("هذا التحدي خاص. لا يمكنك الدخول.");
-          onExit();
+          performSafeExit({ skipFirebaseUpdate: true });
           return;
         }
 
@@ -685,7 +698,7 @@ export default function StudyRoomView({
           }
         } else {
           // Room was deleted or doesn't exist
-          setTimeout(() => onExit(), 0);
+          setTimeout(() => performSafeExit({ skipFirebaseUpdate: true }), 0);
         }
       },
       (e) => handleFirestoreError(e, OperationType.GET, `rooms/${stationId}`),
@@ -725,13 +738,7 @@ export default function StudyRoomView({
               prevStatus.current === "focus"
             ) {
               // Self-deduct XP
-              updateDoc(doc(db, "users", user.uid), {
-                xp: increment(-20),
-              }).catch(console.error);
-              if (user.fleetId)
-                updateDoc(doc(db, "fleets", user.fleetId), {
-                  xp: increment(-20),
-                }).catch(() => {});
+              requestXpGrant(user.uid, user.fleetId, null, false, -20, "peer_exit_penalty", true);
             }
           }
         });
@@ -813,16 +820,7 @@ export default function StudyRoomView({
           else {
             try {
               // خصم الـ XP من المستخدم
-              await updateDoc(doc(db, "users", user.uid), {
-                xp: increment(-1),
-              });
-
-              // خصم الـ XP من الأسطول إن وجد
-              if (user.fleetId) {
-                updateDoc(doc(db, "fleets", user.fleetId), {
-                  xp: increment(-1),
-                }).catch(() => {});
-              }
+              requestXpGrant(user.uid, user.fleetId, null, false, -1, "fuel_leak_tick", true);
             } catch (err) {
               console.error("Error draining XP:", err);
             }
@@ -1085,30 +1083,16 @@ export default function StudyRoomView({
     setShowAFKCheck(false);
 
     // Kick user out
-    addDoc(collection(db, "rooms", stationId, "messages"), {
-      text: `💤 غادر ${user.displayName} المحطة بسبب عدم الاستجابة (AFK). تم حفظ نقاطه المسجلة حتى الآن.`,
-      userId: "system",
-      userName: "نظام المراقبة",
-      userPhoto: "",
-      timestamp: serverTimestamp(),
-      type: "text",
-    }).catch(() => {});
-
-    onExit();
+    performSafeExit({
+       customExitMessage: `💤 غادر ${user.displayName} المحطة بسبب عدم الاستجابة (AFK). تم حفظ نقاطه المسجلة حتى الآن.`
+    });
   };
 
   const triggerRedAlert = async () => {
     setShowAlert(true);
 
     // Deduct 20 XP on distraction
-    const userRef = doc(db, "users", user.uid);
-    await updateDoc(userRef, {
-      xp: increment(-20),
-    });
-    if (user.fleetId)
-      updateDoc(doc(db, "fleets", user.fleetId), { xp: increment(-20) }).catch(
-        () => {},
-      );
+    requestXpGrant(user.uid, user.fleetId, null, false, -20, "distraction_penalty", true);
 
     // Broadcast alert to chat
     await addDoc(collection(db, "rooms", stationId, "messages"), {
@@ -1275,15 +1259,7 @@ export default function StudyRoomView({
           lastStudyDate: new Date().toISOString().split("T")[0],
         };
 
-        if (safeXpEarned > 0) {
-            updates.xp = increment(safeXpEarned);
-        }
-
-        // Daily Quest Reward
         if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
-          // نضيف 50 لـ safeXpEarned إذا كان موجباً، وإلا 50 فقط (لن نتجاوز المنطق السابق)
-          const questBonus = 50;
-          updates.xp = increment((safeXpEarned > 0 ? safeXpEarned : 0) + questBonus);
           updates.completedTasks = increment(1); // Keep track of completed tasks if we want
         }
 
@@ -1306,6 +1282,31 @@ export default function StudyRoomView({
         updateDoc(userRef, updates).catch((e) =>
           handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
         );
+
+        let totalXpToGive = 0;
+        if (safeXpEarned > 0) {
+            totalXpToGive += safeXpEarned;
+        }
+        if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
+            totalXpToGive += 50;
+        }
+
+        if (totalXpToGive > 0) {
+            requestXpGrant(
+              user.uid,
+              user.fleetId,
+              null, // Shield returns and quests do NOT count toward challenge time
+              false,
+              totalXpToGive,
+              `on_exit_session (refund/quest)`,
+              true // force bypass lock! Because multiple things might happen.
+            ).then(granted => {
+              if (granted > 0 && room?.isChallenge && room.challengeId) {
+                  // We still check just in case, but no progress added here
+                  checkChallengeCompletion(room.challengeId).catch(() => {});
+              }
+            });
+        }
 
         if (user.fleetId) {
           updateDoc(doc(db, "fleets", user.fleetId), {
@@ -1415,13 +1416,7 @@ export default function StudyRoomView({
                       }
 
                       try {
-                        await updateDoc(doc(db, "users", user.uid), {
-                          xp: increment(-amount),
-                        });
-                        if (user.fleetId)
-                          updateDoc(doc(db, "fleets", user.fleetId), {
-                            xp: increment(-amount),
-                          }).catch(() => {});
+                        requestXpGrant(user.uid, user.fleetId, null, false, -amount, "shield_bet_deduction", true);
                         currentBetRef.current = amount;
                         remainingShieldRef.current = amount;
                         setShieldPercent(100);
@@ -1489,13 +1484,7 @@ export default function StudyRoomView({
                 <button
                   onClick={() => {
                     setShowAFKCheck(false);
-                    updateDoc(doc(db, "users", user.uid), {
-                      xp: increment(5),
-                    }).catch(() => {});
-                    if (user.fleetId)
-                      updateDoc(doc(db, "fleets", user.fleetId), {
-                        xp: increment(5),
-                      }).catch(() => {});
+                    requestXpGrant(user.uid, user.fleetId, null, false, 5, "afk_check", true);
                     // Give them a small 5xp reward for being attentive
                   }}
                   className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-500 hover:from-indigo-500 hover:to-fuchsia-400 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 text-lg"
@@ -2397,7 +2386,7 @@ export default function StudyRoomView({
                   onClick={async () => {
                     setShowDeleteDialog(false);
                     await deleteDoc(doc(db, "rooms", stationId));
-                    onExit();
+                    performSafeExit({ skipFirebaseUpdate: true });
                   }}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white font-bold transition-all shadow-sm shadow-red-600/30 text-sm"
                 >

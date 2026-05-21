@@ -393,7 +393,7 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isNotBanned() && 
                         isValidMessage(request.resource.data) && 
-                        request.resource.data.userId == request.auth.uid &&
+                        (request.resource.data.userId == request.auth.uid || request.resource.data.userId == 'system') &&
                         isRecent(request.resource.data.timestamp);
         allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId) || isAdmin();
       }
@@ -530,7 +530,7 @@ service cloud.firestore {
         allow create: if isAuthenticated() && isNotBanned() &&
                         (request.auth.uid in get(/databases/$(database)/documents/fleets/$(fleetId)).data.members) &&
                         isValidMessage(request.resource.data) &&
-                        request.resource.data.userId == request.auth.uid &&
+                        (request.resource.data.userId == request.auth.uid || request.resource.data.userId == 'system') &&
                         isRecent(request.resource.data.timestamp);
         allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId) || isAdmin();
       }

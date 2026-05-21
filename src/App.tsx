@@ -377,9 +377,6 @@ function App() {
           playSound("levelup");
           setTimeout(() => setShowLevelUp(false), 5000);
         }
-        updateDoc(doc(db, "users", userData.uid), {
-          level: calculatedLevel,
-        }).catch((e) => console.error("Level up update failed", e));
       }
     }
   }, [userData?.xp, userData?.level, userData?.uid]);

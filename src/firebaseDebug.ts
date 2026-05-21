@@ -5,8 +5,8 @@ export const Debugger = {
   logClearInterval: (name: string, id: NodeJS.Timeout | number | null) => {
     console.log(`[DEBUG] Interval Cleared: ${name} (ID: ${id})`);
   },
-  logXP: (amount: number, reason: string) => {
-    console.log(`[DEBUG] XP Gained: +${amount} (${reason})`);
+  logXP: (amount: number, reason: string, oldXp?: number, newXp?: number) => {
+    console.log(`[DEBUG] XP Gained: +${amount} (${reason}) | Previous: ${oldXp} -> Next: ${newXp} | Tab Visible: ${document.visibilityState}`);
   },
   logWrite: (collection: string, docId: string, action: string) => {
     console.log(`[DEBUG] Write to ${collection}/${docId}: ${action}`);
@@ -15,6 +15,6 @@ export const Debugger = {
     console.warn(`[DEBUG] Cleanup Failure: ${message}`);
   },
   logSuspicious: (message: string) => {
-    console.warn(`[DEBUG] Suspicious Activity: ${message}`);
+    console.warn(`[DEBUG] Suspicious Activity: ${message} | Tab Visible: ${document.visibilityState}`);
   }
 };
