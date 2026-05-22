@@ -253,7 +253,7 @@ export default function LeaderboardView({
                 transition={{ delay: index * 0.05 }}
                 className={cn(
                   "grid grid-cols-12 gap-4 p-4 items-center transition-colors hover:bg-[#0a0b16] shadow-lg shadow-indigo-900/10",
-                  leader.uid === user.uid && "bg-indigo-500/200/10",
+                  leader.uid === user.uid && "bg-indigo-500/10",
                 )}
               >
                 <div className="col-span-1 flex justify-center">
@@ -278,7 +278,7 @@ export default function LeaderboardView({
                       referrerPolicy="no-referrer"
                     />
                     {leader.uid === user.uid && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-indigo-500/200 rounded-full border-2 border-[#0a0a1a] flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full border-2 border-[#0a0a1a] flex items-center justify-center">
                         <Star size={8} className="text-white" />
                       </div>
                     )}

@@ -1,7 +1,21 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, initializeFirestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  doc, 
+  getDocFromServer, 
+  initializeFirestore, 
+  disableNetwork,
+  getDoc as originalGetDoc,
+  getDocs as originalGetDocs,
+  updateDoc as originalUpdateDoc,
+  addDoc as originalAddDoc,
+  deleteDoc as originalDeleteDoc,
+  setDoc as originalSetDoc,
+  runTransaction as originalRunTransaction
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
+import { Debugger } from './firebaseDebug';
 
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
@@ -23,7 +37,6 @@ export const signInWithGoogle = async () => {
       alert(`خطأ في تسجيل الدخول: النطاق الحالي غير مصرح به في إعدادات Firebase.\n\nالرجاء إضافة النطاق (${window.location.hostname}) إلى قسم "Authorized domains" في إعدادات Authentication داخل Firebase Console.`);
     } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
       console.warn('Popup closed by user.');
-      // Do not rethrow for user cancellation
       return null;
     } else {
       alert('حدث خطأ أثناء تسجيل الدخول: ' + error.message);
@@ -34,6 +47,42 @@ export const signInWithGoogle = async () => {
 
 export const logout = () => signOut(auth);
 
+// Tracked replacements of Firestore core APIs
+export const getDoc = async (docRef: any) => {
+  Debugger.trackGetDoc(docRef.path || "unspecified_doc");
+  return originalGetDoc(docRef);
+};
+
+export const getDocs = async (queryRef: any) => {
+  Debugger.trackGetDocs(queryRef._query?.path?.toString() || "queries");
+  return originalGetDocs(queryRef);
+};
+
+export const updateDoc = async (docRef: any, data: any) => {
+  Debugger.trackUpdateDoc(docRef.path || "unspecified_doc");
+  return originalUpdateDoc(docRef, data);
+};
+
+export const addDoc = async (colRef: any, data: any) => {
+  Debugger.trackAddDoc(colRef.path || "unspecified_collection");
+  return originalAddDoc(colRef, data);
+};
+
+export const deleteDoc = async (docRef: any) => {
+  Debugger.trackDeleteDoc(docRef.path || "unspecified_doc");
+  return originalDeleteDoc(docRef);
+};
+
+export const setDoc = async (docRef: any, data: any, options?: any) => {
+  Debugger.trackSetDoc(docRef.path || "unspecified_doc");
+  return originalSetDoc(docRef, data, options);
+};
+
+export const runTransaction = async (firestore: any, updateFunction: any) => {
+  Debugger.trackTransaction("run_transaction_ops");
+  return originalRunTransaction(firestore, updateFunction);
+};
+
 // Test connection
 async function testConnection() {
   try {
@@ -42,6 +91,7 @@ async function testConnection() {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration.");
     }
+    handleFirestoreError(error, OperationType.GET, 'test/connection');
   }
 }
 testConnection();
@@ -75,8 +125,9 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -93,6 +144,23 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+  
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+
+  const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource-exhausted") || errMsg.toLowerCase().includes("exhausted");
+  if (isQuota) {
+    if (typeof window !== "undefined") {
+      (window as any).__firestoreQuotaExceeded = true;
+      try {
+        window.dispatchEvent(new CustomEvent("firestore_quota_exceeded", { detail: errInfo }));
+      } catch {}
+    }
+    disableNetwork(db).catch((e) => {
+      console.warn("[Quota Fallback] Could not disable network:", e);
+    });
+    Debugger.logError("firestore_quota", "Quota Exceeded on " + path + ": " + errMsg);
+    return;
+  }
+
+  Debugger.logError(`firestore_op_${operationType}`, `Path: ${path} | Err: ${errMsg}`);
 }

@@ -1,5 +1,6 @@
 import { Joyride } from "react-joyride";
 import { playSound } from "./lib/sound";
+import { useRenderLog } from "./firebaseDebug";
 import Markdown from "react-markdown";
 /**
  * @license
@@ -182,16 +183,35 @@ import AnalyticsView from './views/AnalyticsView';
 import FleetsView from './views/FleetsView';
 
 function App() {
+  useRenderLog("App");
   const [user, loading] = useAuthState(auth);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
+  const lastSyncedProfileRef = useRef<string>("");
+
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(
+    typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded
+  );
+
+  useEffect(() => {
+    const handleQuota = () => {
+      setIsQuotaExceeded(true);
+    };
+    window.addEventListener("firestore_quota_exceeded", handleQuota);
+    return () => {
+      window.removeEventListener("firestore_quota_exceeded", handleQuota);
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
       // Activity tracking
       let lastActivityUpdate = 0;
       const updateActivity = () => {
+        if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+          return; // Guard against further quota errors when resource is exhausted
+        }
         const now = Date.now();
         if (now - lastActivityUpdate > 60000) {
           // Throttle to 1 min
@@ -383,7 +403,6 @@ function App() {
 
   useEffect(() => {
     if (userData) {
-      const profileRef = doc(db, "profiles", userData.uid);
       const publicData = {
         uid: userData.uid,
         displayName: userData.displayName,
@@ -397,6 +416,17 @@ function App() {
         banned: userData.banned || false,
         currentActivity: userData.currentActivity || "في المدار",
       };
+      
+      const serialized = JSON.stringify(publicData);
+      if (lastSyncedProfileRef.current === serialized) {
+        return;
+      }
+      if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+        return; // Guard profile updates
+      }
+      lastSyncedProfileRef.current = serialized;
+
+      const profileRef = doc(db, "profiles", userData.uid);
       setDoc(profileRef, publicData, { merge: true }).catch((e) =>
         console.error("Profile sync failed", e),
       );
@@ -436,6 +466,12 @@ function App() {
 
   return (
     <>
+      {isQuotaExceeded && (
+        <div className="bg-gradient-to-r from-amber-600/90 to-red-600/90 text-white text-xs md:text-sm py-2.5 px-4 text-center font-semibold relative z-[300] shadow-md flex items-center justify-center gap-2 select-none">
+          <span>🛡️ نظام الفضاء الرديف: ميزانية قاعدة البيانات المجانية لـ Firebase تجاوزت الحد المسموح به اليوم. نحن نوجه جميع عملياتك بنجاح محلياً لضمان تركيزك التام ومواصلة إنتاجيتك دون انقطاع.</span>
+          <button onClick={() => setIsQuotaExceeded(false)} className="underline hover:text-white/80 transition ml-2 text-[10px] md:text-sm font-bold bg-white/10 px-2 py-0.5 rounded">إخفاء</button>
+        </div>
+      )}
       <AnimatePresence>
         {showLevelUp && (
           <motion.div

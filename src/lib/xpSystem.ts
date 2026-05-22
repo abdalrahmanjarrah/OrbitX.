@@ -47,8 +47,8 @@
  * ==========================================
  */
 
-import { db } from '../firebase';
-import { doc, runTransaction, updateDoc, increment } from 'firebase/firestore';
+import { db, runTransaction, updateDoc } from '../firebase';
+import { doc, increment } from 'firebase/firestore';
 import { Debugger } from '../firebaseDebug';
 
 /**
@@ -92,7 +92,7 @@ export const requestXpGrant = async (
        
        // Hard lock 50 seconds to prevent interval duplicating.
        // Only applies to positive constant interval rewards unless bypassed.
-       if (!forceBypassLock && amount > 0 && uTimeSinceLastGrant < 50000) {
+       if (!forceBypassLock && amount > 0 && uTimeSinceLastGrant < 50000 && (Debugger.logXPBlocked(amount, source, "Cooldown lock applied"), true)) {
           Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastGrant/1000)}s passed. (${userId})`);
           return;
        }

@@ -309,29 +309,33 @@ export default function AwarenessView({ user }: { user: UserData }) {
     }
   };
 
-  const pointsData = signals.map((sig, i) => {
-    let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
-    if (!coords) {
-      coords = getCoordinates(sig.id, i);
-    }
+  const pointsData = React.useMemo(() => {
+    return signals.map((sig, i) => {
+      let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
+      if (!coords) {
+        coords = getCoordinates(sig.id, i);
+      }
 
-    let color = "#00ffcc"; // target blue-green color
-    return {
-      lat: coords.lat,
-      lng: coords.lng,
-      size: 1,
-      color: color,
-      signal: sig,
-    };
-  });
+      let color = "#00ffcc"; // target blue-green color
+      return {
+        lat: coords.lat,
+        lng: coords.lng,
+        size: 1,
+        color: color,
+        signal: sig,
+      };
+    });
+  }, [signals]);
 
-  const arcsData = Array.from({ length: 15 }).map((_, i) => ({
-    startLat: (Math.random() - 0.5) * 160,
-    startLng: (Math.random() - 0.5) * 360,
-    endLat: (Math.random() - 0.5) * 160,
-    endLng: (Math.random() - 0.5) * 360,
-    color: ["rgba(6, 182, 212, 0.4)", "rgba(16, 185, 129, 0.4)"][i % 2],
-  }));
+  const arcsData = React.useMemo(() => {
+    return Array.from({ length: 15 }).map((_, i) => ({
+      startLat: (Math.random() - 0.5) * 160,
+      startLng: (Math.random() - 0.5) * 360,
+      endLat: (Math.random() - 0.5) * 160,
+      endLng: (Math.random() - 0.5) * 360,
+      color: ["rgba(6, 182, 212, 0.4)", "rgba(16, 185, 129, 0.4)"][i % 2],
+    }));
+  }, []);
 
   return (
     <div className="relative w-full h-[80vh] md:h-[calc(100vh-120px)] rounded-[2rem] overflow-hidden bg-[#000108] border border-cyan-900/30 block shadow-2xl">

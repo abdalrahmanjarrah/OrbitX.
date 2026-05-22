@@ -1,5 +1,6 @@
 import { Joyride } from "react-joyride";
 import { playSound } from "../lib/sound";
+import { useRenderLog } from "../firebaseDebug";
 import Markdown from "react-markdown";
 /**
  * @license
@@ -187,6 +188,7 @@ export default function Dashboard({
   user: UserData | null;
   onLogout: () => void;
 }) {
+  useRenderLog("Dashboard", { userEmail: user?.email });
   const [activeTab, setActiveTab] = useState<
     | "home"
     | "chat"

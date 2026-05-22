@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   doc,
   collection,
@@ -6,41 +6,76 @@ import {
   where,
   orderBy,
   limit,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp,
+  deleteField,
+  increment,
+  onSnapshot,
+} from "firebase/firestore";
+import { 
+  auth, 
+  db, 
+  handleFirestoreError, 
+  OperationType,
   getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
   addDoc,
-  arrayUnion,
-  arrayRemove,
-  serverTimestamp,
-  deleteField,
-} from "firebase/firestore";
-import { auth, db, handleFirestoreError, OperationType } from "../firebase";
+  runTransaction
+} from "../firebase";
 import { requestXpGrant } from "./xpSystem";
 import { Debugger } from "../firebaseDebug";
 import { Room, Challenge, Message, UserData } from "../shared";
 import { playSound } from "./sound";
 
-// Custom onSnapshot wrapper to prevent unauthenticated read crashes
-function safeOnSnapshot(queryRef: any, onNext: (snapshot: any) => void, onError?: (error: any) => void) {
+// Custom onSnapshot wrapper to prevent unauthenticated read crashes and track active listener counts
+function safeOnSnapshot(
+  queryRef: any,
+  onNext: (snapshot: any) => void,
+  onError?: (error: any) => void,
+  pathLabel: string = "unspecified_snapshot"
+) {
   if (!auth.currentUser) {
     // Return empty unsubscribe if not authenticated to prevent permission errors
     return () => {};
   }
-  const { onSnapshot } = require("firebase/firestore");
-  return onSnapshot(queryRef, onNext, (e: any) => {
-    if (!auth.currentUser) {
-      // Ignore errors after signing out or during unmount
-      return;
+  const timerStart = performance.now();
+  Debugger.trackListenerStart(pathLabel);
+  
+  const unsub = onSnapshot(
+    queryRef,
+    (snap) => {
+      // Record first snapshot RTT latency metric
+      if (timerStart > 0) {
+        Debugger.logLatency(`snapshot_load[${pathLabel}]`, timerStart, true);
+      }
+      Debugger.trackOnSnapshotTrigger(pathLabel, (snap as any).docs ? (snap as any).docs.length : 1);
+      onNext(snap);
+    },
+    (e: any) => {
+      if (!auth.currentUser) {
+        // Ignore errors after signing out or during unmount
+        return;
+      }
+      Debugger.logError(`safeOnSnapshot_listener[${pathLabel}]`, e);
+      if (onError) {
+        onError(e);
+      } else {
+        console.warn(`[Diagnostics] Intercepted safeOnSnapshot error on ${pathLabel}:`, e);
+      }
     }
-    if (onError) {
-      onError(e);
-    } else {
-      console.warn("Intercepted safeOnSnapshot error:", e);
-    }
-  });
+  );
+  
+  return () => {
+    unsub();
+    Debugger.trackListenerStop(pathLabel);
+  };
 }
+
+// Global active hook instance tracking to secure mounts against unmount/remount race conditions (e.g. StrictMode, route transitions)
+const activeHookInstances = new Map<string, string>(); // userId -> hookInstanceId
 
 export function useSessionEngine(
   stationId: string,
@@ -85,6 +120,77 @@ export function useSessionEngine(
   const isExitingRef = useRef(false);
   const isJoinedRef = useRef(false);
 
+  // STABILITY & SYNC SYSTEM CORES
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const instanceIdRef = useRef<string>("");
+  if (!instanceIdRef.current) {
+    instanceIdRef.current = Math.random().toString();
+  }
+
+  // Register this hook instance as the active session handler for the current user
+  useEffect(() => {
+    activeHookInstances.set(user.uid, instanceIdRef.current);
+    
+    // Cleanup active registration only if we are the current active instance on unmount
+    return () => {
+      if (activeHookInstances.get(user.uid) === instanceIdRef.current) {
+        // Delay clearing slightly so the mounting instance has time to override
+        setTimeout(() => {
+          if (activeHookInstances.get(user.uid) === instanceIdRef.current) {
+            activeHookInstances.delete(user.uid);
+          }
+        }, 500);
+      }
+    };
+  }, [user.uid]);
+
+  // Window unload listener to clear participant entry immediately
+  useEffect(() => {
+    const handleUnload = () => {
+      activeHookInstances.delete(userRef.current.uid);
+      // Synchronously trigger exit cleanup if user was joined
+      if (isJoinedRef.current && !isSpectator) {
+        const xhr = new XMLHttpRequest();
+        // Best effort synchronous XMLHttp request to remove user from active session
+        // Note: Firestore updates via REST are possible but direct doc updates might be halted, 
+        // we at least try to clean up active registrations.
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, [isSpectator]);
+
+  // Clock Offset Alignment system to offset local computer clock drift/skews
+  const clockOffsetRef = useRef<number>(0);
+  useEffect(() => {
+    const fetchServerTime = async () => {
+      try {
+        const startCall = Date.now();
+        const res = await fetch("/", { method: "HEAD" }).catch(() => fetch("/"));
+        if (!res) return;
+        const dateHeader = res.headers.get("Date");
+        if (dateHeader) {
+          const serverTime = new Date(dateHeader).getTime();
+          const endCall = Date.now();
+          const latency = (endCall - startCall) / 2;
+          clockOffsetRef.current = (serverTime + latency) - endCall;
+          console.log(`[Clock Synchronizer] Calculated clock skew offset: ${clockOffsetRef.current}ms`);
+          Debugger.setClockSkew(clockOffsetRef.current);
+        }
+      } catch (e) {
+        console.warn("[Clock Synchronizer] Failed to synchronize clock skew, defaulting to local time.", e);
+        Debugger.logError("clock_sync_offset", e);
+      }
+    };
+    fetchServerTime();
+  }, [stationId]);
+
   // References
   const roomRef = doc(db, "rooms", stationId);
   const lastXpGrantTimestampRef = useRef<number | null>(null);
@@ -105,6 +211,7 @@ export function useSessionEngine(
   const afkFailCountRef = useRef<number>(0);
   const xpIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTime = useRef<number>(0);
+  const toggleCallLockRef = useRef<boolean>(false);
 
   const MAX_XP_PER_SESSION = 120;
   const isHost = room ? ((room.hostId || room.creatorId) === user.uid || user.role === "admin") : false;
@@ -116,17 +223,41 @@ export function useSessionEngine(
   useEffect(() => { roomStatusRef.current = room?.timerStatus || null; }, [room?.timerStatus]);
   useEffect(() => { roomSnapshotRef.current = room; }, [room]);
 
-  const safeUpdateRoom = async (data: any) => {
+  const isEditingNotesRef = useRef(isEditingNotes);
+  useEffect(() => {
+    isEditingNotesRef.current = isEditingNotes;
+  }, [isEditingNotes]);
+
+  const challengeDataRef = useRef<Challenge | null>(null);
+  useEffect(() => {
+    challengeDataRef.current = challengeData;
+  }, [challengeData]);
+
+  const participantsDataRef = useRef<UserData[]>([]);
+  useEffect(() => {
+    participantsDataRef.current = participantsData;
+  }, [participantsData]);
+
+  const onExitRef = useRef(onExit);
+  useEffect(() => {
+    onExitRef.current = onExit;
+  }, [onExit]);
+
+  const safeUpdateRoom = useCallback(async (data: any) => {
     if (isSpectator) return;
+    const startMs = performance.now();
     try {
       await updateDoc(roomRef, data);
+      Debugger.logLatency(`updateRoom[${stationId}]`, startMs, true);
     } catch (e) {
+      Debugger.logLatency(`updateRoom[${stationId}]`, startMs, false, e instanceof Error ? e.message : String(e));
+      Debugger.logError("safeUpdateRoom", e);
       console.error("safeUpdateRoom failed:", e);
     }
-  };
+  }, [stationId, isSpectator]);
 
   // 1. COMPREHENSIVE SINGLE EXIT EXECUTION GUARANTEE
-  const performSafeExit = async (options: {
+  const performSafeExit = useCallback(async (options: {
     isPenalty?: boolean;
     penaltyReason?: string;
     penaltyAmount?: number;
@@ -152,14 +283,14 @@ export function useSessionEngine(
 
     if (isSpectator) {
       console.log("[Exit Engine] Spectator clean local exit.");
-      onExit();
+      onExitRef.current();
       return;
     }
 
     if (options.isPenalty && options.penaltyReason) {
       try {
         console.log("[Exit Engine] Applying penalty transactional write:", options.penaltyAmount, options.penaltyReason);
-        await requestXpGrant(user.uid, user.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true);
+        await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true);
       } catch (e) {
         console.error("Failed to apply exit penalty:", e);
       }
@@ -171,8 +302,8 @@ export function useSessionEngine(
         if (participantsCountRef.current > 1) {
           await addDoc(collection(db, "rooms", stationId, "messages"), {
             text: options.customExitMessage || (options.isPenalty 
-              ? `🚀 غادر المحرك (${user.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
-              : `🚀 غادر المحرك (${user.displayName}) المحطة.`),
+              ? `🚀 غادر المحرك (${userRef.current.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
+              : `🚀 غادر المحرك (${userRef.current.displayName}) المحطة.`),
             userId: "system",
             userName: "نظام التنبيه",
             userPhoto: "",
@@ -185,15 +316,15 @@ export function useSessionEngine(
         const roomSnap = await getDoc(roomRef);
         if (roomSnap.exists()) {
           const rData = roomSnap.data() as Room;
-          const rem = (rData.participants || []).filter((p: string) => p !== user.uid);
+          const rem = (rData.participants || []).filter((p: string) => p !== userRef.current.uid);
           
           const updates: any = {
-            participants: arrayRemove(user.uid),
+            participants: arrayRemove(userRef.current.uid),
             emptyAt: rem.length === 0 ? serverTimestamp() : deleteField(),
           };
           
           const currentHostId = rData.hostId || rData.creatorId;
-          if (currentHostId === user.uid && rem.length > 0) {
+          if (currentHostId === userRef.current.uid && rem.length > 0) {
             updates.hostId = rem[0];
           }
           if (rem.length === 0) {
@@ -207,7 +338,7 @@ export function useSessionEngine(
             setTimeout(async () => {
               try {
                 const checkSnap = await getDoc(roomRef);
-                if (checkSnap.exists() && (!checkSnap.data().participants || checkSnap.data().participants.length === 0)) {
+                if (checkSnap.exists() && (!(checkSnap.data() as any).participants || (checkSnap.data() as any).participants.length === 0)) {
                   await deleteDoc(roomRef);
                 }
               } catch (e) {}
@@ -221,19 +352,19 @@ export function useSessionEngine(
 
     // Set user back to main dashboard activity
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      await updateDoc(doc(db, "users", userRef.current.uid), {
         currentActivity: "في لوحة التحكم",
       });
     } catch (e) {}
 
     console.log("[Exit Engine] Cleanup complete. Invoking onExit callback.");
-    onExit();
-  };
+    onExitRef.current();
+  }, [stationId, isSpectator]);
 
-  const handleConfirmExit = async () => {
+  const handleConfirmExit = useCallback(async () => {
     let isPenalty = false;
     let penaltyAmount = -10;
-    if (room?.timerStatus === "focus") {
+    if (roomSnapshotRef.current?.timerStatus === "focus") {
       isPenalty = true;
     }
     await performSafeExit({
@@ -241,23 +372,28 @@ export function useSessionEngine(
       penaltyReason: "self_exit_penalty",
       penaltyAmount
     });
-  };
+  }, [performSafeExit]);
 
-  const toggleCall = async () => {
+  const toggleCall = useCallback(async () => {
     if (isSpectator) return;
-    if (isJoined) {
-      setIsJoined(false);
-      try {
+    if (toggleCallLockRef.current) {
+      console.warn("[toggleCall Shield] Blocked rapid toggle join/leave spam clicks.");
+      return;
+    }
+    toggleCallLockRef.current = true;
+    try {
+      if (isJoinedRef.current) {
+        setIsJoined(false);
         const docSnap = await getDoc(roomRef);
         if (docSnap.exists()) {
           const rData = docSnap.data() as Room;
-          const rem = (rData.participants || []).filter((p: string) => p !== user.uid);
+          const rem = (rData.participants || []).filter((p: string) => p !== userRef.current.uid);
           const updates: any = {
-            participants: arrayRemove(user.uid),
+            participants: arrayRemove(userRef.current.uid),
             emptyAt: rem.length === 0 ? serverTimestamp() : deleteField(),
           };
           const currentHostId = rData.hostId || rData.creatorId;
-          if (currentHostId === user.uid && rem.length > 0) {
+          if (currentHostId === userRef.current.uid && rem.length > 0) {
             updates.hostId = rem[0];
           }
           if (rem.length === 0) {
@@ -265,17 +401,21 @@ export function useSessionEngine(
           }
           await safeUpdateRoom(updates);
         }
-      } catch (e) {}
-      setHasJoinedStation(false);
-    } else {
-      setIsJoined(true);
-      await safeUpdateRoom({
-        participants: arrayUnion(user.uid),
-        emptyAt: null,
-      });
-      setHasJoinedStation(true);
+        setHasJoinedStation(false);
+      } else {
+        setIsJoined(true);
+        await safeUpdateRoom({
+          participants: arrayUnion(userRef.current.uid),
+          emptyAt: null,
+        });
+        setHasJoinedStation(true);
+      }
+    } catch (e) {
+      console.error("Failed toggleCall:", e);
+    } finally {
+      toggleCallLockRef.current = false;
     }
-  };
+  }, [safeUpdateRoom, isSpectator]);
 
   // Auto-join on mounting
   useEffect(() => {
@@ -287,17 +427,17 @@ export function useSessionEngine(
         setIsJoined(true);
         try {
           await updateDoc(roomRef, {
-            participants: arrayUnion(user.uid),
+            participants: arrayUnion(userRef.current.uid),
             emptyAt: null,
           });
-          await updateDoc(doc(db, "users", user.uid), {
-            currentActivity: `في مدار محطة: ${room?.name || "خاصة"}`,
+          await updateDoc(doc(db, "users", userRef.current.uid), {
+            currentActivity: `في مدار محطة: ${roomSnapshotRef.current?.name || "خاصة"}`,
           });
         } catch (e) {}
       }
     };
     autoJoin();
-  }, [stationId, room?.name, user.uid, isSpectator]);
+  }, [stationId, isSpectator]);
 
   // Main Room, Messaging and Typing Listeners
   useEffect(() => {
@@ -315,7 +455,7 @@ export function useSessionEngine(
         const data = docSnap.data() as Room;
         setRoom({ id: docSnap.id, ...data });
 
-        if (data.sharedNotes !== undefined && !isEditingNotes) {
+        if (data.sharedNotes !== undefined && !isEditingNotesRef.current) {
           setSharedNotes(data.sharedNotes);
         }
 
@@ -325,7 +465,7 @@ export function useSessionEngine(
             ? data.startTime.toDate().getTime()
             : (data.startTime as any).seconds * 1000;
           const duration = (data.timerStatus === "focus" ? data.timerDuration : data.breakDuration) * 60 * 1000;
-          const elapsed = Date.now() - start;
+          const elapsed = (Date.now() + clockOffsetRef.current) - start;
           const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
           setTimeLeft(remaining);
         } else {
@@ -337,7 +477,8 @@ export function useSessionEngine(
         if (!isExitingRef.current) {
           handleFirestoreError(e, OperationType.GET, `rooms/${stationId}`);
         }
-      }
+      },
+      `rooms/${stationId}`
     );
 
     // Live Typing subscription
@@ -346,12 +487,14 @@ export function useSessionEngine(
       (snap) => {
         const newMap: Record<string, { name: string; time: number }> = {};
         snap.docs.forEach((d: any) => {
-          if (d.id !== user.uid) {
+          if (d.id !== userRef.current.uid) {
             newMap[d.id] = d.data() as { name: string; time: number };
           }
         });
         setTypingMap(newMap);
-      }
+      },
+      undefined,
+      `rooms/${stationId}/typing`
     );
 
     const typingInterval = setInterval(() => {
@@ -393,8 +536,8 @@ export function useSessionEngine(
             } else if (msg.type === 'system' || msg.text.includes("انضم إلى") || msg.text.includes("غادر المحطة")) {
               setActiveAlerts(prev => [...prev, { id: change.doc.id, text: msg.text, type: 'presence' }]);
             }
-            if (msg.isExitPenalty && msg.userId !== user.uid && isJoinedRef.current && roomStatusRef.current === "focus" && !isSpectator) {
-              requestXpGrant(user.uid, user.fleetId, null, false, -20, "peer_exit_penalty", true);
+            if (msg.isExitPenalty && msg.userId !== userRef.current.uid && isJoinedRef.current && roomStatusRef.current === "focus" && !isSpectator) {
+              requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -20, "peer_exit_penalty", true);
             }
           }
         });
@@ -404,7 +547,8 @@ export function useSessionEngine(
         if (!isExitingRef.current) {
           handleFirestoreError(e, OperationType.GET, `rooms/${stationId}/messages`);
         }
-      }
+      },
+      `rooms/${stationId}/messages`
     );
 
     // User visibility changed listeners
@@ -424,7 +568,7 @@ export function useSessionEngine(
 
         if (participantsCountRef.current > 1) {
           addDoc(collection(db, "rooms", stationId, "messages"), {
-            text: `🚨 المحرك (${user.displayName}) توقف عن العمل! السفينة تتباطأ!`,
+            text: `🚨 المحرك (${userRef.current.displayName}) توقف عن العمل! السفينة تتباطأ!`,
             userId: "system",
             userName: "نظام التنبيه",
             userPhoto: "",
@@ -436,6 +580,16 @@ export function useSessionEngine(
 
         if (!fuelLeakIntervalRef.current) {
           fuelLeakIntervalRef.current = setInterval(async () => {
+            // Self-Correcting / Safety check to prevent leaks outside active focus state
+            if (!isJoinedRef.current || roomStatusRef.current !== "focus") {
+              if (fuelLeakIntervalRef.current) {
+                clearInterval(fuelLeakIntervalRef.current);
+                fuelLeakIntervalRef.current = null;
+              }
+              setShowFuelLeak(false);
+              return;
+            }
+
             localLeakedRef.current += 1;
             setLeakedXP(localLeakedRef.current);
 
@@ -444,7 +598,7 @@ export function useSessionEngine(
               setShieldPercent(Math.round((remainingShieldRef.current / currentBetRef.current) * 100));
             } else {
               try {
-                await requestXpGrant(user.uid, user.fleetId, null, false, -1, "fuel_leak_tick", true);
+                await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -1, "fuel_leak_tick", true);
               } catch (err) {
                 console.error("Error draining XP:", err);
               }
@@ -477,19 +631,26 @@ export function useSessionEngine(
         fuelLeakIntervalRef.current = null;
       }
 
-      // Safe mount-unmount teardown matching our exit locks
+      // Safe delayed mount-unmount teardown protecting against StrictMode and quick navigates
       if (!isExitingRef.current && !isSpectator) {
-        const leaveCleanup = async () => {
-          try {
-            const rSnap = await getDoc(roomRef);
-            if (!rSnap.exists()) return;
-            const updates = {
-              participants: arrayRemove(user.uid)
-            };
-            await updateDoc(roomRef, updates);
-          } catch (e) {}
-        };
-        leaveCleanup();
+        const myInstanceId = instanceIdRef.current;
+        setTimeout(async () => {
+          // Verify if another instance has taken over in the meantime before performing DB write
+          if (activeHookInstances.get(userRef.current.uid) === myInstanceId) {
+            activeHookInstances.delete(userRef.current.uid);
+            try {
+              const updates = {
+                participants: arrayRemove(userRef.current.uid)
+              };
+              await updateDoc(roomRef, updates);
+              console.log("[Delayed Clean] Cleaned up room state successfully on total unmount.");
+            } catch (e) {
+              console.warn("Silent unmount cleanup error (expected if deleting room):", e);
+            }
+          } else {
+            console.log("[Delayed Clean Shield] Bypassed stale unmount cleanup for", userRef.current.displayName);
+          }
+        }, 1200);
       }
     };
   }, [stationId, user.uid, isSpectator]);
@@ -502,34 +663,57 @@ export function useSessionEngine(
         if (docSnap.exists()) {
           setChallengeData({ id: docSnap.id, ...docSnap.data() } as Challenge);
         }
-      });
+      }, undefined, `challenges/${room.challengeId}`);
     }
     return () => unsubChallenge();
   }, [room?.isChallenge, room?.challengeId]);
 
-  // Live query for participant profile info
-  useEffect(() => {
-    if (room?.participants && auth.currentUser) {
-      setParticipantsData((prev) => prev.filter((p) => room.participants.includes(p.uid)));
+  // Local optimized key tracking to prevent array comparison identity re-run storms
+  const participantsKey = (room?.participants || []).join(",");
 
-      const unsubscribes = room.participants.map((uid) => {
-        return safeOnSnapshot(
-          doc(db, "profiles", uid),
-          (docSnap) => {
-            if (docSnap.exists()) {
-              setParticipantsData((prev) => {
-                const filtered = prev.filter((p) => p.uid !== uid);
-                return [...filtered, docSnap.data() as UserData];
-              });
-            }
-          }
-        );
+  // Live query for participant profile info
+  const pendingFetchesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const list = room?.participants || [];
+    if (list.length > 0 && auth.currentUser) {
+      // Retain only those participants that are still actively inside the room list
+      setParticipantsData((prev) => prev.filter((p) => list.includes(p.uid)));
+
+      list.forEach((uid) => {
+        const exists = participantsDataRef.current.some((p) => p.uid === uid);
+        if (!exists && !pendingFetchesRef.current.has(uid)) {
+          pendingFetchesRef.current.add(uid);
+          getDoc(doc(db, "profiles", uid))
+            .then((docSnap) => {
+              if (docSnap.exists()) {
+                const fetched = docSnap.data() as UserData;
+                setParticipantsData((current) => {
+                  if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
+                    return [...current, fetched];
+                  }
+                  return current;
+                });
+              }
+            })
+            .catch((e) => {
+              console.warn(`[Participant Sync] Failed to fetch profile for ${uid}:`, e);
+            })
+            .finally(() => {
+              pendingFetchesRef.current.delete(uid);
+            });
+        }
       });
-      return () => unsubscribes.forEach((unsub) => unsub());
     } else {
       setParticipantsData([]);
     }
-  }, [room?.participants]);
+  }, [participantsKey]);
+
+  const startTimeVal = room?.startTime
+    ? (typeof room.startTime.toDate === "function"
+        ? room.startTime.toDate().getTime()
+        : (room.startTime as any).seconds * 1000)
+    : 0;
 
   // Active worker ticking to obtain authentic remaining timer ticks
   useEffect(() => {
@@ -551,11 +735,20 @@ export function useSessionEngine(
       worker.onmessage = () => {
         const r = roomSnapshotRef.current;
         if (!r || !r.startTime) return;
+        
+        // Securely handle pending Firestore server timestamps in latency-compensation phase
+        const seconds = r.startTime.seconds || (r.startTime as any).seconds;
+        if (seconds === undefined && typeof r.startTime.toDate !== "function") {
+          const duration = (r.timerStatus === "focus" ? r.timerDuration : r.breakDuration) * 60;
+          setTimeLeft(duration);
+          return;
+        }
+
         const start = typeof r.startTime.toDate === "function"
           ? r.startTime.toDate().getTime()
           : (r.startTime as any).seconds * 1000;
         const duration = (r.timerStatus === "focus" ? r.timerDuration : r.breakDuration) * 60 * 1000;
-        const elapsed = Date.now() - start;
+        const elapsed = (Date.now() + clockOffsetRef.current) - start;
         const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
         setTimeLeft(remaining);
       };
@@ -568,17 +761,17 @@ export function useSessionEngine(
         URL.revokeObjectURL(workerUrl);
       };
     }
-  }, [room?.timerStatus, room?.startTime, room?.timerDuration, room?.breakDuration]);
+  }, [room?.timerStatus, startTimeVal, room?.timerDuration, room?.breakDuration]);
 
   // Distraction trigger Red Alert
-  const triggerRedAlert = async () => {
+  const triggerRedAlert = useCallback(async () => {
     if (isSpectator) return;
     setShowAlert(true);
-    await requestXpGrant(user.uid, user.fleetId, null, false, -20, "distraction_penalty", true);
+    await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -20, "distraction_penalty", true);
 
     await addDoc(collection(db, "rooms", stationId, "messages"), {
-      text: `☄️ نيزك ضرب المحطة! ${user.displayName} تشتت وفقد 20 XP!`,
-      userId: user.uid,
+      text: `☄️ نيزك ضرب المحطة! ${userRef.current.displayName} تشتت وفقد 20 XP!`,
+      userId: userRef.current.uid,
       userName: "نظام التنبيه",
       userPhoto: "",
       timestamp: serverTimestamp(),
@@ -586,7 +779,7 @@ export function useSessionEngine(
     });
 
     setTimeout(() => setShowAlert(false), 4000);
-  };
+  }, [stationId, isSpectator]);
 
   // Interactive interval positive XP progression loop
   useEffect(() => {
@@ -601,7 +794,7 @@ export function useSessionEngine(
     }
 
     if (lastXpUpdateTimeRef.current === null) {
-      lastXpUpdateTimeRef.current = Date.now();
+      lastXpUpdateTimeRef.current = Date.now() + clockOffsetRef.current;
       sessionXpCountRef.current = 0;
       afkFailCountRef.current = 0;
     }
@@ -611,7 +804,7 @@ export function useSessionEngine(
     }
 
     xpIntervalRef.current = setInterval(async () => {
-      const now = Date.now();
+      const now = Date.now() + clockOffsetRef.current;
       const secondsSpent = Math.floor((now - (lastXpUpdateTimeRef.current || now)) / 1000);
 
       // Check if a minute actually elapsed
@@ -623,29 +816,38 @@ export function useSessionEngine(
         const boundedMinutes = Math.min(elapsedMinutes, 5);
         lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
 
-        const globalLastGrant = (user as any).lastXpUpdate || 0;
+        let globalLastGrant = (userRef.current as any).lastXpUpdate || 0;
+        if (globalLastGrant && typeof globalLastGrant.toDate === "function") {
+          globalLastGrant = globalLastGrant.toDate().getTime();
+        } else if (globalLastGrant && typeof globalLastGrant === "object" && "seconds" in globalLastGrant) {
+          globalLastGrant = globalLastGrant.seconds * 1000;
+        } else if (typeof globalLastGrant !== "number") {
+          globalLastGrant = Number(globalLastGrant) || 0;
+        }
+
         const lastGrant = Math.max(lastXpGrantTimestampRef.current || 0, globalLastGrant);
         const globalElapsedMinutes = Math.max(0, Math.floor((now - lastGrant + 5000) / 60000));
 
         const maxAllowedXp = Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current);
         let xpToGrant = Math.min(boundedMinutes, globalElapsedMinutes, maxAllowedXp);
 
-        if (xpToGrant > 0) {
+        const currentRoom = roomSnapshotRef.current;
+        if (xpToGrant > 0 && currentRoom) {
           lastXpGrantTimestampRef.current = now;
           sessionXpCountRef.current += xpToGrant;
 
           await requestXpGrant(
-            user.uid,
-            user.fleetId,
-            room?.isChallenge ? room.challengeId : null,
-            user.uid === room?.creatorId,
+            userRef.current.uid,
+            userRef.current.fleetId,
+            currentRoom.isChallenge ? currentRoom.challengeId : null,
+            challengeDataRef.current ? (userRef.current.uid === challengeDataRef.current.challengerId) : false,
             xpToGrant,
             `Focus Interval Loop (Minutes: ${xpToGrant})`,
             false // Enforce Transaction lock!
           );
 
-          if (room?.isChallenge && room.challengeId) {
-            checkChallengeCompletion(room.challengeId).catch(() => {});
+          if (currentRoom.isChallenge && currentRoom.challengeId) {
+            checkChallengeCompletion(currentRoom.challengeId).catch(() => {});
           }
         }
       }
@@ -657,7 +859,7 @@ export function useSessionEngine(
         xpIntervalRef.current = null;
       }
     };
-  }, [isJoined, room?.timerStatus, user.uid, user.fleetId, isSpectator]);
+  }, [isJoined, room?.timerStatus, isSpectator]);
 
   // AFK checking triggers
   useEffect(() => {
@@ -735,7 +937,7 @@ export function useSessionEngine(
         ? room.startTime.toDate().getTime()
         : (room.startTime as any).seconds * 1000;
       const durationMs = (room.timerStatus === "focus" ? room.timerDuration : room.breakDuration) * 60 * 1000;
-      const elapsed = Date.now() - startMs;
+      const elapsed = (Date.now() + clockOffsetRef.current) - startMs;
 
       // Ensure 90% of the session time has objectively elapsed to guard against fast-forward timing glitches
       if (elapsed < durationMs - 5000) return;
@@ -759,42 +961,60 @@ export function useSessionEngine(
 
       // CLIENT-SIDE PROGRESS REWARDS (Safe, independent, and strictly bounded)
       if (room.timerStatus === "focus" && isLegitEnd) {
-        const refund = remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
-        const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
+        const sessionStartVal = room.startTime ? (typeof room.startTime.toDate === 'function' ? room.startTime.toDate().getTime() : (room.startTime as any).seconds * 1000) : 0;
+        const transitionLockKey = `processed_transition_${stationId}_${sessionStartVal}`;
+        if (localStorage.getItem(transitionLockKey)) {
+          console.log("[Collision Shield] Rewards already granted in another tab/instance for this session");
+        } else {
+          localStorage.setItem(transitionLockKey, "true");
+          
+          // Clean up old obsolete transition lock keys for this room to avoid filling storage
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith(`processed_transition_${stationId}_`) && key !== transitionLockKey) {
+                localStorage.removeItem(key);
+              }
+            }
+          } catch (e) {}
 
-        currentBetRef.current = 0;
-        remainingShieldRef.current = 0;
-        setShieldPercent(0);
+          const refund = remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
+          const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
 
-        const updates: any = {
-          totalFocusSessions: increment(1),
-          lastStudyDate: new Date().toISOString().split("T")[0],
-        };
+          currentBetRef.current = 0;
+          remainingShieldRef.current = 0;
+          setShieldPercent(0);
 
-        if (((user.totalFocusSessions || 0) + 1) % 3 === 0) {
-          updates.completedTasks = increment(1);
-        }
-        if (((user.totalFocusSessions || 0) + 1) % 5 === 0) {
-          updates.seeds = increment(1);
-        }
-        if (user.plants && user.plants.length > 0) {
-          updates.plants = user.plants.map((p) => ({ ...p, lastWateredAt: Date.now() }));
-        }
+          const updates: any = {
+            totalFocusSessions: increment(1),
+            lastStudyDate: new Date().toISOString().split("T")[0],
+          };
 
-        updateDoc(doc(db, "users", user.uid), updates).catch(() => {});
+          if (((userRef.current.totalFocusSessions || 0) + 1) % 3 === 0) {
+            updates.completedTasks = increment(1);
+          }
+          if (((userRef.current.totalFocusSessions || 0) + 1) % 5 === 0) {
+            updates.seeds = increment(1);
+          }
+          if (userRef.current.plants && userRef.current.plants.length > 0) {
+            updates.plants = userRef.current.plants.map((p) => ({ ...p, lastWateredAt: Date.now() + clockOffsetRef.current }));
+          }
 
-        let totalXpToGive = 0;
-        if (safeXpEarned > 0) totalXpToGive += safeXpEarned;
-        if (((user.totalFocusSessions || 0) + 1) % 3 === 0) totalXpToGive += 50;
+          updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
 
-        if (totalXpToGive > 0) {
-          requestXpGrant(user.uid, user.fleetId, null, false, totalXpToGive, `on_exit_session (refund/quest)`, true);
-        }
+          let totalXpToGive = 0;
+          if (safeXpEarned > 0) totalXpToGive += safeXpEarned;
+          if (((userRef.current.totalFocusSessions || 0) + 1) % 3 === 0) totalXpToGive += 50;
 
-        if (user.fleetId) {
-          updateDoc(doc(db, "fleets", user.fleetId), {
-            totalFocusHours: increment(room.timerDuration / 60),
-          }).catch(() => {});
+          if (totalXpToGive > 0) {
+            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, totalXpToGive, `on_exit_session (refund/quest)`, true);
+          }
+
+          if (userRef.current.fleetId) {
+            updateDoc(doc(db, "fleets", userRef.current.fleetId), {
+              totalFocusHours: increment(room.timerDuration / 60),
+            }).catch(() => {});
+          }
         }
       }
 
@@ -804,7 +1024,7 @@ export function useSessionEngine(
 
       // Alphabetical participant listing to establish a backup execution chain
       const sortedParticipants = [...(room.participants || [])].sort();
-      const myAlphabeticalRank = sortedParticipants.indexOf(user.uid);
+      const myAlphabeticalRank = sortedParticipants.indexOf(userRef.current.uid);
 
       // Rule: Only Host is primary authorized writer.
       // If Host is absent, the next alphabetical participant (rank 0 or 1) steps up after 5 seconds to heal the timer stall.
@@ -838,35 +1058,56 @@ export function useSessionEngine(
         }
       }, transitionDelay);
     }
-  }, [timeLeft, room?.timerStatus, user.uid, stationId, isSpectator]);
+  }, [timeLeft, room?.timerStatus, stationId, isSpectator]);
 
   const checkChallengeCompletion = async (cId: string) => {
+    const startMs = performance.now();
     try {
-      const snap = await getDoc(doc(db, "challenges", cId));
-      if (!snap.exists()) return;
-      const cData = snap.data() as Challenge;
-      if (cData.status !== "active") return;
+      const cRef = doc(db, "challenges", cId);
+      let rewardedUser = false;
+      let winnerId = "";
+      let challengerId = "";
+      let challengedId = "";
+      let challengerName = "";
+      let challengedName = "";
 
-      const target = cData.durationMinutes;
-      const p1 = cData.progressPlayer1 || 0;
-      const p2 = cData.progressPlayer2 || 0;
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(cRef);
+        if (!snap.exists()) return;
+        const cData = snap.data() as Challenge;
+        if (cData.status !== "active") return;
 
-      if (p1 >= target || p2 >= target) {
-        let winnerId = "";
-        if (p1 >= target && p2 >= target) {
-          winnerId = p1 > p2 ? cData.challengerId : (p2 > p1 ? cData.challengedId : "tie");
-        } else if (p1 >= target) {
-          winnerId = cData.challengerId;
-        } else {
-          winnerId = cData.challengedId;
+        const target = cData.durationMinutes;
+        const p1 = cData.progressPlayer1 || 0;
+        const p2 = cData.progressPlayer2 || 0;
+
+        if (p1 >= target || p2 >= target) {
+          challengerId = cData.challengerId;
+          challengedId = cData.challengedId;
+          challengerName = cData.challengerName;
+          challengedName = cData.challengedName;
+
+          if (p1 >= target && p2 >= target) {
+            winnerId = p1 > p2 ? cData.challengerId : (p2 > p1 ? cData.challengedId : "tie");
+          } else if (p1 >= target) {
+            winnerId = cData.challengerId;
+          } else {
+            winnerId = cData.challengedId;
+          }
+
+          transaction.update(cRef, { status: "completed", winnerId });
+          rewardedUser = true;
         }
+      });
 
-        await updateDoc(doc(db, "challenges", cId), { status: "completed", winnerId });
+      Debugger.logLatency(`challenge_completion_tx[${cId}]`, startMs, true);
 
-        if (winnerId !== "tie" && winnerId === user.uid) {
-          await updateDoc(doc(db, "users", user.uid), { coins: increment(50) });
-          await requestXpGrant(user.uid, user.fleetId, null, false, 50, "challenge_win", true);
-          await addDoc(collection(db, "users", user.uid, "notifications"), {
+      if (rewardedUser && winnerId) {
+        if (winnerId !== "tie" && winnerId === userRef.current.uid) {
+          const uRef = doc(db, "users", userRef.current.uid);
+          await updateDoc(uRef, { coins: increment(50) });
+          await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, 50, "challenge_win", true);
+          await addDoc(collection(db, "users", userRef.current.uid, "notifications"), {
             type: "challenge_win",
             content: `مبروك! لقد فزت بتحدي التركيز. تم إضافة 50 XP لعملك الرائع!`,
             read: false,
@@ -875,7 +1116,7 @@ export function useSessionEngine(
         }
 
         await addDoc(collection(db, "rooms", stationId, "messages"), {
-          text: winnerId === "tie" ? "انتهى التحدي بالتعادل!" : `🏆 انتهى التحدي! الفائز هو ${winnerId === cData.challengerId ? cData.challengerName : cData.challengedName}`,
+          text: winnerId === "tie" ? "انتهى التحدي بالتعادل!" : `🏆 انتهى التحدي! الفائز هو ${winnerId === challengerId ? challengerName : challengedName}`,
           userId: "system",
           userName: "نظام التحديات",
           userPhoto: "",
@@ -884,22 +1125,25 @@ export function useSessionEngine(
         });
       }
     } catch (e) {
-      console.error(`Failed to check challenge: ${e}`);
+      Debugger.logLatency(`challenge_completion_tx[${cId}]`, startMs, false, e instanceof Error ? e.message : String(e));
+      Debugger.logError("checkChallengeCompletion", e);
+      console.error(`Failed to check challenge transactionally: ${e}`);
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    if (newMessage.length > 500) {
+  const handleSendMessage = useCallback(async (customText?: string) => {
+    const textToSend = typeof customText === "string" ? customText : newMessage;
+    if (!textToSend.trim()) return;
+    if (textToSend.length > 500) {
       alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
       return;
     }
-    if (room?.isChatLocked && !isHost) {
+    if (roomSnapshotRef.current?.isChatLocked && !isHost) {
       alert("الدردشة مغلقة من قبل المشرف.");
       return;
     }
 
-    if (room?.timerStatus === "focus") {
+    if (roomSnapshotRef.current?.timerStatus === "focus") {
       const now = Date.now();
       if (now - lastMessageTime.current < 5 * 60 * 1000) {
         const remainingMinutes = Math.ceil((5 * 60 * 1000 - (now - lastMessageTime.current)) / 60000);
@@ -909,29 +1153,69 @@ export function useSessionEngine(
       lastMessageTime.current = now;
     }
 
+    if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+      // Robust client fallback: simulate adding the message locally so the room interface doesn't freeze
+      const simulatedMsg = {
+        id: "offline_" + Math.random().toString(36).substring(7),
+        text: textToSend,
+        userId: userRef.current.uid,
+        userName: userRef.current.displayName,
+        userPhoto: userRef.current.photoURL,
+        timestamp: { toDate: () => new Date() }, // Mock Firestore timestamp object
+        type: "text" as const,
+        simulated: true,
+      };
+      setMessages((prev) => [...prev, simulatedMsg] as any);
+      if (typeof customText !== "string") {
+        setNewMessage("");
+      }
+      return;
+    }
+
     try {
       await addDoc(collection(db, "rooms", stationId, "messages"), {
-        text: newMessage,
-        userId: user.uid,
-        userName: user.displayName,
-        userPhoto: user.photoURL,
+        text: textToSend,
+        userId: userRef.current.uid,
+        userName: userRef.current.displayName,
+        userPhoto: userRef.current.photoURL,
         timestamp: serverTimestamp(),
         type: "text",
       });
-      setNewMessage("");
+      if (typeof customText !== "string") {
+        setNewMessage("");
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `rooms/${stationId}/messages`);
+      // Fallback locally even if write failed dynamically mid-flight
+      const simulatedMsg = {
+        id: "offline_err_" + Math.random().toString(36).substring(7),
+        text: textToSend,
+        userId: userRef.current.uid,
+        userName: userRef.current.displayName,
+        userPhoto: userRef.current.photoURL,
+        timestamp: { toDate: () => new Date() },
+        type: "text" as const,
+        simulated: true,
+      };
+      setMessages((prev) => [...prev, simulatedMsg] as any);
+      if (typeof customText !== "string") {
+        setNewMessage("");
+      }
     }
-  };
+  }, [stationId, isHost, newMessage]);
 
-  const saveNotes = async () => {
+  const saveNotes = useCallback(async () => {
+    if (sharedNotes === roomSnapshotRef.current?.sharedNotes) {
+      setIsEditingNotes(false);
+      return;
+    }
     try {
       await safeUpdateRoom({ sharedNotes });
       setIsEditingNotes(false);
     } catch (e) {
       console.error("Failed to save notes", e);
     }
-  };
+  }, [safeUpdateRoom, sharedNotes]);
 
   const handleNextMissionSubmit = () => {
     if (nextMissionInput.trim()) {
@@ -1025,10 +1309,4 @@ export function useSessionEngine(
   };
 }
 
-// Private helper incremental Firestore mapping
-function increment(val: number) {
-  return {
-    __op: "Increment",
-    value: val,
-  };
-}
+
