@@ -118,7 +118,7 @@ export function useSessionEngine(
   const [showAFKCheck, setShowAFKCheck] = useState(false);
   const [isWatchingClass, setIsWatchingClass] = useState(false);
   const [afkTimeLeft, setAfkTimeLeft] = useState(60);
-  const [showFuelLeak, setShowFuelLeak] = useState(false);
+  const [showFuelLeak, setShowFuelLeakState] = useState(false);
   const [leakedXP, setLeakedXP] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
 
@@ -218,6 +218,89 @@ export function useSessionEngine(
   const xpIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTime = useRef<number>(0);
   const toggleCallLockRef = useRef<boolean>(false);
+
+  const isDistractedRef = useRef<boolean>(false);
+  const processedExitPenaltiesRef = useRef<Set<string>>(new Set());
+
+  const setShowFuelLeak = useCallback((val: boolean) => {
+    setShowFuelLeakState(val);
+    if (!val) {
+      isDistractedRef.current = false;
+      if (fuelLeakIntervalRef.current) {
+        clearInterval(fuelLeakIntervalRef.current);
+        fuelLeakIntervalRef.current = null;
+      }
+    }
+  }, []);
+
+  const handleVisibilityChangeVal = useCallback(() => {
+    if (isSpectator) return;
+    if (!isJoinedRef.current) return;
+
+    const shouldBeDistracted = document.visibilityState === "hidden" || !document.hasFocus();
+
+    if (shouldBeDistracted) {
+      if (roomStatusRef.current !== "focus") return;
+      if (studyLinkRef.current && studyLinkRef.current.trim() !== "") return;
+      if (isWatchingClassRef.current) return;
+
+      // Mutex Guard: Only transition into distracted state ONCE per focus loss cycle
+      if (isDistractedRef.current) return;
+      isDistractedRef.current = true;
+
+      setShowFuelLeakState(true);
+      localLeakedRef.current = 0;
+      setLeakedXP(0);
+
+      try { playSound("alert"); } catch (e) {}
+
+      if (participantsCountRef.current > 1) {
+        addDoc(collection(db, "rooms", stationId, "messages"), {
+          text: `🚨 المحرك (${userRef.current.displayName}) توقف عن العمل! السفينة تتباطأ!`,
+          userId: "system",
+          userName: "نظام التنبيه",
+          userPhoto: "",
+          timestamp: serverTimestamp(),
+          type: "text",
+          isExitPenalty: true,
+        }).catch(() => {});
+      }
+
+      if (!fuelLeakIntervalRef.current) {
+        fuelLeakIntervalRef.current = setInterval(async () => {
+          // Self-Correcting / Safety check to prevent leaks outside active focus state
+          if (!isJoinedRef.current || roomStatusRef.current !== "focus" || isWatchingClassRef.current) {
+            if (fuelLeakIntervalRef.current) {
+              clearInterval(fuelLeakIntervalRef.current);
+              fuelLeakIntervalRef.current = null;
+            }
+            isDistractedRef.current = false;
+            setShowFuelLeakState(false);
+            return;
+          }
+
+          localLeakedRef.current += 1;
+          setLeakedXP(localLeakedRef.current);
+
+          if (currentBetRef.current > 0 && remainingShieldRef.current > 0) {
+            remainingShieldRef.current = Math.max(0, remainingShieldRef.current - 1);
+            setShieldPercent(Math.round((remainingShieldRef.current / currentBetRef.current) * 100));
+          } else {
+            try {
+              await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -1, "fuel_leak_tick", true);
+            } catch (err) {
+              console.error("Error draining XP:", err);
+            }
+          }
+        }, 60000);
+      }
+    } else {
+      // Recover focus safely using the wrapped helper
+      if (isDistractedRef.current) {
+        setShowFuelLeak(false);
+      }
+    }
+  }, [stationId, isSpectator]);
 
   const MAX_XP_PER_SESSION = 120;
   const isHost = room ? ((room.hostId || room.creatorId) === user.uid || user.role === "admin") : false;
@@ -542,9 +625,6 @@ export function useSessionEngine(
             } else if (msg.type === 'system' || msg.text.includes("انضم إلى") || msg.text.includes("غادر المحطة")) {
               setActiveAlerts(prev => [...prev, { id: change.doc.id, text: msg.text, type: 'presence' }]);
             }
-            if (msg.isExitPenalty && msg.userId !== userRef.current.uid && isJoinedRef.current && roomStatusRef.current === "focus" && !isSpectator) {
-              requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -20, "peer_exit_penalty", true);
-            }
           }
         });
         initialLoadMsgs = false;
@@ -557,80 +637,18 @@ export function useSessionEngine(
       `rooms/${stationId}/messages`
     );
 
-    // User visibility changed listeners
-    const handleVisibilityChange = () => {
-      if (isSpectator) return;
-      if (!isJoinedRef.current) return;
-      if (document.visibilityState === "hidden" || !document.hasFocus()) {
-        if (roomStatusRef.current !== "focus") return;
-        if (studyLinkRef.current && studyLinkRef.current.trim() !== "") return;
-        if (isWatchingClassRef.current) return;
-
-        setShowFuelLeak(true);
-        localLeakedRef.current = 0;
-        setLeakedXP(0);
-
-        try { playSound("alert"); } catch (e) {}
-
-        if (participantsCountRef.current > 1) {
-          addDoc(collection(db, "rooms", stationId, "messages"), {
-            text: `🚨 المحرك (${userRef.current.displayName}) توقف عن العمل! السفينة تتباطأ!`,
-            userId: "system",
-            userName: "نظام التنبيه",
-            userPhoto: "",
-            timestamp: serverTimestamp(),
-            type: "text",
-            isExitPenalty: true,
-          }).catch(() => {});
-        }
-
-        if (!fuelLeakIntervalRef.current) {
-          fuelLeakIntervalRef.current = setInterval(async () => {
-            // Self-Correcting / Safety check to prevent leaks outside active focus state
-            if (!isJoinedRef.current || roomStatusRef.current !== "focus") {
-              if (fuelLeakIntervalRef.current) {
-                clearInterval(fuelLeakIntervalRef.current);
-                fuelLeakIntervalRef.current = null;
-              }
-              setShowFuelLeak(false);
-              return;
-            }
-
-            localLeakedRef.current += 1;
-            setLeakedXP(localLeakedRef.current);
-
-            if (currentBetRef.current > 0 && remainingShieldRef.current > 0) {
-              remainingShieldRef.current = Math.max(0, remainingShieldRef.current - 1);
-              setShieldPercent(Math.round((remainingShieldRef.current / currentBetRef.current) * 100));
-            } else {
-              try {
-                await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -1, "fuel_leak_tick", true);
-              } catch (err) {
-                console.error("Error draining XP:", err);
-              }
-            }
-          }, 60000);
-        }
-      } else {
-        if (fuelLeakIntervalRef.current) {
-          clearInterval(fuelLeakIntervalRef.current);
-          fuelLeakIntervalRef.current = null;
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleVisibilityChange);
-    window.addEventListener("focus", handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChangeVal);
+    window.addEventListener("blur", handleVisibilityChangeVal);
+    window.addEventListener("focus", handleVisibilityChangeVal);
 
     return () => {
       unsubscribeRoom();
       unsubTyping();
       unsubscribeMessages();
       clearInterval(typingInterval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleVisibilityChange);
-      window.removeEventListener("focus", handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChangeVal);
+      window.removeEventListener("blur", handleVisibilityChangeVal);
+      window.removeEventListener("focus", handleVisibilityChangeVal);
 
       if (fuelLeakIntervalRef.current) {
         clearInterval(fuelLeakIntervalRef.current);
@@ -714,6 +732,16 @@ export function useSessionEngine(
       setParticipantsData([]);
     }
   }, [participantsKey]);
+
+  // Verify visibility state when focus round starts to handle pre-inactive participants independently
+  useEffect(() => {
+    if (room?.timerStatus === "focus" && isJoined && !isSpectator) {
+      const timer = setTimeout(() => {
+        handleVisibilityChangeVal();
+      }, 1500); // 1.5s stabilization delay
+      return () => clearTimeout(timer);
+    }
+  }, [room?.timerStatus, isJoined, isSpectator, handleVisibilityChangeVal]);
 
   const startTimeVal = room?.startTime
     ? (typeof room.startTime.toDate === "function"
@@ -811,6 +839,13 @@ export function useSessionEngine(
 
     xpIntervalRef.current = setInterval(async () => {
       const now = Date.now() + clockOffsetRef.current;
+      
+      if (isDistractedRef.current || showAFKCheck) {
+        // Distracted or AFK-checked users do not earn Focus XP!
+        lastXpUpdateTimeRef.current = now;
+        return;
+      }
+
       const secondsSpent = Math.floor((now - (lastXpUpdateTimeRef.current || now)) / 1000);
 
       // Check if a minute actually elapsed
@@ -822,7 +857,10 @@ export function useSessionEngine(
         const boundedMinutes = Math.min(elapsedMinutes, 5);
         lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
 
-        let globalLastGrant = (userRef.current as any).lastXpUpdate || 0;
+        let globalLastGrant = (userRef.current as any).lastFocusXpUpdate !== undefined 
+          ? (userRef.current as any).lastFocusXpUpdate 
+          : ((userRef.current as any).lastXpUpdate || 0);
+
         if (globalLastGrant && typeof globalLastGrant.toDate === "function") {
           globalLastGrant = globalLastGrant.toDate().getTime();
         } else if (globalLastGrant && typeof globalLastGrant === "object" && "seconds" in globalLastGrant) {

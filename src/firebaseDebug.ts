@@ -30,6 +30,17 @@ let tabOpenCount = 1;
 const tabInstanceId = Math.random().toString(36).substring(2, 10);
 let multiTabConflictDetected = false;
 
+let isAuthorizedUser = typeof window !== "undefined" ? !!import.meta.env.DEV : false;
+let isInitialized = false;
+let diagnosticChannel: BroadcastChannel | null = null;
+
+export function authorizeDebugger(isAuthorized: boolean) {
+  isAuthorizedUser = isAuthorized;
+  if (isAuthorized) {
+    initializeDiagnostics();
+  }
+}
+
 // 1. React Render Diagnostics structure
 const renderTracker: Record<string, { count: number; lastRender: number; history: string[] }> = {};
 
@@ -64,7 +75,10 @@ let maxDriftDetected = 0;
 const driftHistory: { timestamp: number; driftMs: number; deltaMs: number }[] = [];
 
 // Intercept window.setInterval and window.clearInterval
-if (typeof window !== "undefined") {
+function initializeDiagnostics() {
+  if (typeof window === "undefined" || isInitialized) return;
+  isInitialized = true;
+
   const originalSetInterval = window.setInterval;
   const originalClearInterval = window.clearInterval;
 
@@ -144,37 +158,31 @@ if (typeof window !== "undefined") {
 
     return w;
   } as any;
-}
 
-// BroadcastChannel to check multi-tab conflicts safely and gracefully
-const diagnosticChannel = typeof window !== "undefined" && "BroadcastChannel" in window
-  ? new BroadcastChannel("astro_realtime_diagnostic_net")
-  : null;
+  // BroadcastChannel to check multi-tab conflicts safely and gracefully
+  if ("BroadcastChannel" in window) {
+    diagnosticChannel = new BroadcastChannel("astro_realtime_diagnostic_net");
+    diagnosticChannel.onmessage = (event) => {
+      if (event.data?.type === "ping_tabs") {
+        tabOpenCount++;
+        diagnosticChannel?.postMessage({ type: "pong_tabs", senderId: tabInstanceId });
+        Debugger.logSuspicious(`Multi-tab conflict warning! Other tab pinged us. Total tabs: ${tabOpenCount}`);
+        multiTabConflictDetected = true;
+        triggerUIRefresh();
+      } else if (event.data?.type === "pong_tabs" && event.data?.senderId !== tabInstanceId) {
+        tabOpenCount++;
+        multiTabConflictDetected = true;
+        triggerUIRefresh();
+      }
+    };
 
-if (diagnosticChannel) {
-  diagnosticChannel.onmessage = (event) => {
-    if (event.data?.type === "ping_tabs") {
-      tabOpenCount++;
-      diagnosticChannel.postMessage({ type: "pong_tabs", senderId: tabInstanceId });
-      Debugger.logSuspicious(`Multi-tab conflict warning! Other tab pinged us. Total tabs: ${tabOpenCount}`);
-      multiTabConflictDetected = true;
-      triggerUIRefresh();
-    } else if (event.data?.type === "pong_tabs" && event.data?.senderId !== tabInstanceId) {
-      tabOpenCount++;
-      multiTabConflictDetected = true;
-      triggerUIRefresh();
-    }
-  };
+    // Initial tab discovery check
+    setTimeout(() => {
+      diagnosticChannel?.postMessage({ type: "ping_tabs", senderId: tabInstanceId });
+    }, 1000);
+  }
 
-  // Initial tab discovery check
-  setTimeout(() => {
-    diagnosticChannel.postMessage({ type: "ping_tabs", senderId: tabInstanceId });
-  }, 1000);
-}
-
-// Global window event watchers
-let lastOfflineTime = 0;
-if (typeof window !== "undefined") {
+  // Global window event watchers
   window.addEventListener("online", () => {
     Debugger.logLifecycle("internet_reconnect", "✅ Network recovered. Restoring connection.");
     if (lastOfflineTime > 0) {
@@ -187,9 +195,15 @@ if (typeof window !== "undefined") {
     lastOfflineTime = Date.now();
     Debugger.logLifecycle("internet_disconnect", "❌ Network offline. Queuing local mutations.");
   });
+
+  // Hotkey binding and visual layout creation
+  createVisualDiagnosticsPanel();
 }
 
+let lastOfflineTime = 0;
+
 function pushTrace(trace: Omit<DiagnosticTrace, "id" | "timestamp">) {
+  if (!isAuthorizedUser) return;
   const completeTrace: DiagnosticTrace = {
     ...trace,
     id: Math.random().toString(36).substring(3, 9),
@@ -203,6 +217,7 @@ function pushTrace(trace: Omit<DiagnosticTrace, "id" | "timestamp">) {
 }
 
 function triggerUIRefresh() {
+  if (!isAuthorizedUser) return;
   if (typeof window !== "undefined" && (window as any).__onDiagnosticUpdate) {
     try {
       (window as any).__onDiagnosticUpdate();
@@ -213,6 +228,7 @@ function triggerUIRefresh() {
 export const Debugger = {
   // Renders tracking
   trackRender: (componentName: string, reason?: string) => {
+    if (!isAuthorizedUser) return;
     if (!renderTracker[componentName]) {
       renderTracker[componentName] = { count: 0, lastRender: Date.now(), history: [] };
     }
@@ -565,6 +581,10 @@ export const Debugger = {
     });
   },
 
+  getClockOffset: () => {
+    return clockSkewValue.offset;
+  },
+
   getDiagnosticsMetrics: () => {
     const activeListeners = Object.entries(listenerTracker)
       .filter(([_, data]) => data.count > 0)
@@ -638,7 +658,9 @@ export function useRenderLog(componentName: string, props: any = {}) {
 // Global hook registration
 if (typeof window !== "undefined") {
   (window as any).__realtimeDiagnostics = Debugger;
-  createVisualDiagnosticsPanel();
+  if (isAuthorizedUser) {
+    initializeDiagnostics();
+  }
 }
 
 function createVisualDiagnosticsPanel() {

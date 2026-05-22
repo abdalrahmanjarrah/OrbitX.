@@ -1,6 +1,6 @@
 import { Joyride } from "react-joyride";
 import { playSound } from "./lib/sound";
-import { useRenderLog } from "./firebaseDebug";
+import { useRenderLog, authorizeDebugger } from "./firebaseDebug";
 import Markdown from "react-markdown";
 /**
  * @license
@@ -189,6 +189,17 @@ function App() {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
   const lastSyncedProfileRef = useRef<string>("");
+
+  useEffect(() => {
+    if (user) {
+      if (userData) {
+        const isAuthorized = import.meta.env.DEV || userData.role === "admin";
+        authorizeDebugger(isAuthorized);
+      }
+    } else {
+      authorizeDebugger(!!import.meta.env.DEV);
+    }
+  }, [user, userData]);
 
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(
     typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded

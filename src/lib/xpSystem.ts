@@ -77,7 +77,8 @@ export const requestXpGrant = async (
   const userRef = doc(db, 'users', userId);
   
   try {
-    const now = Date.now();
+    const skew = (Debugger as any).getClockOffset ? (Debugger as any).getClockOffset() : 0;
+    const now = Date.now() + skew;
     let updatedXp = false;
     let oldXp = 0;
     let newXp = 0;
@@ -86,15 +87,27 @@ export const requestXpGrant = async (
        const userDoc = await transaction.get(userRef);
        if (!userDoc.exists()) return;
        const uData = userDoc.data();
-       const uLastXpUpdate = uData.lastXpUpdate || 0;
        
-       const uTimeSinceLastGrant = now - uLastXpUpdate;
+       const isFocusLoop = source.includes("Focus Interval Loop");
        
-       // Hard lock 50 seconds to prevent interval duplicating.
-       // Only applies to positive constant interval rewards unless bypassed.
-       if (!forceBypassLock && amount > 0 && uTimeSinceLastGrant < 50000 && (Debugger.logXPBlocked(amount, source, "Cooldown lock applied"), true)) {
-          Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastGrant/1000)}s passed. (${userId})`);
-          return;
+       if (!forceBypassLock && amount > 0) {
+         if (isFocusLoop) {
+           const uLastFocusXpUpdate = uData.lastFocusXpUpdate || 0;
+           const uTimeSinceLastFocusGrant = now - uLastFocusXpUpdate;
+           if (uTimeSinceLastFocusGrant < 45000) {
+             Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastFocusGrant/1000)}s passed. (${userId})`);
+             Debugger.logXPBlocked(amount, source, "Cooldown lock applied due to focus interval check");
+             return;
+           }
+         } else {
+           const uLastXpUpdate = uData.lastXpUpdate || 0;
+           const uTimeSinceLastGrant = now - uLastXpUpdate;
+           if (uTimeSinceLastGrant < 45000) {
+             Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastGrant/1000)}s passed. (${userId})`);
+             Debugger.logXPBlocked(amount, source, "Cooldown lock applied due to general interval check");
+             return;
+           }
+         }
        }
        
        oldXp = uData.xp || 0;
@@ -106,11 +119,16 @@ export const requestXpGrant = async (
            levelUpdates = { level: calculatedLevel };
        }
        
-       transaction.update(userRef, {
+       const updates: any = {
            xp: increment(amount),
            lastXpUpdate: now,
            ...levelUpdates
-       });
+       };
+       if (isFocusLoop) {
+           updates.lastFocusXpUpdate = now;
+       }
+       
+       transaction.update(userRef, updates);
        updatedXp = true;
     });
     
