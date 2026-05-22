@@ -17,7 +17,12 @@ const traceBuffer: DiagnosticTrace[] = [];
 const maxTracesCount = 200;
 
 const listenerTracker: Record<string, { count: number; createdAt: number; lastModified: number; dupesDetected: number }> = {};
+const duplicateCheckTimeouts: Record<string, any> = {};
 let latencyHistory: { duration: number; timestamp: number; success: boolean; operation: string }[] = [];
+let listenerLatencyHistory: { duration: number; timestamp: number; operation: string }[] = [];
+let writeLatencyHistory: { duration: number; timestamp: number; operation: string }[] = [];
+let websocketReconnectHistory: { duration: number; timestamp: number; operation: string }[] = [];
+let failedRequestHistory: { duration: number; timestamp: number; operation: string }[] = [];
 let averageLatency = 0;
 let latencySpikesCount = 0;
 const clockSkewValue = { offset: 0, checkedAt: 0 };
@@ -168,11 +173,18 @@ if (diagnosticChannel) {
 }
 
 // Global window event watchers
+let lastOfflineTime = 0;
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
     Debugger.logLifecycle("internet_reconnect", "✅ Network recovered. Restoring connection.");
+    if (lastOfflineTime > 0) {
+      const reconnectDuration = Date.now() - lastOfflineTime;
+      Debugger.logLatency("websocket_reconnect", performance.now() - reconnectDuration, true);
+      lastOfflineTime = 0;
+    }
   });
   window.addEventListener("offline", () => {
+    lastOfflineTime = Date.now();
     Debugger.logLifecycle("internet_disconnect", "❌ Network offline. Queuing local mutations.");
   });
 }
@@ -349,21 +361,83 @@ export const Debugger = {
 
   logLatency: (operation: string, startMs: number, successPlan: boolean, errorSnippet?: string) => {
     const elapsed = performance.now() - startMs;
+    
+    // Ensure quota-exhausted fallback mode does not continue inflating RTT metrics
+    const isQuotaExceeded = typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded;
+    if (isQuotaExceeded) {
+      return;
+    }
+
     const isSpike = elapsed > 2000;
-    if (isSpike) {
+    if (isSpike && successPlan) {
       latencySpikesCount++;
     }
-    latencyHistory.push({
-      duration: elapsed,
-      timestamp: Date.now(),
-      success: successPlan,
-      operation
-    });
-    if (latencyHistory.length > 50) {
-      latencyHistory.shift();
+
+    const now = Date.now();
+    let categoryType: "listener" | "write" | "websocket" | "unknown" = "unknown";
+    const opLower = operation.toLowerCase();
+    
+    if (opLower.startsWith("snapshot_load") || opLower.startsWith("safeonsnapshot")) {
+      categoryType = "listener";
+    } else if (
+      opLower.startsWith("updatedoc") ||
+      opLower.startsWith("adddoc") ||
+      opLower.startsWith("deletedoc") ||
+      opLower.startsWith("setdoc") ||
+      opLower.startsWith("runtransaction") ||
+      opLower.startsWith("updateroom") ||
+      opLower.startsWith("challenge_completion_tx") ||
+      opLower.includes("write")
+    ) {
+      categoryType = "write";
+    } else if (
+      opLower.includes("reconnect") ||
+      opLower.includes("websocket") ||
+      opLower.includes("socket") ||
+      opLower.includes("network_reconnect")
+    ) {
+      categoryType = "websocket";
     }
-    const sum = latencyHistory.reduce((acc, curr) => acc + curr.duration, 0);
-    averageLatency = Math.round(sum / latencyHistory.length);
+
+    if (!successPlan) {
+      failedRequestHistory.push({ duration: elapsed, timestamp: now, operation });
+      if (failedRequestHistory.length > 50) failedRequestHistory.shift();
+    } else {
+      if (categoryType === "listener") {
+        listenerLatencyHistory.push({ duration: elapsed, timestamp: now, operation });
+        if (listenerLatencyHistory.length > 50) listenerLatencyHistory.shift();
+      } else if (categoryType === "write") {
+        writeLatencyHistory.push({ duration: elapsed, timestamp: now, operation });
+        if (writeLatencyHistory.length > 50) writeLatencyHistory.shift();
+      } else if (categoryType === "websocket") {
+        websocketReconnectHistory.push({ duration: elapsed, timestamp: now, operation });
+        if (websocketReconnectHistory.length > 50) websocketReconnectHistory.shift();
+      }
+
+      latencyHistory.push({
+        duration: elapsed,
+        timestamp: now,
+        success: true,
+        operation
+      });
+      if (latencyHistory.length > 50) {
+        latencyHistory.shift();
+      }
+    }
+
+    // rolling-window logic: ignore stale requests older than 10 seconds
+    const recentSuccess = latencyHistory.filter(x => x.success && (now - x.timestamp) < 10000);
+    if (recentSuccess.length > 0) {
+      averageLatency = Math.round(recentSuccess.reduce((acc, curr) => acc + curr.duration, 0) / recentSuccess.length);
+    } else {
+      // Fallback to absolute last successful request to prevent sudden drop to 0 when idle
+      const allSuccess = latencyHistory.filter(x => x.success);
+      if (allSuccess.length > 0) {
+        averageLatency = Math.round(allSuccess[allSuccess.length - 1].duration);
+      } else {
+        averageLatency = 0;
+      }
+    }
 
     pushTrace({
       category: "latency",
@@ -391,20 +465,66 @@ export const Debugger = {
     });
   },
 
+  getConnectionState: () => {
+    const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+    if (!isOnline) return "Offline";
+
+    const isQuotaExceeded = typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded;
+    if (isQuotaExceeded) return "Offline";
+
+    const now = Date.now();
+    const recentSuccess = latencyHistory.filter(x => x.success && (now - x.timestamp) < 10000);
+    const recentFailed = failedRequestHistory.filter(x => (now - x.timestamp) < 10000);
+
+    if (recentFailed.length > 0) {
+      return "Degraded";
+    }
+
+    let avg = 0;
+    if (recentSuccess.length > 0) {
+      avg = recentSuccess.reduce((acc, curr) => acc + curr.duration, 0) / recentSuccess.length;
+    } else if (latencyHistory.length > 0) {
+      avg = latencyHistory[latencyHistory.length - 1].duration;
+    }
+
+    if (avg === 0) {
+      return "Healthy";
+    }
+
+    if (avg < 300) {
+      return "Healthy";
+    } else if (avg < 1000) {
+      return "Slow";
+    } else {
+      return "Degraded";
+    }
+  },
+
   // Stethoscope functions to trace stream leakage
   trackListenerStart: (path: string) => {
+    const now = Date.now();
     if (!listenerTracker[path]) {
-      listenerTracker[path] = { count: 0, createdAt: Date.now(), lastModified: Date.now(), dupesDetected: 0 };
+      listenerTracker[path] = { count: 0, createdAt: now, lastModified: now, dupesDetected: 0 };
     }
     listenerTracker[path].count++;
-    listenerTracker[path].lastModified = Date.now();
+    listenerTracker[path].lastModified = now;
+
     if (listenerTracker[path].count > 1) {
-      listenerTracker[path].dupesDetected++;
-      pushTrace({
-        category: "state",
-        severity: "warning",
-        message: `⚠️ DUPLICATED snap listener detected! Path: ${path}`,
-      });
+      // Clear any pending duplicate check timeout
+      if (duplicateCheckTimeouts[path]) {
+        clearTimeout(duplicateCheckTimeouts[path]);
+      }
+      // Debounce the duplicate warning check by 500ms to allow React StrictMode/Concurrent Mode cleanup of old snapshot mounts
+      duplicateCheckTimeouts[path] = setTimeout(() => {
+        if (listenerTracker[path] && listenerTracker[path].count > 1) {
+          listenerTracker[path].dupesDetected++;
+          pushTrace({
+            category: "state",
+            severity: "warning",
+            message: `⚠️ DUPLICATED snap listener detected! Path: ${path}`,
+          });
+        }
+      }, 500);
     } else {
       pushTrace({
         category: "state",
@@ -418,6 +538,15 @@ export const Debugger = {
     if (listenerTracker[path] && listenerTracker[path].count > 0) {
       listenerTracker[path].count--;
       listenerTracker[path].lastModified = Date.now();
+      
+      // If the count fell back to a safe level, cancel any duplicate check timeouts
+      if (listenerTracker[path].count <= 1) {
+        if (duplicateCheckTimeouts[path]) {
+          clearTimeout(duplicateCheckTimeouts[path]);
+          delete duplicateCheckTimeouts[path];
+        }
+      }
+
       pushTrace({
         category: "state",
         severity: "info",
@@ -445,12 +574,30 @@ export const Debugger = {
       .filter(([path, data]) => data.count > 0 && (Date.now() - data.lastModified) > 600000) // 10 minutes inactive
       .map(([path, data]) => ({ path, count: data.count }));
 
+    // Helper to get rolling averages
+    const getRollingAverage = (history: { duration: number; timestamp: number }[]) => {
+      const now = Date.now();
+      const recent = history.filter(x => (now - x.timestamp) < 10000);
+      if (recent.length > 0) {
+        return Math.round(recent.reduce((acc, curr) => acc + curr.duration, 0) / recent.length);
+      }
+      if (history.length > 0) {
+        return Math.round(history[history.length - 1].duration);
+      }
+      return 0;
+    };
+
     return {
       tabInstanceId,
       tabOpenCount,
       multiTabConflictDetected,
       clockSkewMs: clockSkewValue.offset,
       averageLatencyMs: averageLatency,
+      listenerLatencyMs: getRollingAverage(listenerLatencyHistory),
+      writeLatencyMs: getRollingAverage(writeLatencyHistory),
+      websocketReconnectMs: getRollingAverage(websocketReconnectHistory),
+      failedRequestMs: getRollingAverage(failedRequestHistory),
+      connectionState: Debugger.getConnectionState(),
       latencySpikesCount,
       activeListenersCount: activeListeners.reduce((a, b) => a + b.count, 0),
       activeListeners,
@@ -704,9 +851,20 @@ function createVisualDiagnosticsPanel() {
           <div><span class="diag-stat-label">Instance ID:</span> <span class="diag-stat-val" style="color: #6366f1;" id="field-instance-id">-</span></div>
           <div><span class="diag-stat-label">Multi-tab Active:</span> <span class="diag-stat-val" id="field-multi-tab" style="color:#10b981;">No</span></div>
           <div><span class="diag-stat-label">Network RTT:</span> <span class="diag-stat-val" id="field-rtt">-</span></div>
+          <div><span class="diag-stat-label">Conn State:</span> <span class="diag-stat-val" id="field-conn-state">-</span></div>
           <div><span class="diag-stat-label">System Skew:</span> <span class="diag-stat-val" id="field-skew">-</span></div>
           <div><span class="diag-stat-label">Active Listeners:</span> <span class="diag-stat-val" id="field-readers">-</span></div>
           <div><span class="diag-stat-label">Active Worker:</span> <span class="diag-stat-val" id="field-workers">-</span></div>
+        </div>
+      </div>
+
+      <div class="diag-metric-card">
+        <div class="diag-metric-title">Segmented Latencies (10s rolling)</div>
+        <div class="diag-metric-group">
+          <div><span class="diag-stat-label">Listener RTT:</span> <span class="diag-stat-val" id="field-listener-rtt">-</span></div>
+          <div><span class="diag-stat-label">Write RTT:</span> <span class="diag-stat-val" id="field-write-rtt">-</span></div>
+          <div><span class="diag-stat-label">WS Reconnect:</span> <span class="diag-stat-val" id="field-ws-reconnect">-</span></div>
+          <div><span class="diag-stat-label">Failed Duration:</span> <span class="diag-stat-val" id="field-failed-dur">-</span></div>
         </div>
       </div>
       
@@ -856,6 +1014,18 @@ function createVisualDiagnosticsPanel() {
       rtt.style.color = data.averageLatencyMs > 2000 ? "#ef4444" : "#10b981";
     }
 
+    const connState = document.getElementById("field-conn-state");
+    if (connState) {
+      connState.textContent = data.connectionState;
+      if (data.connectionState === "Healthy") {
+        connState.style.color = "#10b981";
+      } else if (data.connectionState === "Slow") {
+        connState.style.color = "#fbbf24";
+      } else {
+        connState.style.color = "#ef4444";
+      }
+    }
+
     const skew = document.getElementById("field-skew");
     if (skew) {
       skew.textContent = `${data.clockSkewMs}ms`;
@@ -878,6 +1048,19 @@ function createVisualDiagnosticsPanel() {
     if (conflictBanner) {
       conflictBanner.style.display = data.multiTabConflictDetected ? "block" : "none";
     }
+
+    // Segmented latencies bindings
+    const listenerRtt = document.getElementById("field-listener-rtt");
+    if (listenerRtt) listenerRtt.textContent = data.listenerLatencyMs > 0 ? `${data.listenerLatencyMs}ms` : "N/A";
+
+    const writeRtt = document.getElementById("field-write-rtt");
+    if (writeRtt) writeRtt.textContent = data.writeLatencyMs > 0 ? `${data.writeLatencyMs}ms` : "N/A";
+
+    const wsReconnect = document.getElementById("field-ws-reconnect");
+    if (wsReconnect) wsReconnect.textContent = data.websocketReconnectMs > 0 ? `${data.websocketReconnectMs}ms` : "N/A";
+
+    const failedDur = document.getElementById("field-failed-dur");
+    if (failedDur) failedDur.textContent = data.failedRequestMs > 0 ? `${data.failedRequestMs}ms` : "N/A";
 
     // Trace block rendering
     const streamContainer = document.getElementById("diag-stream-pane");

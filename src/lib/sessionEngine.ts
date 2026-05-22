@@ -41,6 +41,7 @@ function safeOnSnapshot(
     // Return empty unsubscribe if not authenticated to prevent permission errors
     return () => {};
   }
+  let isFirstLoad = true;
   const timerStart = performance.now();
   Debugger.trackListenerStart(pathLabel);
   
@@ -48,8 +49,9 @@ function safeOnSnapshot(
     queryRef,
     (snap) => {
       // Record first snapshot RTT latency metric
-      if (timerStart > 0) {
+      if (timerStart > 0 && isFirstLoad) {
         Debugger.logLatency(`snapshot_load[${pathLabel}]`, timerStart, true);
+        isFirstLoad = false;
       }
       Debugger.trackOnSnapshotTrigger(pathLabel, (snap as any).docs ? (snap as any).docs.length : 1);
       onNext(snap);
@@ -58,6 +60,10 @@ function safeOnSnapshot(
       if (!auth.currentUser) {
         // Ignore errors after signing out or during unmount
         return;
+      }
+      if (isFirstLoad) {
+        Debugger.logLatency(`snapshot_load[${pathLabel}]`, timerStart, false, e?.message || String(e));
+        isFirstLoad = false;
       }
       Debugger.logError(`safeOnSnapshot_listener[${pathLabel}]`, e);
       if (onError) {
