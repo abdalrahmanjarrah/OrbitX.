@@ -208,26 +208,27 @@ export default function AwarenessView({ user }: { user: UserData }) {
 
   useEffect(() => {
     let isMounted = true;
-    const q = query(
-      collection(db, "awareness_signals"),
-      orderBy("timestamp", "desc"),
-      limit(20)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
+    const fetchSignals = async () => {
+      const q = query(
+        collection(db, "awareness_signals"),
+        orderBy("timestamp", "desc"),
+        limit(20)
+      );
+      try {
+        const snapshot = await getDocs(q);
         if (isMounted) {
           const fetched = snapshot.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as AwarenessSignal,
           );
           setSignals([...fetched, ...DEFAULT_SIGNALS]);
         }
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "awareness_signals"),
-    );
+      } catch (e: any) {
+        handleFirestoreError(e, OperationType.GET, "awareness_signals");
+      }
+    };
+    fetchSignals();
     return () => {
       isMounted = false;
-      unsub();
     };
   }, []);
 

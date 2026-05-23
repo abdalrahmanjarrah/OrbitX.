@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { Play, Shield, Globe, Award, Target, Zap, Activity, Rocket } from "lucide-react";
+import { Play, Shield, Globe, Award, Target, Zap, Activity, Rocket, Clock } from "lucide-react";
 import StarBackground from "./StarBackground";
 
 function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
@@ -56,7 +56,7 @@ const steps = [
   {
     num: "02",
     title: "اجمع الموارد والـ XP",
-    desc: "كل جلسة ناجحة تضيف XP لرصيدك. لا تكسر سلسلة الأيام (الستريك) وإلا سينطفئ محرك الاستكشاف الخاص بك.",
+    desc: "كل جلسة ناجحة تضيف XP لرصيدك. ركز بانتظام لترقية رتبتك وفتح شارات الملاحة الفضائية النادرة.",
     visual: (
       <div className="flex flex-col items-center gap-4 w-full">
         <div className="text-xs text-emerald-400/70 mb-1 font-mono tracking-widest">MISSION ACCOMPLISHED</div>
@@ -76,11 +76,11 @@ const steps = [
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-start gap-4 bg-orange-950/40 border border-orange-500/30 rounded-2xl p-4 w-full backdrop-blur-xl">
-          <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center text-2xl animate-pulse">🔥</div>
+        <div className="flex items-center justify-start gap-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4 w-full backdrop-blur-xl">
+          <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-2xl animate-pulse">🚀</div>
           <div className="text-right flex-1">
-            <div className="text-lg font-bold text-orange-400">ستريك 14 يوم</div>
-            <div className="text-xs text-orange-200/50">المحرك يعمل بأقصى طاقة</div>
+            <div className="text-lg font-bold text-indigo-400">ساعات التركيز المعتمدة</div>
+            <div className="text-xs text-indigo-200/50">تطور مستمر نحو نجوم المدار</div>
           </div>
         </div>
       </div>
@@ -176,11 +176,11 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 </div>
              </div>
           </div>
-          {/* Middle Orbit (Streak) */}
-          <div className="w-[750px] sm:w-[900px] h-[750px] sm:h-[900px] rounded-full border border-orange-500/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
+          {/* Middle Orbit (Focus Time) */}
+          <div className="w-[750px] sm:w-[900px] h-[750px] sm:h-[900px] rounded-full border border-cyan-500/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 flex items-center justify-center">
-                <div className="w-20 h-20 bg-orange-500/10 rounded-full blur-md absolute" />
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-600 shadow-[0_0_40px_theme(colors.orange.500)] flex items-center justify-center animate-[spin_10s_linear_infinite_reverse]">
+                <div className="w-20 h-20 bg-cyan-500/10 rounded-full blur-md absolute" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-600 shadow-[0_0_40px_theme(colors.cyan.500)] flex items-center justify-center animate-[spin_10s_linear_infinite_reverse]">
                    <Zap size={16} className="text-white/80" />
                 </div>
              </div>
@@ -232,7 +232,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
             className="text-lg md:text-xl text-gray-400 max-w-[650px] leading-relaxed mb-14 drop-shadow-lg"
             dir="rtl"
           >
-            حوّل جلساتك الدراسية إلى رحلة فضائية مليئة بالـ XP. ابنِ ستريكك أو شاهد محركك ينطفئ. كل دقيقة تركيز تدفعك لمجرة جديدة.
+            حوّل جلساتك الدراسية إلى رحلة فضائية غامرة. راكم ساعات التركيز الفعلي، وارتقِ بمستواك وعزز انضباطك المداري مع زملائك في الزمن الحقيقي.
           </motion.p>
 
           <motion.div
@@ -314,14 +314,14 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">ادخل عصر الدراسة المعززة.</span>
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed text-center max-w-2xl">
-            كل نظام في OrbitX مصمم لجعلك مدمناً على الإنجاز. لا مجال للكسل حين يكون محرك الستريك الخاص بك مهدداً بالانطفاء.
+            كل نظام في OrbitX مصمم لجعلك مدمناً على الإنجاز. لا مجال للتشتت حين تطلق العنان لقواك المدارية وتراكم ساعات تركيزك الفعلي.
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" dir="rtl">
           {[
             { title: "نظام XP المتقدم", desc: "حول تركيزك لنقاط خبرة ملموسة تُحدث فرقاً في مستواك المجري.", icon: <Award className="w-6 h-6"/>, tag: "ترقية مستمرة", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-            { title: "محرك الستريك الأليم", desc: "تغيب يوم؟ تخسر وقودك وستريكك وتتراجع. الاستمرارية مسألة حياة أو موت.", icon: <Zap className="w-6 h-6"/>, tag: "انضباط عالي", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+            { title: "ساعات التركيز المعتمدة", desc: "راكم ساعات طيران مخصصة للدراسة. الدقائق تترجم مباشرة لتقدم مستدام في رصيدك.", icon: <Clock className="w-6 h-6"/>, tag: "أثر مستدام", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
             { title: "تحديات المدار", desc: "مهام يومية وأسبوعية تفتح لك شارات خاصة وأندر الإنجازات.", icon: <Target className="w-6 h-6"/>, tag: "مكافآت حصرية", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
             { title: "المتصدرون (Leaderboards)", desc: "تنافس مع صفوة العقول في المجرة. أثبت أنك الأكثر تركيزاً وإنتاجية.", icon: <Globe className="w-6 h-6"/>, tag: "منافسة شرسة", color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
             { title: "ردار التحليلات", desc: "خريطة حرارية (Heatmap) توضح أفضل أوقات تركيزك وتوزيع جهدك.", icon: <Activity className="w-6 h-6"/>, tag: "بيانات حقيقية", color: "text-fuchsia-400", bg: "bg-fuchsia-500/10", border: "border-fuchsia-500/20" },

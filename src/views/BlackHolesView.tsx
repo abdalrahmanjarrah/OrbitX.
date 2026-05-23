@@ -193,19 +193,19 @@ export default function BlackHolesView({ user }: { user: UserData }) {
         let users: UserData[] = [];
         usersSnapshot.forEach((doc) => {
           const data = doc.data() as UserData;
-          if (data.totalFocusSessions) {
-            totalSessions += data.totalFocusSessions;
+          if (data.xp) {
+            totalSessions += data.xp; // We reuse totalSessions but as total XP
             users.push({ ...data, uid: doc.id });
           }
         });
 
         users.sort(
-          (a, b) => (b.totalFocusSessions || 0) - (a.totalFocusSessions || 0),
+          (a, b) => (b.xp || 0) - (a.xp || 0),
         );
         setTopContributors(users.slice(0, 3));
 
-        // Let's say 1 session is 25 minutes = ~0.41 hours
-        let totalHours = totalSessions * 0.41;
+        // 1 hour focus = 60 XP
+        let totalHours = totalSessions / 60;
         setGlobalProgress(Math.floor(totalHours));
       } catch (e) {
         console.error("Failed to fetch black hole progress", e);
@@ -349,10 +349,7 @@ export default function BlackHolesView({ user }: { user: UserData }) {
                       </span>
                     </div>
                     <span className="text-xs text-orange-400 font-bold bg-orange-400/10 px-2 py-1 rounded-lg">
-                      {usr.totalFocusSessions
-                        ? Math.floor(usr.totalFocusSessions * 0.41)
-                        : 0}{" "}
-                      س
+                      {Math.round((usr.xp || 0) / 60)} س
                     </span>
                   </div>
                 ))

@@ -178,6 +178,7 @@ import UserModal from './UserModal';
 import NavLink from './NavLink';
 import BlackHolesView from './BlackHolesView';
 import AwarenessView from './AwarenessView';
+import ChallengesHubView from './ChallengesHubView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 
@@ -203,6 +204,7 @@ export default function Dashboard({
     | "fleets"
     | "farm"
     | "support"
+    | "challenges"
   >("home");
   const [activeStation, setActiveStation] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -212,6 +214,15 @@ export default function Dashboard({
   const [customRole, setCustomRole] = useState("");
   const [runTour, setRunTour] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const activityTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -221,12 +232,8 @@ export default function Dashboard({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    if (user && !localStorage.getItem("hasSeenTour_v4")) {
-      localStorage.setItem("hasSeenTour_v4", "true");
-      setTimeout(() => setRunTour(true), 1500);
-    }
-  }, [user]);
+  // Removed automatically forced onboarding tutorial round/flow.
+  // Optional button in top bar triggers tour manually.
 
   const handleJoyrideCallback = (data: any) => {
     const { status } = data;
@@ -268,7 +275,7 @@ export default function Dashboard({
     );
   }
 
-  const focusTabs = ["home", "schedule", "farm", "blackholes"];
+  const focusTabs = ["home", "schedule", "challenges", "farm", "blackholes"];
   const communityTabs = [
     "chat",
     "search",
@@ -299,8 +306,19 @@ export default function Dashboard({
     if (tab === "leaderboard") activity = "يراقب التصنيف المجري 🏆";
     if (tab === "admin") activity = "في غرفة القيادة العليا 🛡️";
     if (tab === "awareness") activity = "يستقبل إشارات الوعي 📡";
+    if (tab === "challenges") activity = "يتحضر للمباريات والنزالات ⚔️";
+    if (tab === "farm") activity = "يرعى المزرعة الفضائية 🐓";
+    if (tab === "blackholes") activity = "يتفادى الثقوب السوداء 🌌";
+    if (tab === "fleets") activity = "يدير الأسطول المجري 🌌";
+    if (tab === "support") activity = "يرفع اقتراحات للدعم الفني 📡";
+    if (tab === "search") activity = "يستكشف رواد الفضاء الجدد 📡";
 
-    updateDoc(doc(db, "users", user.uid), { currentActivity: activity });
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current);
+    }
+    activityTimeoutRef.current = setTimeout(() => {
+      updateDoc(doc(db, "users", user.uid), { currentActivity: activity }).catch(() => {});
+    }, 4000);
   };
 
   return (
@@ -420,6 +438,7 @@ export default function Dashboard({
                 <>
                   <NavPill icon={<LayoutDashboard size={14} />} label="المحطات" active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
                   <NavPill icon={<Calendar size={14} />} label="الجدول" active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
+                  <NavPill icon={<Swords size={14} />} label="النزالات ⚔️" active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
                   <NavPill icon={<Bird size={14} />} label="المزرعة" active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <NavPill icon={<Target size={14} />} label="الثقوب السوداء" active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
@@ -460,6 +479,19 @@ export default function Dashboard({
         </div>
 
         <div className="flex items-center justify-end gap-3 pl-1">
+          {/* Manual Tour Trigger (Lightweight guidance) */}
+          <button
+            onClick={() => {
+              setRunTour(true);
+              playSound("timer");
+            }}
+            className="p-2 hover:bg-white/10 text-gray-400 hover:text-indigo-400 rounded-full transition-colors flex items-center justify-center relative group"
+            title="بدء الجولة الإرشادية"
+          >
+            <Info size={18} />
+            <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2 py-0.5 rounded whitespace-nowrap">🧭 جولة سريعة</span>
+          </button>
+
           <div className="md:border-l md:border-white/10 md:pl-2">
             <NotificationsDropdown userId={user.uid} />
           </div>
@@ -488,11 +520,8 @@ export default function Dashboard({
             </div>
             
             <div className="flex flex-col items-end border-r border-white/10 pr-3 mr-1">
-               <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-400">
-                  <Flame size={10} /> {user.streak || 1}d
-               </div>
                <div className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400">
-                  <Zap size={10} /> {Math.floor(user.xp || 0).toLocaleString()} 
+                  <Zap size={10} /> {Math.floor(user.xp || 0).toLocaleString()} XP
                </div>
             </div>
 
@@ -527,6 +556,7 @@ export default function Dashboard({
             {activeTab === "profile" && <ProfileView user={user} />}
             {activeTab === "discussions" && <DiscussionsView user={user} />}
             {activeTab === "schedule" && <ScheduleView user={user} />}
+            {activeTab === "challenges" && <ChallengesHubView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
             {activeTab === "farm" && (
               <div className="max-w-4xl mx-auto animate-fade-in pb-12">
                 <FarmDisplay user={user} isOwner={true} isStudying={false} />
@@ -549,6 +579,7 @@ export default function Dashboard({
                 <>
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label="المحطات" active={activeTab === "home"} onClick={() => handleTabChange("home")} />
                   <MobileNavPill icon={<Calendar size={14} />} label="الجدول" active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
+                  <MobileNavPill icon={<Swords size={14} />} label="النزالات ⚔️" active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
                   <MobileNavPill icon={<Bird size={14} />} label="المزرعة" active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <MobileNavPill icon={<Target size={14} />} label="الثقوب السوداء" active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>

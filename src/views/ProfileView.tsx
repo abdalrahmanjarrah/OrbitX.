@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, User as UserIcon, Rocket, Edit3, Image as ImageIcon,
   Plus, Trash2, Users, Flame, Activity, Award, CheckCircle,
-  Eye, Zap, Globe, Target, Clock, Calendar, BarChart3, Star, Shield
+  Eye, Zap, Globe, Target, Clock, Calendar, BarChart3, Star, Shield, Swords
 } from "lucide-react";
 import { auth, db, logout, handleFirestoreError, OperationType } from "../firebase";
 import {
@@ -316,9 +316,9 @@ export default function ProfileView({
            {/* Stats Section - Premium Glass Cards */}
            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { title: "الستريك", value: user.streak || 0, icon: <Flame size={20}/>, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-                { title: "ساعات التركيز", value: formatTime(user.totalFocusTime), icon: <Clock size={20}/>, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-                { title: "الجلسات", value: user.focusSessions || 0, icon: <Target size={20}/>, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+                { title: "الخبرة الكلية", value: `${user.xp || 0} XP`, icon: <Zap size={20}/>, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+                { title: "ساعات التركيز", value: `${Math.round((user.xp / 60) * 10) / 10} س`, icon: <Clock size={20}/>, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+                { title: "النزالات الفائزة", value: user.challengeWins || 0, icon: <Swords size={20}/>, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
                 { title: "الأصدقاء", value: friends.length, icon: <Users size={20}/>, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }
               ].map((stat, i) => (
                 <motion.div 
@@ -431,10 +431,10 @@ export default function ProfileView({
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.orange.500/30)]"><Flame size={12} className="text-orange-400" /></div>
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.emerald.500/30)]"><Award size={12} className="text-emerald-400" /></div>
                     <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                      <p className="text-[13px] font-bold text-white mb-0.5">حالة الستريك الأساسي</p>
-                      <p className="text-[11px] text-gray-400">تحذير: الستريك الخاص بك ({user.streak || 0}) يحتاج لصيانة يومية عبر جلسات جديدة.</p>
+                      <p className="text-[13px] font-bold text-white mb-0.5">الاستقرار المداري</p>
+                      <p className="text-[11px] text-gray-400">محرك النبض نشط ومستقر. استمر في التدرب والدراسة للحفاظ على ريادتك في الفضاء.</p>
                     </div>
                   </div>
                 </div>

@@ -333,21 +333,9 @@ function App() {
 
       if (lastActive !== today) {
         const userRef = doc(db, "users", userData.uid);
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-        let newStreak = userData.streak || 0;
-        if (lastActive === yesterdayStr) {
-          newStreak += 1;
-        } else {
-          newStreak = 1;
-        }
-
         updateDoc(userRef, {
-          streak: newStreak,
           lastActiveDate: today,
-        }).catch((e) => console.error("Streak update failed", e));
+        }).catch((e) => console.error("Active date update failed", e));
       }
     }
   }, [userData?.uid, userData?.lastActiveDate]);
@@ -357,25 +345,25 @@ function App() {
       const newBadges: string[] = [...(userData.badges || [])];
       let changed = false;
 
+      // Starter Badge (awarded on having at least 25 XP)
       if (
-        userData.totalFocusSessions &&
-        userData.totalFocusSessions >= 1 &&
+        userData.xp >= 25 &&
         !newBadges.includes("starter")
       ) {
         newBadges.push("starter");
         changed = true;
       }
+      // Focus 10 Badge (awarded on having at least 250 XP)
       if (
-        userData.totalFocusSessions &&
-        userData.totalFocusSessions >= 10 &&
+        userData.xp >= 250 &&
         !newBadges.includes("focus_10")
       ) {
         newBadges.push("focus_10");
         changed = true;
       }
+      // Master Focus Badge (previously streak_7, awarded on 1000 XP)
       if (
-        userData.streak &&
-        userData.streak >= 7 &&
+        userData.xp >= 1000 &&
         !newBadges.includes("streak_7")
       ) {
         newBadges.push("streak_7");
@@ -393,8 +381,7 @@ function App() {
       }
     }
   }, [
-    userData?.totalFocusSessions,
-    userData?.streak,
+    userData?.xp,
     userData?.level,
     userData?.uid,
   ]);

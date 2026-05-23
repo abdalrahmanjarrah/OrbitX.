@@ -189,7 +189,7 @@ export default function SupportView({ user }: { user: UserData }) {
               <div className="space-y-4">
                  <div>
                     <h4 className="text-sm font-bold text-gray-300 mb-1">كيف أحصل على XP أكثر؟</h4>
-                    <p className="text-xs text-gray-500">حاول الدراسة في محطات مشتركة، واستمر بالحفاظ على الـ Streak اليومي.</p>
+                    <p className="text-xs text-gray-500">حاول الدراسة في محطات مشتركة، والمشاركة في التحديات والنزالات الودية.</p>
                  </div>
                  <div>
                     <h4 className="text-sm font-bold text-gray-300 mb-1">لم أستلم الإشعارات؟</h4>

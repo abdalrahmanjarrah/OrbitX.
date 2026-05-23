@@ -252,14 +252,15 @@ export default function CosmicDiary({
     });
   }
 
-  if (user.streak && user.streak >= 3) {
+  if (user.xp && user.xp >= 1000) {
+    const focusHours = Math.round(user.xp / 60);
     milestones.push({
-      title: "استدامة نجمية",
+      title: "ريادة الفضاء",
       description: isOwner
-        ? `حفاظ على سلسلة تركيز لمدة ${user.streak} أيام متواصلة 🔥`
-        : `سلسلة تركيز لمدة ${user.streak} أيام متواصلة 🔥`,
-      color: "bg-orange-600",
-      icon: <Flame size={18} />,
+        ? `إتمام أكثر من ${focusHours} ساعة تركيز كرواد فضاء معتمدين 🚀`
+        : `إكمال أكثر من ${focusHours} ساعة تركيز 🚀`,
+      color: "bg-cyan-600",
+      icon: <Rocket size={18} />,
     });
   }
 

@@ -381,9 +381,9 @@ export const BADGES = [
   },
   {
     id: "streak_7",
-    title: "منضبط كوني",
-    icon: "🔥",
-    description: "حافظت على التزامك لمدة 7 أيام",
+    title: "ملتزم مداري",
+    icon: "🔮",
+    description: "جمعت طاقة كافية تتجاوز 5,000 XP",
     minXp: 5000,
   },
   {
@@ -504,6 +504,7 @@ export interface UserData {
   }[];
   fleetId?: string;
   fleetInvites?: string[];
+  challengeWins?: number;
 }
 
 export interface Fleet {
@@ -589,6 +590,7 @@ export interface Challenge {
   progressPlayer2: number;
   winnerId?: string;
   rewardsClaimed?: string[];
+  completedAt?: number;
 }
 
 export interface AwarenessSignal {

@@ -626,20 +626,20 @@ export default function UserModal({
 
             {/* Right Column - Stats or other bento items */}
             <div className="lg:col-span-1 space-y-6 flex flex-col">
-              <div className="p-6 rounded-3xl glass border border-orange-500/20 flex flex-col items-center justify-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-orange-500/5 group-hover:bg-orange-500/10 transition-colors"></div>
-                <Flame
+              <div className="p-6 rounded-3xl glass border border-cyan-500/20 flex flex-col items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors"></div>
+                <Timer
                   size={48}
-                  className="text-orange-500 mb-4 animate-pulse drop-shadow-[0_0_10px_rgba(249,115,22,0.8)]"
+                  className="text-cyan-400 mb-4 animate-pulse drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]"
                 />
                 <h4 className="text-xl font-black text-white mb-1">
-                  أيام التركيز
+                  ساعات التركيز
                 </h4>
-                <p className="text-4xl font-black text-orange-400 drop-shadow-md">
-                  {userData.streak || 0}
+                <p className="text-4xl font-black text-cyan-400 drop-shadow-md">
+                  {Math.round((userData.xp || 0) / 60)}
                 </p>
                 <span className="text-xs text-gray-400 mt-2 font-bold uppercase tracking-widest">
-                  تتجدد غداً
+                  ساعة مقضية
                 </span>
               </div>
             </div>

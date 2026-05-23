@@ -83,6 +83,9 @@ function safeOnSnapshot(
 // Global active hook instance tracking to secure mounts against unmount/remount race conditions (e.g. StrictMode, route transitions)
 const activeHookInstances = new Map<string, string>(); // userId -> hookInstanceId
 
+// Global session-level in-memory cache for participant profiles to eliminate redundant getDoc loads
+const profileCache: Record<string, UserData> = {};
+
 export function useSessionEngine(
   stationId: string,
   user: UserData,
@@ -125,6 +128,7 @@ export function useSessionEngine(
   // MUTEX / EXIT LOCK
   const isExitingRef = useRef(false);
   const isJoinedRef = useRef(false);
+  const lastDistractionWarningMsgTime = useRef(0);
 
   // STABILITY & SYNC SYSTEM CORES
   const userRef = useRef(user);
@@ -255,15 +259,19 @@ export function useSessionEngine(
       try { playSound("alert"); } catch (e) {}
 
       if (participantsCountRef.current > 1) {
-        addDoc(collection(db, "rooms", stationId, "messages"), {
-          text: `🚨 المحرك (${userRef.current.displayName}) توقف عن العمل! السفينة تتباطأ!`,
-          userId: "system",
-          userName: "نظام التنبيه",
-          userPhoto: "",
-          timestamp: serverTimestamp(),
-          type: "text",
-          isExitPenalty: true,
-        }).catch(() => {});
+        const nowMs = Date.now();
+        if (nowMs - lastDistractionWarningMsgTime.current > 180000) { // Limit distraction warnings to once per 3 minutes
+          lastDistractionWarningMsgTime.current = nowMs;
+          addDoc(collection(db, "rooms", stationId, "messages"), {
+            text: `🚨 المحرك (${userRef.current.displayName}) توقف عن العمل! السفينة تتباطأ!`,
+            userId: "system",
+            userName: "نظام التنبيه",
+            userPhoto: "",
+            timestamp: serverTimestamp(),
+            type: "text",
+            isExitPenalty: true,
+          }).catch(() => {});
+        }
       }
 
       if (!fuelLeakIntervalRef.current) {
@@ -295,10 +303,7 @@ export function useSessionEngine(
         }, 60000);
       }
     } else {
-      // Recover focus safely using the wrapped helper
-      if (isDistractedRef.current) {
-        setShowFuelLeak(false);
-      }
+      // Do not automatically close the warning when returning; the user must manually dismiss it.
     }
   }, [stationId, isSpectator]);
 
@@ -592,7 +597,7 @@ export function useSessionEngine(
         const next = { ...m };
         const now = Date.now();
         for (const k in next) {
-          if (now - next[k].time > 4000) {
+          if (now - next[k].time > 12000) {
             delete next[k];
             changed = true;
           }
@@ -707,11 +712,24 @@ export function useSessionEngine(
       list.forEach((uid) => {
         const exists = participantsDataRef.current.some((p) => p.uid === uid);
         if (!exists && !pendingFetchesRef.current.has(uid)) {
+          // Check session-level in-memory cache first
+          if (profileCache[uid]) {
+            const fetched = profileCache[uid];
+            setParticipantsData((current) => {
+              if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
+                return [...current, fetched];
+              }
+              return current;
+            });
+            return;
+          }
+
           pendingFetchesRef.current.add(uid);
           getDoc(doc(db, "profiles", uid))
             .then((docSnap) => {
               if (docSnap.exists()) {
                 const fetched = docSnap.data() as UserData;
+                profileCache[uid] = fetched; // Cache the fetched profile
                 setParticipantsData((current) => {
                   if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
                     return [...current, fetched];

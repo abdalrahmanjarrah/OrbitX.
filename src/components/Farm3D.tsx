@@ -469,13 +469,13 @@ export function Farm3D({
       const currentPos = myPosRef.current;
       const lastPos = lastSentPosRef.current;
       
-      // Calculate distance to see if player moved significantly (e.g. > 0.1 units)
+      // Calculate distance to see if player moved significantly (e.g. > 0.5 units)
       const distSq = 
         Math.pow(currentPos[0] - lastPos[0], 2) + 
         Math.pow(currentPos[1] - lastPos[1], 2) + 
         Math.pow(currentPos[2] - lastPos[2], 2);
         
-      if (distSq > 0.01) {
+      if (distSq > 0.25) {
         lastSentPosRef.current = [...currentPos];
         setDoc(doc(db, `worlds/${worldId}/players/${uid}`), {
           name: currentUserName,
@@ -483,7 +483,7 @@ export function Farm3D({
           timestamp: Date.now()
         }, { merge: true }).catch(err => console.error("Error updating player pos:", err));
       }
-    }, 2000);
+    }, 6000);
 
     const unsub = onSnapshot(query(collection(db, `worlds/${worldId}/players`), limit(20)), (snapshot) => {
       const players: any[] = [];
@@ -491,7 +491,7 @@ export function Farm3D({
       snapshot.forEach(doc => {
         if (doc.id !== uid) {
           const data = doc.data();
-          if (now - data.timestamp < 10000) {
+          if (now - data.timestamp < 30000) {
             players.push({ id: doc.id, ...data });
           }
         }

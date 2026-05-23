@@ -268,15 +268,24 @@ export default function HomeView({
         }
 
         const usersQuery = query(collection(db, "profiles"), orderBy("lastActiveTime", "desc"), limit(15));
-        unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-          if (isMounted) {
-            setActiveUsers(
-              snapshot.docs
-                .map((doc) => doc.data() as UserData)
-                .filter((u) => u.uid !== user.uid),
-            );
+        const fetchActiveUsers = async () => {
+          try {
+            const snapshot = await getDocs(usersQuery);
+            if (isMounted) {
+              setActiveUsers(
+                snapshot.docs
+                  .map((doc) => doc.data() as UserData)
+                  .filter((u) => u.uid !== user.uid),
+              );
+            }
+          } catch (err) {
+            console.warn("Soft fail loading online profiles: ", err);
           }
-        });
+        };
+
+        await fetchActiveUsers();
+        const intervalId = setInterval(fetchActiveUsers, 60000);
+        unsubscribeUsers = () => clearInterval(intervalId);
 
       } catch (e) {
         console.error("Error fetching home data:", e);
@@ -389,19 +398,19 @@ export default function HomeView({
 
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 shrink-0">
              <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <Flame size={12} className="text-orange-500" /> سلسلة النشاط
+                  <Timer size={12} className="text-cyan-400" /> ساعات التركيز
                 </span>
-                <div className="text-3xl font-black text-white">{user.streak || 1} <span className="text-sm font-medium text-gray-500">أيام</span></div>
+                <div className="text-3xl font-black text-white">{Math.round((user.xp / 60) * 10) / 10} <span className="text-sm font-medium text-gray-500">ساعة</span></div>
              </div>
              
              <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <Timer size={12} className="text-cyan-400" /> إجمالي التركيز
+                  <Star size={12} className="text-fuchsia-400" /> رتبة الفضاء
                 </span>
-                <div className="text-3xl font-black text-white">{Math.floor(((user.totalFocusSessions || 0) * 25) / 60)} <span className="text-sm font-medium text-gray-500">ساعة</span></div>
+                <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-sm font-medium text-gray-500">{getAstronautRank(user.xp).title}</span></div>
              </div>
           </div>
         </motion.div>

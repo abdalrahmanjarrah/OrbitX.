@@ -40,16 +40,32 @@ function StudyRoomChatComponent({
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastTypingUpdate = useRef(0);
+  const typingTimeoutRef = useRef<any>(null);
 
   const onSend = () => {
     if (!localNewMessage.trim()) return;
     handleSendMessage(localNewMessage);
     setLocalNewMessage("");
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (user?.uid) {
+        deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+      }
+    };
+  }, [user?.uid, stationId]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -219,13 +235,21 @@ function StudyRoomChatComponent({
                         if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
                           return; // Guard typing indicator when Firestore quota has run out
                         }
-                        if (now - lastTypingUpdate.current > 2500) {
+                        if (now - lastTypingUpdate.current > 10000) {
                           lastTypingUpdate.current = now;
                           setDoc(
                             doc(db, "rooms", stationId, "typing", user.uid),
                             { name: user.displayName, time: now },
                           ).catch(() => {});
                         }
+                        if (typingTimeoutRef.current) {
+                          clearTimeout(typingTimeoutRef.current);
+                        }
+                        typingTimeoutRef.current = setTimeout(() => {
+                          if (user?.uid) {
+                            deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+                          }
+                        }, 4000);
                       }}
                       onKeyDown={(e) =>
                         e.key === "Enter" && onSend()
