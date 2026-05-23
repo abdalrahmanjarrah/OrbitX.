@@ -189,6 +189,8 @@ function App() {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
   const lastSyncedProfileRef = useRef<string>("");
+  const previousLevelRef = useRef<number | null>(null);
+  const previousUserUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -389,13 +391,37 @@ function App() {
   useEffect(() => {
     if (userData) {
       const calculatedLevel = Math.floor(userData.xp / 1000) + 1;
-      if (calculatedLevel !== userData.level) {
-        if (calculatedLevel > userData.level) {
-          setShowLevelUp(true);
-          playSound("levelup");
-          setTimeout(() => setShowLevelUp(false), 5000);
+      const sessionKey = `lastCelebratedLevel_${userData.uid}`;
+      
+      // Initial load or user change: silently initialize without triggering the toast
+      if (previousUserUidRef.current !== userData.uid || previousLevelRef.current === null) {
+        previousUserUidRef.current = userData.uid;
+        
+        const celebratedLevelStr = sessionStorage.getItem(sessionKey);
+        const celebratedLevel = celebratedLevelStr ? parseInt(celebratedLevelStr, 10) : null;
+        
+        // Make sure previousLevelRef is initialized to the highest verified level
+        previousLevelRef.current = Math.max(calculatedLevel, celebratedLevel !== null ? celebratedLevel : calculatedLevel);
+        
+        if (celebratedLevel === null) {
+          sessionStorage.setItem(sessionKey, String(calculatedLevel));
         }
+        return;
       }
+
+      const celebratedLevelStr = sessionStorage.getItem(sessionKey);
+      const celebratedLevel = celebratedLevelStr ? parseInt(celebratedLevelStr, 10) : null;
+
+      // Genuine promotion transition where the calculated level exceeds what was previously seen and celebrated
+      if (calculatedLevel > previousLevelRef.current && (celebratedLevel === null || calculatedLevel > celebratedLevel)) {
+        setShowLevelUp(true);
+        playSound("levelup");
+        sessionStorage.setItem(sessionKey, String(calculatedLevel));
+        setTimeout(() => setShowLevelUp(false), 5000);
+      }
+      
+      // Always keep the persistent ref updated with the latest state
+      previousLevelRef.current = calculatedLevel;
     }
   }, [userData?.xp, userData?.level, userData?.uid]);
 
