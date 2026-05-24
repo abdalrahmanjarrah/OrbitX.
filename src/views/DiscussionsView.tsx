@@ -7,7 +7,7 @@ import { db, handleFirestoreError, OperationType } from "../firebase";
 import {
   collection, doc, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
   query, orderBy, limit as firestoreLimit, onSnapshot as originalOnSnapshot, 
-  where, getDocs // Fallback for batch fetch if needed
+  where, getDocs, arrayUnion, arrayRemove // Fallback for batch fetch if needed
 } from "firebase/firestore";
 import { Discussion, Reply, UserData } from "../shared";
 import { cn } from "../lib/utils";
@@ -118,6 +118,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
         timestamp: serverTimestamp(),
         repliesCount: 0,
         likesCount: 0,
+        likedBy: [],
       };
       const docRef = await addDoc(collection(db, "discussions"), docData);
       
@@ -172,19 +173,82 @@ export default function DiscussionsView({ user }: { user: UserData }) {
     if (user.role !== "admin" && user.uid !== authorId) return;
     try {
       await deleteDoc(doc(db, "discussions", id));
+      setDiscussions(prev => prev.filter(d => d.id !== id));
       if (selectedDiscussion?.id === id) setSelectedDiscussion(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `discussions/${id}`);
     }
   };
 
-  const handleLike = async (id: string) => {
+  const handleDeleteReply = async (replyId: string) => {
+    if (!selectedDiscussion) return;
     try {
-      await updateDoc(doc(db, "discussions", id), {
-        likesCount: increment(1)
+      await deleteDoc(doc(db, "discussions", selectedDiscussion.id, "replies", replyId));
+      setReplies(prev => prev.filter(r => r.id !== replyId));
+      
+      setDiscussions(prev => prev.map(d => d.id === selectedDiscussion.id ? { ...d, repliesCount: Math.max(0, (d.repliesCount || 0) - 1) } : d));
+      setSelectedDiscussion(prev => prev ? { ...prev, repliesCount: Math.max(0, (prev.repliesCount || 0) - 1) } : null);
+
+      await updateDoc(doc(db, "discussions", selectedDiscussion.id), {
+        repliesCount: increment(-1)
       });
     } catch (e) {
-      // ignore silently
+      handleFirestoreError(e, OperationType.DELETE, `discussions/${selectedDiscussion.id}/replies/${replyId}`);
+    }
+  };
+
+  const handleLike = async (id: string) => {
+    if (!user) return;
+    try {
+      const targetDisc = discussions.find(d => d.id === id) || (selectedDiscussion && selectedDiscussion.id === id ? selectedDiscussion : null);
+      if (!targetDisc) return;
+
+      const likedBy = (targetDisc as any).likedBy || [];
+      const hasLiked = likedBy.includes(user.uid);
+
+      let newLikedBy: string[];
+      let likesCountChange: number;
+
+      if (hasLiked) {
+        newLikedBy = likedBy.filter((uid: string) => uid !== user.uid);
+        likesCountChange = -1;
+      } else {
+        newLikedBy = [...likedBy, user.uid];
+        likesCountChange = 1;
+      }
+
+      // 1. Update local state immediately for instant feedback
+      setDiscussions(prev => prev.map(d => {
+        if (d.id === id) {
+          const currentLikes = (d as any).likesCount || 0;
+          return {
+            ...d,
+            likedBy: newLikedBy,
+            likesCount: Math.max(0, currentLikes + likesCountChange)
+          };
+        }
+        return d;
+      }));
+
+      if (selectedDiscussion && selectedDiscussion.id === id) {
+        setSelectedDiscussion(prev => {
+          if (!prev) return null;
+          const currentLikes = (prev as any).likesCount || 0;
+          return {
+            ...prev,
+            likedBy: newLikedBy,
+            likesCount: Math.max(0, currentLikes + likesCountChange)
+          };
+        });
+      }
+
+      // 2. Perform database update
+      await updateDoc(doc(db, "discussions", id), {
+        likedBy: hasLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
+        likesCount: increment(likesCountChange)
+      });
+    } catch (e) {
+      // rollback or ignore silently
     }
   };
 
@@ -363,9 +427,17 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={() => handleLike(selectedDiscussion.id)}
-                    className="flex items-center gap-1.5 hover:text-pink-400 transition-colors"
+                    className={cn(
+                      "flex items-center gap-1.5 transition-colors cursor-pointer",
+                      ((selectedDiscussion as any).likedBy || []).includes(user.uid)
+                        ? "text-pink-500 hover:text-pink-400"
+                        : "text-gray-400 hover:text-pink-400"
+                    )}
                   >
-                    <Heart size={18} />
+                    <Heart 
+                      size={18} 
+                      className={((selectedDiscussion as any).likedBy || []).includes(user.uid) ? "fill-pink-500" : ""} 
+                    />
                     <span>{(selectedDiscussion as any).likesCount || 0}</span>
                   </button>
                   <div className="flex items-center gap-1.5">
@@ -419,8 +491,8 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                       </span>
                       {(user.role === "admin" || reply.userId === user.uid) && (
                         <button
-                          onClick={() => deleteDoc(doc(db, "discussions", selectedDiscussion.id, "replies", reply.id))}
-                          className="text-gray-600 hover:text-red-500 transition-colors"
+                          onClick={() => handleDeleteReply(reply.id)}
+                          className="text-gray-600 hover:text-red-500 transition-colors cursor-pointer"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -523,10 +595,16 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                             <MessageSquare size={14} />
                             {disc.repliesCount}
                           </div>
-                          {((disc as any).likesCount > 0) && (
-                            <div className="flex items-center gap-1text-xs font-semibold text-pink-400/80">
-                              <Heart size={14} className="fill-pink-500/20" />
-                              {(disc as any).likesCount}
+                          {(((disc as any).likesCount || 0) > 0 || ((disc as any).likedBy || []).includes(user.uid)) && (
+                            <div className={cn(
+                              "flex items-center gap-1 text-xs font-semibold",
+                              ((disc as any).likedBy || []).includes(user.uid) ? "text-pink-400" : "text-pink-400/80"
+                            )}>
+                              <Heart 
+                                size={14} 
+                                className={((disc as any).likedBy || []).includes(user.uid) ? "fill-pink-500" : "fill-pink-500/20"} 
+                              />
+                              {(disc as any).likesCount || 0}
                             </div>
                           )}
                         </div>
@@ -537,7 +615,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                               e.stopPropagation();
                               handleDeleteDiscussion(disc.id, disc.userId);
                             }}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1.5 rounded-lg text-gray-400 sm:text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>

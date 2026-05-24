@@ -525,11 +525,13 @@ function App() {
 }
 
 import GlobalAdminAlert from "./views/GlobalAdminAlert";
+import GlobalAppUpdates from "./views/GlobalAppUpdates";
 
 export default function WrappedApp() {
   return (
     <ErrorBoundary>
       <GlobalAdminAlert />
+      <GlobalAppUpdates />
       <App />
     </ErrorBoundary>
   );

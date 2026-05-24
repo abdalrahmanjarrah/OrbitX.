@@ -509,9 +509,41 @@
         "views",
         "likes"
       ]
+    },
+    "AppUpdate": {
+      "title": "AppUpdate",
+      "description": "System release notes and feature announcements",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "number"
+        },
+        "adminId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "timestamp",
+        "adminId"
+      ]
     }
   },
   "firestore": {
+    "/app_updates/{updateId}": {
+      "schema": "AppUpdate",
+      "description": "Global application updates published by administrators"
+    },
     "/users/{uid}": {
       "schema": "User",
       "description": "User profiles (Private, contains PII)"

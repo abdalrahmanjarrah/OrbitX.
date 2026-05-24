@@ -55,10 +55,43 @@ export default function StarBackground() {
         ))}
       </div>
 
-      {/* Shooting Stars */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[20%] left-[10%] w-px h-px bg-white shadow-[0_0_0_4px_rgba(255,255,255,0.1),0_0_0_8px_rgba(255,255,255,0.1),0_0_20px_rgba(255,255,255,1)] animate-[shooting-star_5s_linear_infinite] opacity-0" />
-        <div className="absolute top-[50%] left-[80%] w-px h-px bg-white shadow-[0_0_0_4px_rgba(255,255,255,0.1),0_0_0_8px_rgba(255,255,255,0.1),0_0_20px_rgba(255,255,255,1)] animate-[shooting-star_8s_linear_infinite_3s] opacity-0" />
+      {/* Highly Realistic Thin Shooting Stars with Ambient Space Flashes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Meteor 1 */}
+        <div className="meteor-container meteor-1">
+          <div className="meteor-flash" />
+          <div className="meteor-body">
+            <div className="meteor-nucleus" />
+            <div className="meteor-trail" />
+          </div>
+        </div>
+
+        {/* Meteor 2 */}
+        <div className="meteor-container meteor-2">
+          <div className="meteor-flash" />
+          <div className="meteor-body">
+            <div className="meteor-nucleus" />
+            <div className="meteor-trail" />
+          </div>
+        </div>
+
+        {/* Meteor 3 */}
+        <div className="meteor-container meteor-3">
+          <div className="meteor-flash" />
+          <div className="meteor-body">
+            <div className="meteor-nucleus" />
+            <div className="meteor-trail" />
+          </div>
+        </div>
+
+        {/* Meteor 4 */}
+        <div className="meteor-container meteor-4">
+          <div className="meteor-flash" />
+          <div className="meteor-body">
+            <div className="meteor-nucleus" />
+            <div className="meteor-trail" />
+          </div>
+        </div>
       </div>
 
       <style>{`
@@ -66,11 +99,146 @@ export default function StarBackground() {
           0%, 100% { opacity: 0.2; transform: scale(0.8); }
           50% { opacity: 1; transform: scale(1.2); }
         }
-        @keyframes shooting-star {
-          0% { transform: translateX(0) translateY(0) rotate(-45deg); opacity: 1; width: 0; }
-          10% { width: 150px; opacity: 1; }
-          20% { width: 0; opacity: 0; transform: translateX(-300px) translateY(300px) rotate(-45deg); }
-          100% { width: 0; opacity: 0; transform: translateX(-300px) translateY(300px) rotate(-45deg); }
+
+        .meteor-container {
+          position: absolute;
+          pointer-events: none;
+          opacity: 0;
+          z-index: 1;
+        }
+
+        /* Ambient high-atmosphere brief flash */
+        .meteor-flash {
+          position: fixed;
+          inset: 0;
+          background-color: rgba(255, 255, 255, 0.05);
+          mix-blend-mode: color-dodge;
+          pointer-events: none;
+          opacity: 0;
+          z-index: 0;
+        }
+
+        .meteor-body {
+          position: relative;
+          display: flex;
+          flex-direction: row;
+          direction: ltr;
+          align-items: center;
+          transform: rotate(-25deg);
+          transform-origin: center left;
+        }
+
+        /* Thicker nucleus with stronger, richer light diffusion aura */
+        .meteor-nucleus {
+          width: 6.8px;
+          height: 6.8px;
+          background-color: #ffffff;
+          border-radius: 50%;
+          box-shadow: 
+            0 0 22px 10px rgba(255, 255, 255, 1),
+            0 0 40px 18px rgba(199, 210, 254, 0.85),
+            0 0 65px 28px rgba(147, 197, 253, 0.6);
+          z-index: 2;
+        }
+
+        /* Thicker, longer, and more visible trail - properly oriented from brightest at head (left) to transparent at tail (right) */
+        .meteor-trail {
+          height: 3.2px;
+          width: 280px;
+          background: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.55) 45%, rgba(255, 255, 255, 0) 100%);
+          margin-left: -1px;
+        }
+
+        /* Meteor 1 Configuration */
+        .meteor-1 {
+          top: 15%;
+          left: 95%;
+          animation: meteor-flow-1 24s linear infinite;
+        }
+        .meteor-1 .meteor-flash {
+          animation: flash-flow-1 24s ease-out infinite;
+        }
+
+        @keyframes meteor-flow-1 {
+          0%, 0.5% { transform: translate(0, 0); opacity: 0; }
+          1% { opacity: 1; }
+          14% { transform: translate(-650px, 303px); opacity: 0; }
+          100% { transform: translate(-650px, 303px); opacity: 0; }
+        }
+        @keyframes flash-flow-1 {
+          0%, 0.5% { opacity: 0; }
+          1.5% { opacity: 0.14; }
+          7% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+
+        /* Meteor 2 Configuration */
+        .meteor-2 {
+          top: 40%;
+          left: 100%;
+          animation: meteor-flow-2 28s linear infinite 8s;
+        }
+        .meteor-2 .meteor-flash {
+          animation: flash-flow-2 28s ease-out infinite 8s;
+        }
+
+        @keyframes meteor-flow-2 {
+          0%, 0.5% { transform: translate(0, 0); opacity: 0; }
+          1% { opacity: 1; }
+          13% { transform: translate(-700px, 326px); opacity: 0; }
+          100% { transform: translate(-700px, 326px); opacity: 0; }
+        }
+        @keyframes flash-flow-2 {
+          0%, 0.5% { opacity: 0; }
+          1.5% { opacity: 0.14; }
+          6.5% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+
+        /* Meteor 3 Configuration */
+        .meteor-3 {
+          top: 25%;
+          left: 90%;
+          animation: meteor-flow-3 32s linear infinite 16s;
+        }
+        .meteor-3 .meteor-flash {
+          animation: flash-flow-3 32s ease-out infinite 16s;
+        }
+
+        @keyframes meteor-flow-3 {
+          0%, 0.4% { transform: translate(0, 0); opacity: 0; }
+          1% { opacity: 1; }
+          12% { transform: translate(-600px, 280px); opacity: 0; }
+          100% { transform: translate(-600px, 280px); opacity: 0; }
+        }
+        @keyframes flash-flow-3 {
+          0%, 0.4% { opacity: 0; }
+          1.5% { opacity: 0.14; }
+          6% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+
+        /* Meteor 4 Configuration */
+        .meteor-4 {
+          top: 60%;
+          left: 100%;
+          animation: meteor-flow-4 36s linear infinite 24s;
+        }
+        .meteor-4 .meteor-flash {
+          animation: flash-flow-4 36s ease-out infinite 24s;
+        }
+
+        @keyframes meteor-flow-4 {
+          0%, 0.4% { transform: translate(0, 0); opacity: 0; }
+          1% { opacity: 1; }
+          12% { transform: translate(-680px, 317px); opacity: 0; }
+          100% { transform: translate(-680px, 317px); opacity: 0; }
+        }
+        @keyframes flash-flow-4 {
+          0%, 0.4% { opacity: 0; }
+          1.5% { opacity: 0.14; }
+          6% { opacity: 0; }
+          100% { opacity: 0; }
         }
       `}</style>
     </div>

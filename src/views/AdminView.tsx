@@ -13,15 +13,27 @@ import { collection, doc, updateDoc, deleteDoc, onSnapshot, setDoc, addDoc, serv
 import { UserData, Discussion } from "../shared";
 import { adminSetXP } from "../lib/xpSystem";
 
+// In-memory module cache to prevent aggressive Firestore read billing on Admin tab swaps / re-renders
+let lastAdminFetchTime = 0;
+let cachedUsers: UserData[] = [];
+let cachedSuggestions: any[] = [];
+let cachedExhibitions: any[] = [];
+let cachedDiscussions: Discussion[] = [];
+let cachedIsChatEnabled = true;
+let cachedSupportTickets: any[] = [];
+
 export default function AdminView({ user }: { user: UserData }) {
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<UserData[]>(() => cachedUsers);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [exhibitions, setExhibitions] = useState<any[]>([]);
-  const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [supportTickets, setSupportTickets] = useState<any[]>([]);
-  const [isChatEnabled, setIsChatEnabled] = useState(true);
+  const [suggestions, setSuggestions] = useState<any[]>(() => cachedSuggestions);
+  const [exhibitions, setExhibitions] = useState<any[]>(() => cachedExhibitions);
+  const [discussions, setDiscussions] = useState<Discussion[]>(() => cachedDiscussions);
+  const [supportTickets, setSupportTickets] = useState<any[]>(() => cachedSupportTickets);
+  const [isChatEnabled, setIsChatEnabled] = useState(() => cachedIsChatEnabled);
   const [announcementText, setAnnouncementText] = useState("");
+  const [updateTitle, setUpdateTitle] = useState("");
+  const [updateVersion, setUpdateVersion] = useState("");
+  const [updateDescription, setUpdateDescription] = useState("");
 
   // Anomaly Data Simulation
   const systemData = [
@@ -64,27 +76,77 @@ export default function AdminView({ user }: { user: UserData }) {
     }
   };
 
+  const handlePublishUpdate = async () => {
+    if (!updateTitle.trim() || !updateDescription.trim()) {
+      alert("الرجاء إدخال عنوان التحديث والوصف لمتابعة النشر!");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "app_updates"), {
+        title: updateTitle.trim(),
+        version: updateVersion.trim() || "تحديث للمنظومة الكونية 🚀",
+        description: updateDescription.trim(),
+        timestamp: Date.now(),
+        adminId: user.uid
+      });
+      setUpdateTitle("");
+      setUpdateVersion("");
+      setUpdateDescription("");
+      alert("🎉 تم نشر وتعميم التحديث الجديد بنجاح على جميع الأعضاء!");
+    } catch(e) {
+      handleFirestoreError(e, OperationType.CREATE, 'app_updates');
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
+      const now = Date.now();
+      if (now - lastAdminFetchTime < 30000 && cachedUsers.length > 0) {
+        if (isMounted) {
+          setUsers(cachedUsers);
+          setSuggestions(cachedSuggestions);
+          setExhibitions(cachedExhibitions);
+          setDiscussions(cachedDiscussions);
+          setIsChatEnabled(cachedIsChatEnabled);
+          setSupportTickets(cachedSupportTickets);
+        }
+        return;
+      }
+
       try {
         const usersSnap = await getDocs(query(collection(db, "profiles"), orderBy("lastActiveTime", "desc"), limit(100)));
-        if (isMounted) setUsers(usersSnap.docs.map(doc => doc.data() as UserData));
+        const fetchedUsers = usersSnap.docs.map(doc => doc.data() as UserData);
+        if (isMounted) setUsers(fetchedUsers);
 
         const suggestionsSnap = await getDocs(query(collection(db, "suggestions"), orderBy("timestamp", "desc"), limit(50)));
-        if (isMounted) setSuggestions(suggestionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const fetchedSuggestions = suggestionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (isMounted) setSuggestions(fetchedSuggestions);
 
         const exhibitionsSnap = await getDocs(query(collection(db, "exhibitions"), orderBy("timestamp", "desc"), limit(50)));
-        if (isMounted) setExhibitions(exhibitionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const fetchedExhibitions = exhibitionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (isMounted) setExhibitions(fetchedExhibitions);
 
         const discussionsSnap = await getDocs(query(collection(db, "discussions"), orderBy("timestamp", "desc"), limit(50)));
-        if (isMounted) setDiscussions(discussionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Discussion));
+        const fetchedDiscussions = discussionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Discussion);
+        if (isMounted) setDiscussions(fetchedDiscussions);
 
         const settingsSnap = await getDoc(doc(db, "system", "settings"));
-        if (isMounted && settingsSnap.exists()) setIsChatEnabled(settingsSnap.data().isChatEnabled !== false);
+        const fetchedIsChatEnabled = settingsSnap.exists() ? settingsSnap.data().isChatEnabled !== false : true;
+        if (isMounted) setIsChatEnabled(fetchedIsChatEnabled);
 
         const supportSnap = await getDocs(query(collection(db, "support_tickets"), orderBy("createdAt", "desc"), limit(50)));
-        if (isMounted) setSupportTickets(supportSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const fetchedSupportTickets = supportSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (isMounted) setSupportTickets(fetchedSupportTickets);
+
+        // Update in-memory session cache
+        lastAdminFetchTime = now;
+        cachedUsers = fetchedUsers;
+        cachedSuggestions = fetchedSuggestions;
+        cachedExhibitions = fetchedExhibitions;
+        cachedDiscussions = fetchedDiscussions;
+        cachedIsChatEnabled = fetchedIsChatEnabled;
+        cachedSupportTickets = fetchedSupportTickets;
       } catch (e) {
         console.warn(e);
       }
@@ -96,9 +158,12 @@ export default function AdminView({ user }: { user: UserData }) {
 
   const toggleChat = async () => {
     try {
-      await updateDoc(doc(db, "system", "settings"), { isChatEnabled: !isChatEnabled }).catch(async () => {
-         await setDoc(doc(db, "system", "settings"), { isChatEnabled: !isChatEnabled });
+      const nextSetting = !isChatEnabled;
+      await updateDoc(doc(db, "system", "settings"), { isChatEnabled: nextSetting }).catch(async () => {
+         await setDoc(doc(db, "system", "settings"), { isChatEnabled: nextSetting });
       });
+      setIsChatEnabled(nextSetting);
+      cachedIsChatEnabled = nextSetting;
     } catch(e) {}
   };
 
@@ -110,6 +175,8 @@ export default function AdminView({ user }: { user: UserData }) {
     try {
       await updateDoc(doc(db, "users", uid), { banned: !currentStatus });
       await updateDoc(doc(db, "profiles", uid), { banned: !currentStatus });
+      // Invalidate the cache to ensure the user list is re-fetched next time
+      lastAdminFetchTime = 0;
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `users/${uid}`);
     }
@@ -118,6 +185,32 @@ export default function AdminView({ user }: { user: UserData }) {
   const handleDeleteDoc = async (col: string, id: string) => {
     try {
       await deleteDoc(doc(db, col, id));
+      // Update local state and the corresponding cached arrays directly to avoid redundant bulk reads
+      if (col === "suggestions") {
+        setSuggestions(prev => {
+          const next = prev.filter(item => item.id !== id);
+          cachedSuggestions = next;
+          return next;
+        });
+      } else if (col === "exhibitions") {
+        setExhibitions(prev => {
+          const next = prev.filter(item => item.id !== id);
+          cachedExhibitions = next;
+          return next;
+        });
+      } else if (col === "discussions") {
+        setDiscussions(prev => {
+          const next = prev.filter(item => item.id !== id);
+          cachedDiscussions = next;
+          return next;
+        });
+      } else if (col === "support_tickets") {
+        setSupportTickets(prev => {
+          const next = prev.filter(item => item.id !== id);
+          cachedSupportTickets = next;
+          return next;
+        });
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `${col}/${id}`);
     }
@@ -210,15 +303,67 @@ export default function AdminView({ user }: { user: UserData }) {
                  />
                  <button 
                     onClick={handleSendAnnouncement}
-                    className="w-full bg-yellow-600/20 text-yellow-400 border border-yellow-500 py-2 text-xs font-bold uppercase hover:bg-yellow-500 hover:text-[#020308] transition-all"
+                    className="w-full bg-yellow-600/20 text-yellow-400 border border-yellow-500 py-2 text-xs font-bold uppercase hover:bg-yellow-500 hover:text-[#020308] transition-all cursor-pointer"
                  >
                     Execute Broadcast
                  </button>
                  <button 
                     onClick={handleEmergencyAlert}
-                    className="w-full mt-2 bg-red-600/20 text-red-500 border border-red-600 py-2 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] animate-pulse"
+                    className="w-full mt-2 bg-red-600/20 text-red-500 border border-red-600 py-2 text-xs font-bold uppercase hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] animate-pulse cursor-pointer"
                  >
                     TRIGGER EMERGENCY ALERT
+                 </button>
+             </div>
+          </div>
+
+          {/* New Cosmic App Updates Deployer Card */}
+          <div className="bg-[#050B14] border border-fuchsia-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(236,72,153,0.05)_inset] space-y-4" dir="rtl">
+             <h3 className="text-fuchsia-400 font-bold tracking-widest text-right flex items-center justify-end gap-2 text-sm sm:text-base">
+               <span>بث تحديث جديد للمنصة</span>
+               <Zap size={18} className="text-fuchsia-400 animate-pulse" />
+             </h3>
+             <p className="text-[11px] text-gray-400 border-b border-fuchsia-950 pb-2 text-right">سيظهر هذا التحديث لجميع المستخدمين في منتصف الشاشة ولن يتكرر بمجرد إغلاقه.</p>
+             <div className="space-y-3 text-right">
+                 <div>
+                    <label className="text-fuchsia-300 text-xs font-bold block mb-1">
+                      عنوان التحديث الرئيسي 🚀
+                    </label>
+                    <input 
+                       type="text"
+                       value={updateTitle}
+                       onChange={(e) => setUpdateTitle(e.target.value)}
+                       placeholder="مثال: إضافة قسم تحدي الفضاء والمجلس المطور"
+                       className="w-full bg-[#020308] border border-fuchsia-900/60 rounded p-2 text-fuchsia-200 focus:outline-none focus:border-fuchsia-500 text-xs font-sans placeholder-gray-600"
+                    />
+                 </div>
+                 <div>
+                    <label className="text-fuchsia-300 text-xs font-bold block mb-1">
+                      رقم الإصدار والترميز 🏷️
+                    </label>
+                    <input 
+                       type="text"
+                       value={updateVersion}
+                       onChange={(e) => setUpdateVersion(e.target.value)}
+                       placeholder="مثال: الإصدار الجديد v2.1.0"
+                       className="w-full bg-[#020308] border border-fuchsia-900/60 rounded p-2 text-fuchsia-200 focus:outline-none focus:border-fuchsia-500 text-xs font-sans placeholder-gray-600"
+                    />
+                 </div>
+                 <div>
+                    <label className="text-fuchsia-300 text-xs font-bold block mb-1">
+                      مميزات التحديث (كل ميزة بسطر جديد) ✨
+                    </label>
+                    <textarea 
+                       value={updateDescription}
+                       onChange={(e) => setUpdateDescription(e.target.value)}
+                       placeholder="مثال:&#10;• قمنا بحل مشكلة الإعجابات المزيفة بالنقاشات&#10;• أضفنا إمكانية حذف النقاشات والردود فوراً&#10;• تعديل ذبذبات الراديو لتصفية التدفق"
+                       className="w-full bg-[#020308] border border-fuchsia-900/60 rounded p-2 text-fuchsia-200 focus:outline-none focus:border-fuchsia-500 text-xs font-sans min-h-[120px] leading-relaxed placeholder-gray-600"
+                    />
+                 </div>
+                 <button 
+                    onClick={handlePublishUpdate}
+                    className="w-full bg-fuchsia-600/25 hover:bg-fuchsia-600 text-fuchsia-300 hover:text-white border border-fuchsia-500 py-2.5 rounded text-xs font-black transition-all shadow-[0_2px_12px_rgba(236,72,153,0.15)] hover:shadow-[0_4px_20px_rgba(236,72,153,0.35)] cursor-pointer"
+                 >
+                    إطلاق ونشر مصفوفة التحديث 🌌
                  </button>
              </div>
           </div>

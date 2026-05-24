@@ -216,11 +216,8 @@ export default function HomeView({
   const [newRoomTask, setNewRoomTask] = useState("");
   const [newRoomImageUrl, setNewRoomImageUrl] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [showChallengeModal, setShowChallengeModal] = useState(false);
-  const [pendingChallenges, setPendingChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
-    let unsubscribeChallenges: () => void;
     let unsubscribeUsers: () => void;
     let isMounted = true;
 
@@ -238,10 +235,8 @@ export default function HomeView({
         roomsSnap.docs.forEach((docSnap) => {
           if (!docSnap.exists()) return;
           const data = docSnap.data() as Room;
+          // Filter out challenges completely from the stations view
           if (data && data.isChallenge) {
-             if (data.participants?.includes(user?.uid)) {
-                fetchedRooms.push({ id: docSnap.id, ...data });
-             }
              return;
           }
           if (data && data.participants?.length === 0 && data.emptyAt) {
@@ -294,30 +289,11 @@ export default function HomeView({
     
     fetchData();
 
-    const challengesQuery = query(
-      collection(db, "challenges"),
-      where("challengedId", "==", user.uid),
-      where("status", "==", "pending"),
-      limit(20)
-    );
-    unsubscribeChallenges = onSnapshot(
-      challengesQuery,
-      (snapshot) => {
-        setPendingChallenges(
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Challenge,
-          ),
-        );
-      },
-      (e) => handleFirestoreError(e, OperationType.GET, "challenges"),
-    );
-
     return () => {
       isMounted = false;
-      if (unsubscribeChallenges) unsubscribeChallenges();
       if (unsubscribeUsers) unsubscribeUsers();
     };
-  }, [user.uid]);;
+  }, [user.uid]);
 
   const PREDEFINED_IMAGES = [
     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600&auto=format&fit=crop",
@@ -452,8 +428,8 @@ export default function HomeView({
            )}
         </div>
 
-        {/* Secondary Content: Missions & Cosmic Challenges */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+        {/* Secondary Content: Mission Tracker */}
+        <div className="grid grid-cols-1 gap-6 mt-4 max-w-xl">
            {/* Daily Missions */}
            <motion.div variants={bentoItem} className="flex flex-col bg-[#0b0c1b]/80 backdrop-blur-xl border border-indigo-500/10 rounded-3xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/10 transition-colors duration-700" />
@@ -482,84 +458,12 @@ export default function HomeView({
                     <div className="w-full h-2 bg-[#0a0b16] rounded-full overflow-hidden shadow-inner">
                        <div 
                          className="h-full bg-gradient-to-l from-orange-400 to-indigo-500 relative transition-all duration-1000"
-                         style={{ width: `${Math.min(((user.totalFocusSessions || 0) % 3) * 33.3, 100)}%` }}
+                         style={{ width: Math.min(((user.totalFocusSessions || 0) % 3) * 33.3, 100) + '%' }}
                        >
                          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgoJPHJlY3Qgd2lkdGg9IjQiIGhlaWdodD0iNCIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIwLjEiLz4KPC9zdmc+')] opacity-30" />
                        </div>
                     </div>
                  </div>
-              </div>
-           </motion.div>
-
-           {/* Cosmic Challenges */}
-           <motion.div variants={bentoItem} className="flex flex-col bg-[#0b0c1b]/80 backdrop-blur-xl border border-fuchsia-500/10 rounded-3xl p-6 relative overflow-hidden group">
-              <div className="absolute bottom-0 right-0 w-40 h-40 bg-fuchsia-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-fuchsia-500/10 transition-colors duration-700" />
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-fuchsia-500/20 flex items-center justify-center border border-fuchsia-500/30">
-                     <Swords size={18} className="text-fuchsia-400" />
-                  </div>
-                  <div>
-                     <h3 className="text-lg font-bold text-white">تحديات الأقران</h3>
-                     <p className="text-xs text-fuchsia-200/60 uppercase tracking-widest font-bold">Social Combat</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowChallengeModal(true)}
-                  className="px-4 py-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 rounded-xl text-xs font-bold transition-all border border-fuchsia-500/20"
-                >
-                  تحدي جديد +
-                </button>
-              </div>
-
-              <div className="space-y-3 relative z-10">
-                 {pendingChallenges.length === 0 ? (
-                   <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
-                      <p className="text-xs text-gray-500">لا توجد تحديات معلقة. كن أنت المبادر!</p>
-                   </div>
-                 ) : (
-                   pendingChallenges.map((challenge) => (
-                     <div key={challenge.id} className="p-4 rounded-2xl bg-[#131526]/80 flex justify-between items-center border border-white/5">
-                        <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
-                              <span className="text-xs">{challenge.challengerName.charAt(0)}</span>
-                           </div>
-                           <span className="text-sm font-bold text-white">{challenge.challengerName}</span>
-                        </div>
-                        <div className="flex gap-2">
-                           <button 
-                             onClick={async () => {
-                               await updateDoc(doc(db, "challenges", challenge.id), { status: "active" });
-                               const roomData = {
-                                 name: `تحدي: ${challenge.challengerName} ⚔️ ${user.displayName}`,
-                                 task: "تحدي التركيز العميق",
-                                 creatorId: user.uid,
-                                 creatorName: user.displayName,
-                                 participants: [user.uid, challenge.challengerId],
-                                 maxParticipants: 2,
-                                 timerStatus: "idle", timerDuration: challenge.durationMinutes || 60, breakDuration: 5,
-                                 createdAt: serverTimestamp(),
-                                 isChallenge: true,
-                                 challengeId: challenge.id,
-                                 challengeDurationMinutes: challenge.durationMinutes || 60
-                               };
-                               const roomRef = await addDoc(collection(db, "rooms"), roomData);
-                               onEnterStation(roomRef.id);
-                             }}
-                             className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg text-xs font-bold transition-colors"
-                           >
-                             قبول ودخول
-                           </button>
-                           <button
-                             onClick={() => updateDoc(doc(db, "challenges", challenge.id), { status: "declined" })}
-                             className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-xs font-bold transition-colors"
-                           >
-                             رفض
-                           </button>
-                        </div>
-                     </div>
-                   ))
-                 )}
               </div>
            </motion.div>
         </div>
@@ -648,9 +552,6 @@ export default function HomeView({
               </button>
             </motion.div>
           </div>
-        )}
-        {showChallengeModal && (
-          <ChallengeModal user={user} onClose={() => setShowChallengeModal(false)} />
         )}
       </AnimatePresence>
     </div>

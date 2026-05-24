@@ -418,19 +418,21 @@ export const BADGES = [
 
 export const MeteorEffect = ({ trigger }: { trigger: any }) => {
   const [meteors, setMeteors] = useState<
-    { id: number; left: number; top: number }[]
+    { id: number; left: number; top: number; size: number; duration: number }[]
   >([]);
 
   useEffect(() => {
     if (trigger) {
       const id = Date.now();
+      const size = 1.1 + Math.random() * 0.9; // beautiful dynamic trail scale
+      const duration = 2.0 + Math.random() * 1.0; // slower, majestic flight duration (2.0s to 3.0s)
       setMeteors((prev) => [
         ...prev,
-        { id, left: Math.random() * 100, top: Math.random() * 50 },
+        { id, left: Math.random() * 100, top: Math.random() * 30, size, duration },
       ]);
       setTimeout(() => {
         setMeteors((prev) => prev.filter((m) => m.id !== id));
-      }, 1000);
+      }, 4000);
     }
   }, [trigger]);
 
@@ -438,14 +440,48 @@ export const MeteorEffect = ({ trigger }: { trigger: any }) => {
     <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
       <AnimatePresence>
         {meteors.map((m) => (
-          <motion.div
-            key={m.id}
-            initial={{ x: "100vw", y: `${m.top}vh`, opacity: 0 }}
-            animate={{ x: "-100vw", y: `${m.top + 20}vh`, opacity: [0, 1, 0] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8, ease: "linear" }}
-            className="absolute w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent rotate-[-20deg]"
-          />
+          <React.Fragment key={m.id}>
+            {/* Highly realistic atmospheric sky flash */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.14, 0.14, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: m.duration, ease: "easeInOut" }}
+              className="absolute inset-0 bg-white"
+            />
+
+            {/* The Meteor Streak */}
+            <motion.div
+              initial={{ x: "115vw", y: `${m.top}vh`, opacity: 0 }}
+              animate={{ x: "-45vw", y: `${m.top + 32}vh`, opacity: [0, 1, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: m.duration, ease: "easeOut" }} // smoother slowdown motion
+              className="absolute flex flex-row items-center select-none [direction:ltr]"
+              style={{
+                transform: "rotate(-22deg)",
+                transformOrigin: "center left",
+                direction: "ltr",
+              }}
+            >
+              {/* Diffused local white aura glow trailing right behind */}
+              <div 
+                className="absolute left-1/2 -translate-x-1/2 w-[320px] h-24 bg-white/12 blur-3xl rounded-full animate-pulse"
+                style={{ transform: "scaleY(0.12)" }}
+              />
+
+              {/* Brilliant shining nucleus/head of the meteor leading the charge - now larger & thicker */}
+              <div className="w-[6px] h-[6px] bg-white rounded-full shadow-[0_0_22px_10px_rgba(255,255,255,1),0_0_44px_22px_rgba(199,210,254,0.8),0_0_75px_35px_rgba(147,197,253,0.5)] relative z-10" />
+
+              {/* Thicker, elegant trail going from maximum brightness to transparent to the back */}
+              <div 
+                className="bg-gradient-to-r from-white via-white/50 to-transparent -ml-[2px]"
+                style={{ 
+                  width: `${200 * m.size}px`,
+                  height: "2.8px" // slightly thicker for realistic presence
+                }}
+              />
+            </motion.div>
+          </React.Fragment>
         ))}
       </AnimatePresence>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   LogOut, User as UserIcon, Rocket, Edit3, Image as ImageIcon,
   Plus, Trash2, Users, Flame, Activity, Award, CheckCircle,

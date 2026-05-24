@@ -189,6 +189,14 @@ service cloud.firestore {
              (data.createdAt is timestamp || data.createdAt is number);
     }
 
+    function isValidAppUpdate(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 300 &&
+             data.version is string && data.version.size() >= 1 && data.version.size() <= 100 &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 10000 &&
+             (data.timestamp is number || data.timestamp is timestamp) &&
+             data.adminId is string;
+    }
+
     // ===============================================================
     // Collection Rules
     // ===============================================================
@@ -575,6 +583,12 @@ service cloud.firestore {
 
     match /support_tickets/{ticketId} {
       allow read, write: if isAdmin();
+    }
+
+    match /app_updates/{updateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidAppUpdate(request.resource.data);
+      allow update, delete: if isAdmin();
     }
 
     match /admin_alerts/{alertId} {

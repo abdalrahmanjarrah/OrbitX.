@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView } from "motion/react";
 import { Play, Shield, Globe, Award, Target, Zap, Activity, Rocket, Clock } from "lucide-react";
 import StarBackground from "./StarBackground";
 

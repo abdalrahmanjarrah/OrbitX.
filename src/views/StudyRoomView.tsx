@@ -135,6 +135,8 @@ import StudyRoomHeader from "../components/study/StudyRoomHeader";
 import StudyRoomParticipants from "../components/study/StudyRoomParticipants";
 import StudyRoomChat from "../components/study/StudyRoomChat";
 import StudyRoomDialogs from "../components/study/StudyRoomDialogs";
+import { useSessionCompletion } from "../hooks/useSessionCompletion";
+import { SessionCompletionModal } from "../components/sessionCompletion/SessionCompletionModal";
 
 
 import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
@@ -324,6 +326,12 @@ function StudyRoomContent({
     hasJoinedStation,
   } = useSessionEngine(stationId, user, isSpectator, onExit);
 
+  const {
+    isOpen: isCompletionOpen,
+    completionData,
+    closeCompletion
+  } = useSessionCompletion(stationId, room, user, isJoined);
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [studyLink, setStudyLink] = useState("");
@@ -385,6 +393,24 @@ function StudyRoomContent({
         studyLink={studyLink}
         setStudyLink={setStudyLink}
         studyLinkRef={studyLinkRef}
+      />
+
+      <SessionCompletionModal
+        isOpen={isCompletionOpen}
+        completionData={completionData}
+        user={user}
+        onClose={closeCompletion}
+        onStartNewRound={() => {
+          closeCompletion();
+          safeUpdateRoom({
+            timerStatus: "focus",
+            startTime: serverTimestamp(),
+          });
+        }}
+        onExitToStations={() => {
+          closeCompletion();
+          performSafeExit();
+        }}
       />
 
       {/* Floating Pill Room Header */}

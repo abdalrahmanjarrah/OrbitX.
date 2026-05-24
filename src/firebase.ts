@@ -87,9 +87,16 @@ export const runTransaction = async (firestore: any, updateFunction: any) => {
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+  } catch (error: any) {
+    const isOffline = error instanceof Error && (
+      error.message.includes('the client is offline') ||
+      error.message.includes('unavailable') ||
+      error.message.includes('Could not reach Cloud Firestore') ||
+      (error as any).code === 'unavailable'
+    );
+    if (isOffline) {
+      console.warn("Firestore: Server is temporarily unreachable or client is working offline. Firestore will automatically sync once connection is restored.");
+      return;
     }
     handleFirestoreError(error, OperationType.GET, 'test/connection');
   }
@@ -126,6 +133,14 @@ export interface FirestoreErrorInfo {
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
+  const errCode = (error as any)?.code;
+
+  const isOffline = errMsg.toLowerCase().includes("unavailable") || 
+                    errMsg.toLowerCase().includes("offline") || 
+                    errMsg.toLowerCase().includes("could not reach cloud firestore") ||
+                    errCode === 'unavailable' ||
+                    errCode === 'failed-precondition';
+
   const errInfo: FirestoreErrorInfo = {
     error: errMsg,
     authInfo: {
@@ -145,6 +160,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   
+  if (isOffline) {
+    console.warn(`[Firestore Status] Offline/temporarily unreachable. Operation '${operationType}' is queued locally and will resume when online. Status: ${errMsg}`);
+    Debugger.logError(`firestore_offline_${operationType}`, `Path: ${path} | Status: ${errMsg}`);
+    return;
+  }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 
   const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource-exhausted") || errMsg.toLowerCase().includes("exhausted");
