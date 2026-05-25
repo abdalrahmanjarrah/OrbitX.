@@ -188,7 +188,12 @@ export default function BlackHolesView({ user }: { user: UserData }) {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const usersSnapshot = await getDocs(collection(db, "profiles"));
+        const q = query(
+          collection(db, "profiles"),
+          orderBy("xp", "desc"),
+          limit(100)
+        );
+        const usersSnapshot = await getDocs(q);
         let totalSessions = 0;
         let users: UserData[] = [];
         usersSnapshot.forEach((doc) => {

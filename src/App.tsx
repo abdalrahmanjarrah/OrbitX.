@@ -188,18 +188,41 @@ function App() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
+  const [loginError, setLoginError] = useState<{ code: string; message: string; fullError?: string } | null>(null);
   const lastSyncedProfileRef = useRef<string>("");
   const previousLevelRef = useRef<number | null>(null);
   const previousUserUidRef = useRef<string | null>(null);
 
+  const handleLogin = async () => {
+    try {
+      setLoginError(null);
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error("Login attempt error:", err);
+      const errorCode = err?.code || "";
+      const errorMessage = err?.message || String(err);
+      
+      if (errorCode === "auth/popup-closed-by-user" || errorCode === "auth/cancelled-popup-request") {
+        console.log("User closed popup, ignoring.");
+        return;
+      }
+      
+      setLoginError({
+        code: errorCode,
+        message: errorMessage,
+        fullError: `${errorCode} | ${errorMessage}`
+      });
+    }
+  };
+
   useEffect(() => {
     if (user) {
       if (userData) {
-        const isAuthorized = import.meta.env.DEV || userData.role === "admin";
+        const isAuthorized = userData.role === "admin";
         authorizeDebugger(isAuthorized);
       }
     } else {
-      authorizeDebugger(!!import.meta.env.DEV);
+      authorizeDebugger(false);
     }
   }, [user, userData]);
 
@@ -250,7 +273,8 @@ function App() {
             // Auto-upgrade to admin if email matches
             const isAdminEmail =
               user.email === "lumafashionhq@gmail.com" ||
-              user.email === "abdalrahmanjarrah94@gmail.com";
+              user.email === "abdalrahmanjarrah94@gmail.com" ||
+              user.email === "abdalrahmanjarrah1@gmail.com";
             if (isAdminEmail && data.role !== "admin") {
               updateDoc(userRef, { role: "admin" }).catch((e) =>
                 handleFirestoreError(
@@ -267,7 +291,8 @@ function App() {
             // Initialize new user
             const isAdminEmail =
               user.email === "lumafashionhq@gmail.com" ||
-              user.email === "abdalrahmanjarrah94@gmail.com";
+              user.email === "abdalrahmanjarrah94@gmail.com" ||
+              user.email === "abdalrahmanjarrah1@gmail.com";
 
             const newUserData: UserData = {
               uid: user.uid,
@@ -466,7 +491,105 @@ function App() {
   }
 
   if (view === "landing" && !user) {
-    return <LandingPage onLogin={signInWithGoogle} />;
+    return (
+      <>
+        <LandingPage onLogin={handleLogin} />
+        {loginError && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]" id="auth-error-overlay">
+            <div className="bg-[#0a0f25]/95 border border-red-500/20 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl shadow-indigo-950/40 relative overflow-hidden text-right" dir="rtl">
+              {/* Absolute floating cosmic decoration */}
+              <div className="absolute top-[-50px] left-[-30px] w-32 h-32 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+              
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <button
+                  onClick={() => setLoginError(null)}
+                  className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <h2 className="text-xl font-black text-white font-sans">عقبة في المدار الفضائي</h2>
+                    <p className="text-xs text-red-400/80 mt-0.5">فشل الاتصال بمزود Google Auth</p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-400/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-400 font-bold shrink-0">
+                    <AlertTriangle className="w-6 h-6 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Main info */}
+              <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-sans">
+                <p className="font-semibold text-gray-200">
+                  تلقينا خطأ شبكة من ميزة الحماية بالمتصفح أثناء محاولة فتح نافذة تسجيل الدخول.
+                </p>
+                
+                <div className="bg-black/40 border border-white/5 rounded-2xl p-4 text-xs font-mono text-gray-400 text-left overflow-x-auto">
+                  {loginError.fullError || loginError.message}
+                </div>
+
+                <p className="text-gray-400">
+                  تمنع المتصفحات الحديثة أحياناً إطارات المعاينة (iFrames) من الوصول إلى ملفات تعريف الارتباط المخصصة للتحقق من الهوية. يرجى تجربة الحلول التالية:
+                </p>
+
+                {/* List of solutions */}
+                <div className="space-y-3 pt-2 font-sans">
+                  <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                    <span className="text-lg mt-0.5">🌐</span>
+                    <div className="text-right">
+                      <h4 className="font-bold text-indigo-300 text-xs">العرض في علامة تبويب جديدة (الحل الأسرع والأنسب)</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        افتح التطبيق في صفحة مستقلة كاملة بدلاً من إطار المعاينة داخل المنصة. اضغط على زر المعاينة الخارجي (Open in new tab) أعلى يمين نافذة AI Studio.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                    <span className="text-lg mt-0.5">🛡️</span>
+                    <div className="text-right">
+                      <h4 className="font-bold text-amber-300 text-xs">إيقاف مانع الإعلانات أو دروع الحماية</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        إذا كنت تستخدم uBlock Origin أو AdBlock أو Brave Shields، قم بإيقافها مؤقتاً للنطاق الحالي للسماح باتصال تسجيل الدخول الآمن.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                    <span className="text-lg mt-0.5">🍪</span>
+                    <div className="text-right">
+                      <h4 className="font-bold text-cyan-300 text-xs">سماح بملفات تعريف ارتباط الطرف الثالث</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        تأكد من سماح المتصفح بملفات تعريف الارتباط للطرف الثالث (Third-Party Cookies) للسماح للإطار بالتحقق من جلستك الفضائية.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer controls */}
+              <div className="flex items-center gap-3 justify-end mt-6 pt-6 border-t border-white/5 font-sans">
+                <button
+                  onClick={() => setLoginError(null)}
+                  className="px-5 py-2.5 bg-white/5 rounded-xl text-xs font-bold text-gray-300 hover:bg-white/10 transition-all border border-white/5"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={() => {
+                    setLoginError(null);
+                    handleLogin();
+                  }}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-indigo-900/30"
+                >
+                  إعادة المحاولة
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (userData?.banned) {

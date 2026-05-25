@@ -30,7 +30,7 @@ let tabOpenCount = 1;
 const tabInstanceId = Math.random().toString(36).substring(2, 10);
 let multiTabConflictDetected = false;
 
-let isAuthorizedUser = typeof window !== "undefined" ? !!import.meta.env.DEV : false;
+let isAuthorizedUser = false;
 let isInitialized = false;
 let diagnosticChannel: BroadcastChannel | null = null;
 
@@ -38,6 +38,20 @@ export function authorizeDebugger(isAuthorized: boolean) {
   isAuthorizedUser = isAuthorized;
   if (isAuthorized) {
     initializeDiagnostics();
+  }
+
+  if (typeof document !== "undefined") {
+    const beacon = document.querySelector(".diag-toggle-beacon") as HTMLElement | null;
+    const panel = document.querySelector(".diag-hud-overlay") as HTMLElement | null;
+    if (beacon) {
+      beacon.style.display = isAuthorized ? "flex" : "none";
+    }
+    if (panel) {
+      if (!isAuthorized) {
+        panel.classList.remove("is-open");
+      }
+      panel.style.display = isAuthorized ? "flex" : "none";
+    }
   }
 }
 

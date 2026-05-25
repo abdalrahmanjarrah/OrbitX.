@@ -273,7 +273,7 @@ export default function LeaderboardView({
                     className="relative group"
                   >
                     <img
-                      src={leader.photoURL}
+                      src={leader.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${leader.uid}`}
                       className="w-10 h-10 rounded-full border border-white/10 group-hover:border-indigo-400 transition-colors"
                       referrerPolicy="no-referrer"
                     />

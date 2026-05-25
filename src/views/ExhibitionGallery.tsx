@@ -214,7 +214,7 @@ export default function ExhibitionGallery() {
           className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 relative group"
         >
           <img
-            src={ex.url}
+            src={ex.url || undefined}
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />

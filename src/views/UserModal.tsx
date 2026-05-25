@@ -354,7 +354,7 @@ export default function UserModal({
 
                   <div className="w-32 h-32 rounded-full border-4 border-indigo-400 p-1 relative overflow-hidden z-10 bg-[#0a0b16]">
                     <img
-                      src={userData.photoURL}
+                      src={userData.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${userData.uid}`}
                       className="w-full h-full rounded-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -542,7 +542,7 @@ export default function UserModal({
                     style={{ zIndex: 10 - i }}
                   >
                     <img
-                      src={friend.photoURL}
+                      src={friend.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${friend.uid}`}
                       className="w-10 h-10 rounded-full border-2 border-[#0a0b16] object-cover hover:scale-110 transition-transform cursor-help"
                       referrerPolicy="no-referrer"
                     />

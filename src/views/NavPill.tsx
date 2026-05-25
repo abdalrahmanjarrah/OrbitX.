@@ -184,12 +184,17 @@ export default function NavPill({ icon, label, active, onClick, className }: any
       <button 
          onClick={onClick}
          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300",
-            active ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)] scale-100" : "text-gray-400 hover:text-white hover:bg-white/10 scale-95",
+            "flex items-center gap-2.5 px-4.5 py-2 rounded-full text-sm font-bold transition-all duration-300 relative select-none",
+            active 
+              ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.35)] scale-100 font-black border border-white" 
+              : "text-gray-300/80 hover:text-white hover:bg-white/5 bg-transparent border border-transparent scale-95 hover:scale-[0.98]",
             className
          )}
       >
-         {icon} {label}
+         {icon} 
+         <span>
+            {label}
+         </span>
       </button>
    )
 }

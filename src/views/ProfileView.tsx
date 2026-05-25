@@ -223,7 +223,7 @@ export default function ProfileView({
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                  <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110" referrerPolicy="no-referrer" />
+                  <img src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`} alt={user.displayName} className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110" referrerPolicy="no-referrer" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                     <span className="text-xs font-bold text-white tracking-widest uppercase flex flex-col items-center gap-1"><ImageIcon size={16} />تغيير الصورة</span>
                   </div>
@@ -338,7 +338,7 @@ export default function ProfileView({
                     {stat.title === "الأصدقاء" && friends.length > 0 && (
                        <div className="flex -space-x-2 space-x-reverse mb-1">
                           {friends.slice(0, 3).map((f, idx) => (
-                             <img key={idx} src={f.photoURL} alt={f.displayName} className="w-6 h-6 rounded-full border-2 border-[#080b1a] object-cover" referrerPolicy="no-referrer" />
+                             <img key={idx} src={f.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${f.uid}`} alt={f.displayName} className="w-6 h-6 rounded-full border-2 border-[#080b1a] object-cover" referrerPolicy="no-referrer" />
                           ))}
                        </div>
                     )}
@@ -474,7 +474,7 @@ export default function ProfileView({
                           i % 3 === 0 ? "col-span-2 aspect-[2/1]" : "aspect-square"
                         )}
                       >
-                        <img src={ex.url} className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110" referrerPolicy="no-referrer" />
+                        <img src={ex.url || undefined} className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110" referrerPolicy="no-referrer" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/ex:opacity-100 transition-opacity flex flex-col justify-end p-3">
                            <span className="text-[10px] font-mono text-gray-300 font-bold mb-2">
                              {ex.timestamp ? new Date(ex.timestamp.toDate()).toLocaleDateString("en-US") : "LOG"}

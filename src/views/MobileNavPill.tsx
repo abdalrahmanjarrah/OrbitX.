@@ -184,11 +184,16 @@ export default function MobileNavPill({ icon, label, active, onClick }: any) {
       <button 
          onClick={onClick}
          className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-lg backdrop-blur-md border",
-            active ? "bg-indigo-600/90 text-white border-indigo-400/50" : "bg-[#0b0c16]/80 text-gray-400 border-white/5 hover:text-white"
+            "flex items-center gap-2.5 px-4.5 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-lg backdrop-blur-md border",
+            active 
+              ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white border-indigo-400/50 shadow-[0_4px_15px_rgba(99,102,241,0.35)] scale-100 font-extrabold" 
+              : "bg-[#0b0c16]/90 text-gray-300 border-white/5 hover:text-white scale-98 hover:bg-[#0f1122]/90"
          )}
       >
-         {icon} {label}
+         {icon} 
+         <span>
+            {label}
+         </span>
       </button>
    )
 }

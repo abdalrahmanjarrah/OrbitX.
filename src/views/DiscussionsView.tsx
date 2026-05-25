@@ -83,15 +83,23 @@ export default function DiscussionsView({ user }: { user: UserData }) {
       const fetchReplies = async () => {
         const q = query(
           collection(db, "discussions", selectedDiscussion.id, "replies"),
-          orderBy("timestamp", "asc"),
-          firestoreLimit(100)
+          firestoreLimit(200)
         );
         try {
           const snapshot = await getDocs(q);
           if (isMounted) {
-            setReplies(
-              snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Reply)
-            );
+            const fetchedReplies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Reply);
+            // Sort safely in-memory so missing/pending timestamps are correctly placed at the end
+            fetchedReplies.sort((a, b) => {
+              const timeA = a.timestamp && typeof (a.timestamp as any).toDate === "function" 
+                ? (a.timestamp as any).toDate().getTime() 
+                : (a.timestamp ? new Date(a.timestamp as any).getTime() : Date.now());
+              const timeB = b.timestamp && typeof (b.timestamp as any).toDate === "function" 
+                ? (b.timestamp as any).toDate().getTime() 
+                : (b.timestamp ? new Date(b.timestamp as any).getTime() : Date.now());
+              return timeA - timeB;
+            });
+            setReplies(fetchedReplies);
             setRepliesLoading(false);
           }
         } catch (e) {
@@ -387,7 +395,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
               <div className="flex items-start justify-between relative z-10 flex-row-reverse text-right">
                 <div className="flex items-center gap-4 flex-row-reverse">
                   <img
-                    src={selectedDiscussion.userPhoto}
+                    src={selectedDiscussion.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedDiscussion.userId}`}
                     className="w-14 h-14 rounded-2xl border-2 border-indigo-500/20 shadow-lg"
                     referrerPolicy="no-referrer"
                     alt={selectedDiscussion.userName}
@@ -397,7 +405,9 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                       {selectedDiscussion.userName}
                     </p>
                     <p className="text-xs text-gray-400 font-mono">
-                      {selectedDiscussion.timestamp?.toDate().toLocaleString("ar-EG")}
+                      {selectedDiscussion.timestamp && typeof (selectedDiscussion.timestamp as any).toDate === "function"
+                        ? (selectedDiscussion.timestamp as any).toDate().toLocaleString("ar-EG")
+                        : "الآن"}
                     </p>
                   </div>
                 </div>
@@ -438,7 +448,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                       size={18} 
                       className={((selectedDiscussion as any).likedBy || []).includes(user.uid) ? "fill-pink-500" : ""} 
                     />
-                    <span>{(selectedDiscussion as any).likesCount || 0}</span>
+                    <span>{Array.isArray((selectedDiscussion as any).likedBy) ? (selectedDiscussion as any).likedBy.length : ((selectedDiscussion as any).likesCount || 0)}</span>
                   </button>
                   <div className="flex items-center gap-1.5">
                     <MessageSquare size={18} />
@@ -477,7 +487,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                   <div className="flex items-center justify-between flex-row-reverse">
                     <div className="flex items-center gap-3 flex-row-reverse">
                       <img
-                        src={reply.userPhoto}
+                        src={reply.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${reply.userId}`}
                         className="w-8 h-8 rounded-full border border-white/10"
                         referrerPolicy="no-referrer"
                       />
@@ -487,7 +497,9 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-500 font-mono">
-                        {reply.timestamp?.toDate().toLocaleString("ar-EG")}
+                        {reply.timestamp && typeof (reply.timestamp as any).toDate === "function"
+                          ? (reply.timestamp as any).toDate().toLocaleString("ar-EG")
+                          : "الآن"}
                       </span>
                       {(user.role === "admin" || reply.userId === user.uid) && (
                         <button
@@ -563,7 +575,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                     {/* User Info & Category */}
                     <div className="flex items-center gap-3 flex-row-reverse w-full md:w-auto justify-start">
                       <img
-                        src={disc.userPhoto}
+                        src={disc.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${disc.userId}`}
                         className="w-10 h-10 rounded-xl border border-white/10 shadow-sm"
                         referrerPolicy="no-referrer"
                       />
@@ -575,7 +587,9 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                           </span>
                         </div>
                         <p className="text-[10px] text-gray-500">
-                          {disc.timestamp?.toDate().toLocaleDateString("ar-EG")}
+                          {disc.timestamp && typeof (disc.timestamp as any).toDate === "function"
+                            ? (disc.timestamp as any).toDate().toLocaleDateString("ar-EG")
+                            : "الآن"}
                         </p>
                       </div>
                     </div>
@@ -595,7 +609,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                             <MessageSquare size={14} />
                             {disc.repliesCount}
                           </div>
-                          {(((disc as any).likesCount || 0) > 0 || ((disc as any).likedBy || []).includes(user.uid)) && (
+                          {((Array.isArray((disc as any).likedBy) ? (disc as any).likedBy.length : ((disc as any).likesCount || 0)) > 0 || ((disc as any).likedBy || []).includes(user.uid)) && (
                             <div className={cn(
                               "flex items-center gap-1 text-xs font-semibold",
                               ((disc as any).likedBy || []).includes(user.uid) ? "text-pink-400" : "text-pink-400/80"
@@ -604,7 +618,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                                 size={14} 
                                 className={((disc as any).likedBy || []).includes(user.uid) ? "fill-pink-500" : "fill-pink-500/20"} 
                               />
-                              {(disc as any).likesCount || 0}
+                              {Array.isArray((disc as any).likedBy) ? (disc as any).likedBy.length : ((disc as any).likesCount || 0)}
                             </div>
                           )}
                         </div>

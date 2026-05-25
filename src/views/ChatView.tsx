@@ -5,13 +5,13 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../lib/utils";
 import {
-  db, handleFirestoreError, OperationType, auth
+  db, handleFirestoreError, OperationType, auth,
+  addDoc, deleteDoc, updateDoc, setDoc
 } from "../firebase";
 import {
-  collection, doc, addDoc, serverTimestamp, updateDoc, deleteDoc,
+  collection, doc, serverTimestamp,
   query, orderBy, limit as firestoreLimit, onSnapshot as originalOnSnapshot, 
-  increment,
-  setDoc
+  increment
 } from "firebase/firestore";
 import { Message, UserData, getAstronautRank } from "../shared";
 import { playSound } from "../lib/sound";
@@ -36,6 +36,29 @@ function onSnapshot(...args: any[]) {
 }
 
 import Markdown from "react-markdown";
+
+const EMOJI_CATEGORIES = [
+  {
+    id: "space",
+    label: "فضاء 🪐",
+    emojis: ["🚀", "🪐", "🔭", "🛸", "🛰️", "👾", "⭐️", "🌟", "✨", "☄️", "🌍", "🌞", "👩‍🚀", "👨‍🚀", "🌌", "🌙", "☀️"]
+  },
+  {
+    id: "faces",
+    label: "وجوه 😂",
+    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕"]
+  },
+  {
+    id: "hands",
+    label: "تفاعل 👍",
+    emojis: ["👍", "👎", "👊", "✊", "🤛", "🤜", "🤞", "✌️", "🤟", "🤘", "👌", "🤌", "🤏", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🤙", "💪", "🦾", "🙏", "🤝", "👏", "🙌", "👐", "🤲", "👑", "💅", "🤳", "👂", "👃", "🧠"]
+  },
+  {
+    id: "symbols",
+    label: "رموز ✨",
+    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❤️‍🔥", "❤️‍🩹", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "🎯", "💡", "🔥", "✨", "🎉", "🎁", "🎈", "🔔", "⭐", "🌟", "🌠", "🌈", "☀️", "🌙", "⚡", "❄️", "💤", "💬", "💭", "⚙️", "🔧", "🔑", "🔒", "🔓", "🔍", "🔎", "📚", "📝", "🗓️", "🇸🇦", "🕋", "🕌", "✅", "❌", "💯"]
+  }
+];
 
 // Module-level variables to persist scroll state across re-mounts
 let savedScrollPosition = -1;
@@ -64,6 +87,144 @@ export default function ChatView({
   const initialLoad = useRef(true);
   const prevCount = useRef(0);
   const lastMsgTime = useRef(0);
+
+  // States for Emojis and File Attachments
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiTab, setEmojiTab] = useState("space");
+  const [attachment, setAttachment] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Refs for custom elements and caret handling
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Click outside to close emoji picker
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const insertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setNewMessage(prev => prev + emoji);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+
+    setNewMessage(before + emoji + after);
+    
+    // Put caret right after the inserted emoji on next tick
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 10);
+  };
+
+  const handlePlusClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+
+    // Non-images must be under 1MB, images are compressed dynamically
+    if (!isImage && file.size > 1024 * 1024) {
+      alert("حجم الملف كبير جداً! يجب أن يكون أقل من 1 ميغابايت لتخزينه بسلاسة في المحطة.");
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      
+      if (isImage) {
+        const img = new Image();
+        img.src = dataUrl;
+        img.onload = () => {
+          // Dynamic compression with canvas (downscale to max 800px width/height and quality 0.5)
+          const canvas = document.createElement('canvas');
+          const max_width = 800;
+          const max_height = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > max_width) {
+              height *= max_width / width;
+              width = max_width;
+            }
+          } else {
+            if (height > max_height) {
+              width *= max_height / height;
+              height = max_height;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          
+          // Verify final base64 is within standard document limits
+          const approxSizeBytes = Math.round((compressedDataUrl.length * 3) / 4);
+          if (approxSizeBytes > 1048576) {
+            alert("الصورة كبيرة جداً حتى بعد الضغط! يرجى اختيار صورة بدقة أو تفاصيل أقل.");
+            setIsUploading(false);
+            return;
+          }
+
+          setAttachment({
+            name: file.name,
+            type: 'image',
+            dataUrl: compressedDataUrl
+          });
+          setIsUploading(false);
+        };
+        img.onerror = () => {
+          if (file.size > 1024 * 1024) {
+             alert("عذراً، فشل تحميل ومعالجة هذه الصورة الضخمة.");
+             setIsUploading(false);
+             return;
+          }
+          setAttachment({
+            name: file.name,
+            type: 'image',
+            dataUrl: dataUrl
+          });
+          setIsUploading(false);
+        };
+      } else {
+        setAttachment({
+          name: file.name,
+          type: file.type.includes('pdf') ? 'pdf' : 'file',
+          dataUrl: dataUrl
+        });
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "settings"), (docSnap) => {
@@ -172,7 +333,7 @@ export default function ChatView({
        alert("الشات العام موقف حالياً من قبل الإدارة.");
        return;
     }
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && !attachment) return;
     if (newMessage.length > 500) {
       alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
       return;
@@ -183,9 +344,18 @@ export default function ChatView({
       return;
     }
     lastMsgTime.current = now;
+
+    let finalMessageText = newMessage.trim();
+    if (attachment) {
+      if (attachment.type === 'image') {
+        finalMessageText += (finalMessageText ? '\n\n' : '') + `![${attachment.name}](${attachment.dataUrl})`;
+      } else {
+        finalMessageText += (finalMessageText ? '\n\n' : '') + `[📎 تحميل الملف: ${attachment.name}](${attachment.dataUrl})`;
+      }
+    }
     
     const messageData = {
-        text: newMessage,
+        text: finalMessageText,
         userId: user.uid,
         userName: user.displayName,
         userPhoto: user.photoURL,
@@ -199,6 +369,7 @@ export default function ChatView({
 
     setNewMessage("");
     setReplyTo(null);
+    setAttachment(null);
 
     try {
       await addDoc(collection(db, "global_chat"), messageData);
@@ -313,7 +484,7 @@ export default function ChatView({
                                <button onClick={() => onSelectUser(msg.userId)} className="relative group">
                                  <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-sm" />
                                  <img
-                                   src={msg.userPhoto}
+                                   src={msg.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`}
                                    className="w-10 h-10 rounded-xl relative z-10 border border-white/10 object-cover bg-[#0a0b16]"
                                    referrerPolicy="no-referrer"
                                    alt={msg.userName}
@@ -370,7 +541,38 @@ export default function ChatView({
                                     dir="rtl"
                                     style={{ wordBreak: 'break-word' }}
                                   >
-                                    <Markdown>{msg.text}</Markdown>
+                                    <Markdown
+                                      components={{
+                                        img: ({ ...props }) => (
+                                          <img
+                                            {...props}
+                                            className="max-h-60 rounded-xl mt-2 border border-white/10 hover:scale-[1.01] transition-all cursor-zoom-in object-cover max-w-full block shadow-md"
+                                            referrerPolicy="no-referrer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (props.src) setLightboxImage(props.src); const win: any = null;
+                                              if (win) {
+                                                win.document.write(`<title>مشاهدة الصورة</title><body style="margin:0;background:#060713;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;"><img src="${props.src}" style="max-width:95%;max-height:95%;object-fit:contain;margin:auto;display:block;border-radius:12px;box-shadow:0 25px 50px rgba(0,0,0,0.8);"/></body>`);
+                                              }
+                                            }}
+                                          />
+                                        ),
+                                        a: ({ ...props }) => {
+                                          const isDataUrl = props.href?.startsWith('data:');
+                                          return (
+                                            <a
+                                              {...props}
+                                              download={isDataUrl ? props.children?.toString() || 'file' : undefined}
+                                              className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-300 font-bold px-3 py-1.5 rounded-xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all mt-2 max-w-full truncate text-xs"
+                                            >
+                                              {props.children}
+                                            </a>
+                                          )
+                                        }
+                                      }}
+                                    >
+                                      {msg.text}
+                                    </Markdown>
                                   </div>
                                   
                                   {/* Context Menu (Hover) */}
@@ -388,7 +590,11 @@ export default function ChatView({
                                                 if(confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
                                                     try {
                                                         await deleteDoc(doc(db, "global_chat", msg.id));
-                                                    } catch(e) {}
+                                                    } catch(e) {
+                                                        console.error("Delete failed:", e);
+                                                        handleFirestoreError(e, OperationType.DELETE, `global_chat/${msg.id}`);
+                                                        alert("عذراً، فشلت عملية الحذف. ربما لا تملك الصلاحية الكافية لك على الخادم.");
+                                                    }
                                                 }
                                             }}
                                             className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors backdrop-blur-md border border-red-500/10"
@@ -440,6 +646,126 @@ export default function ChatView({
            </div>
         ) : (
           <div className="relative">
+             <input 
+               type="file" 
+               ref={fileInputRef} 
+               onChange={handleFileChange} 
+               className="hidden" 
+               accept="image/*,application/pdf,text/plain"
+             />
+
+             {/* Loader */}
+             {isUploading && (
+                <div className="text-xs text-indigo-400 font-bold flex items-center gap-1.5 justify-start px-4 py-2 animate-pulse" dir="rtl">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+                  جاري تحميل ومعالجة الملف...
+                </div>
+             )}
+
+             {/* Attachment Thumbnail View */}
+             {attachment && (
+               <div className="mb-3 ms-4 me-16 flex items-center justify-between text-sm bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-2 text-gray-300 relative group backdrop-blur-md" dir="rtl">
+                 <div className="flex items-center gap-3">
+                   {attachment.type === 'image' ? (
+                     <img src={attachment.dataUrl} className="w-10 h-10 rounded-lg object-cover border border-white/10 cursor-pointer hover:opacity-80 transition-all" title="اضغط لتكبير الصورة" onClick={() => setLightboxImage(attachment.dataUrl)} />
+                   ) : (
+                     <div className="w-10 h-10 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-semibold text-xs animate-bounce">
+                       {attachment.type === 'pdf' ? 'PDF' : '📁'}
+                     </div>
+                   )}
+                   <div className="text-right">
+                     <p className="text-xs font-bold text-white max-w-[200px] truncate">{attachment.name}</p>
+                     <p className="text-[10px] text-gray-500">مستعد للإرسال كملف مرفق</p>
+                   </div>
+                 </div>
+                 <button 
+                   onClick={() => setAttachment(null)} 
+                   className="p-1.5 hover:bg-white/10 inline-flex items-center justify-center rounded-full transition-colors text-red-400 hover:text-red-300"
+                 >
+                   <X size={14} />
+                 </button>
+               </div>
+             )}
+
+             {/* Lightbox / Full-screen Image Modal */}
+              <AnimatePresence>
+                {lightboxImage && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setLightboxImage(null)}
+                    className="fixed inset-0 z-[100] bg-[#060713]/90 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
+                    dir="rtl"
+                  >
+                    {/* Top Close Button */}
+                    <button
+                      onClick={() => setLightboxImage(null)}
+                      className="absolute top-6 right-6 p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
+
+                    {/* Display Image */}
+                    <motion.img
+                      initial={{ scale: 0.95, y: 15 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.95, y: 15 }}
+                      transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                      src={lightboxImage}
+                      alt="مشاهدة بملء الشاشة"
+                      className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10 select-none cursor-default"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Emoji Picker Popover */}
+             <AnimatePresence>
+                {showEmojiPicker && (
+                   <motion.div
+                     ref={emojiPickerRef}
+                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                     animate={{ opacity: 1, scale: 1, y: 0 }}
+                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                     className="absolute bottom-16 right-2 md:right-4 z-40 w-72 md:w-80 h-64 bg-[#0e1021]/95 text-white rounded-2xl border border-indigo-500/30 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col overflow-hidden"
+                     dir="rtl"
+                   >
+                     {/* Category Tabs */}
+                     <div className="flex border-b border-white/10 bg-black/40 p-1.5 gap-1 shrink-0 scrollbar-none overflow-x-auto">
+                        {EMOJI_CATEGORIES.map(cat => (
+                           <button
+                             key={cat.id}
+                             onClick={() => setEmojiTab(cat.id)}
+                             className={cn(
+                               "px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer",
+                               emojiTab === cat.id 
+                                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-100" 
+                                 : "text-gray-400 hover:text-white hover:bg-white/5 scale-95"
+                             )}
+                           >
+                             {cat.label}
+                           </button>
+                        ))}
+                     </div>
+                     
+                     {/* Emoji Grid */}
+                     <div className="flex-1 p-3 overflow-y-auto grid grid-cols-6 gap-2 content-start custom-scrollbar">
+                        {EMOJI_CATEGORIES.find(c => c.id === emojiTab)?.emojis.map(emoji => (
+                           <button
+                             key={emoji}
+                             onClick={() => insertEmoji(emoji)}
+                             className="text-2xl p-1.5 hover:bg-white/10 rounded-xl transition-all hover:scale-125 duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                           >
+                             {emoji}
+                           </button>
+                        ))}
+                     </div>
+                   </motion.div>
+                )}
+             </AnimatePresence>
+
              <AnimatePresence>
                 {replyTo && (
                     <motion.div 
@@ -463,16 +789,20 @@ export default function ChatView({
              <div className="flex gap-2 flex-row-reverse items-end">
                 <button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() && !attachment}
                   className="w-12 h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100 disabled:cursor-not-allowed"
                 >
-                  <Send size={20} className="-ml-1" />
+                  <Send size={20} className="-ml-1 text-white" />
                 </button>
-                <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl flex flex-row-reverse items-center p-1 focus-within:border-indigo-500/50 focus-within:bg-black/60 transition-colors shadow-inner">
-                   <button className="w-10 h-10 shrink-0 flex items-center justify-center text-gray-500 hover:text-indigo-400 transition-colors hover:bg-white/5 rounded-xl">
+                <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl flex flex-row-reverse items-center p-1 focus-within:border-indigo-500/50 focus-within:bg-black/60 transition-colors shadow-inner relative">
+                   <button 
+                     onClick={handlePlusClick}
+                     className="w-10 h-10 shrink-0 flex items-center justify-center text-gray-500 hover:text-indigo-400 transition-colors hover:bg-white/5 rounded-xl cursor-pointer"
+                   >
                       <Plus size={20} />
                    </button>
                    <textarea
+                     ref={textareaRef}
                      value={newMessage}
                      onChange={(e) => setNewMessage(e.target.value)}
                      onKeyDown={(e) => {
@@ -493,7 +823,13 @@ export default function ChatView({
                      }}
                    />
                    <div className="flex shrink-0">
-                       <button className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-indigo-400 transition-colors hover:bg-white/5 rounded-xl">
+                       <button 
+                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                         className={cn(
+                           "w-10 h-10 flex items-center justify-center transition-colors hover:bg-white/5 rounded-xl cursor-pointer",
+                           showEmojiPicker ? "text-indigo-400 bg-white/5" : "text-gray-500 hover:text-indigo-400"
+                         )}
+                       >
                           <Smile size={20} />
                        </button>
                    </div>

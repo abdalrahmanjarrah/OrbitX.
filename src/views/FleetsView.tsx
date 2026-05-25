@@ -457,33 +457,93 @@ export default function FleetsView({ user }: { user: UserData }) {
         className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
         dir="rtl"
       >
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 to-fuchsia-400 flex items-center gap-2">
-              <Users className="text-fuchsia-400" /> الأساطيل الفضائية
-              (التحالفات)
-            </h2>
-            <p className="text-gray-400 mt-2">
-              انضم إلى أسطول فضائي أو قم بتأسيس أسطولك الخاص للمنافسة مع البقية!
-            </p>
+        {/* Style block for lightweight GPU-friendly CSS animations */}
+        <style>{`
+          @keyframes radar-sweep {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes glow-pulse {
+            0%, 100% { opacity: 0.15; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.08); }
+          }
+          @keyframes particle-drift-1 {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.1; }
+            50% { transform: translate(-20px, 15px) scale(1.3); opacity: 0.25; }
+          }
+          @keyframes particle-drift-2 {
+            0%, 100% { transform: translate(0, 0) scale(1.1); opacity: 0.2; }
+            50% { transform: translate(25px, -20px) scale(0.95); opacity: 0.35; }
+          }
+        `}</style>
+
+        {/* Ambient Space Alliance Header Card */}
+        <div className="relative bg-[#060713]/85 rounded-3xl p-8 md:p-10 border border-white/10 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col lg:flex-row items-center justify-between gap-8 mb-10 z-10 select-none bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]">
+          {/* Nebula Glow Backdrops */}
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none animate-[glow-pulse_8s_infinite_ease-in-out]" />
+          <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-[140px] pointer-events-none animate-[glow-pulse_12s_infinite_ease-in-out]" />
+
+          {/* Radar Sweep Layer */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] border border-white/[0.015] rounded-full pointer-events-none flex items-center justify-center">
+            <div className="absolute w-[360px] h-[360px] border border-white/[0.025] rounded-full" />
+            <div className="absolute w-[240px] h-[240px] border border-white/[0.035] rounded-full" />
+            {/* Sweeper needle */}
+            <div className="absolute inset-0 rounded-full pointer-events-none" style={{ animation: 'radar-sweep 22s linear infinite' }}>
+              <div className="absolute left-1/2 top-0 w-[1px] h-1/2 bg-gradient-to-b from-indigo-500/8 via-transparent to-transparent origin-bottom" />
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-2">
+
+          {/* Floating Drift Particles */}
+          <div className="absolute w-2 h-2 bg-indigo-400 rounded-full blur-[1px] opacity-10 animate-[particle-drift-1_15s_infinite_ease-in-out]" style={{ top: '25%', left: '15%' }} />
+          <div className="absolute w-1.5 h-1.5 bg-fuchsia-400 rounded-full blur-[1px] opacity-15 animate-[particle-drift-2_22s_infinite_ease-in-out]" style={{ bottom: '30%', left: '40%' }} />
+          <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-30" style={{ top: '15%', left: '75%', animationDuration: '3s' }} />
+          <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-20" style={{ bottom: '15%', left: '20%', animationDuration: '5s' }} />
+
+          {/* Left Textual Info Module */}
+          <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10 text-center lg:text-right w-full lg:w-auto">
+            {/* Immersive Pulsing Rocket Orbiter */}
+            <div className="relative w-32 h-32 flex items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 via-slate-800/20 to-fuchsia-500/10 border border-white/10 shadow-[0_0_40px_rgba(99,102,241,0.18)] shrink-0 select-none">
+              {/* Outer orbit dots */}
+              <div className="absolute inset-1.5 border border-dashed border-indigo-500/15 rounded-full animate-[spin_55s_linear_infinite]" />
+              <div className="absolute inset-4 border border-dashed border-fuchsia-500/15 rounded-full animate-[spin_35s_linear_infinite_reverse]" />
+              {/* Centered Rocket with gentle hover drift */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                className="relative z-10"
+              >
+                <Rocket className="w-14 h-14 text-indigo-400/90 filter drop-shadow-[0_0_15px_rgba(99,102,241,0.55)]" />
+              </motion.div>
+            </div>
+
+            <div className="flex-1 space-y-3">
+              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-fuchsia-400 to-indigo-300 flex items-center justify-center lg:justify-start gap-3">
+                الأساطيل الفضائية
+              </h1>
+              <p className="text-gray-300/95 max-w-xl text-sm md:text-base leading-relaxed font-sans">
+                أنت لست وحدك في هذا الكون المعرفي المهيب. تقدم وانضم إلى نخبة رواد الفضاء، أو أسس أسطولك الخاص لقيادة دفة التطوير، مشاركة التحديات، وتحقيق نقاط الخبرة كقوة موحدة!
+              </p>
+              {/* Features inline bento specifiers */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-5 text-xs text-gray-400 font-medium">
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><Users size={13} className="text-indigo-400" /> تحالف حتى 10 أعضاء</span>
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><MessageCircle size={13} className="text-fuchsia-400" /> غرف تواصل مدمجة</span>
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><Star size={13} className="text-yellow-400" /> منافسة XP جماعية</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Action CTA Module */}
+          <div className="flex flex-col items-center gap-3 shrink-0 relative z-20 w-full lg:w-auto">
             <button
-              onClick={() => user?.level >= 10 && setIsCreating(true)}
+              onClick={() => setIsCreating(true)}
               className={cn(
-                "font-bold px-6 py-3 rounded-full transition-all flex items-center gap-2",
-                user && user.level >= 10
-                  ? "bg-gradient-to-l from-indigo-600 to-indigo-500 text-white hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]"
-                  : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700",
+                "w-full lg:w-auto font-black px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-3 text-base shadow-lg cursor-pointer",
+                "bg-gradient-to-l from-indigo-500 via-indigo-600 to-fuchsia-600 text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] border border-indigo-400/30"
               )}
             >
-              <Plus size={20} /> أسطول جديد
+              <Plus size={22} className="animate-pulse" /> تأسيس أسطول جديد
             </button>
-            {user && user.level < 10 && (
-              <span className="text-[10px] text-orange-400 font-bold bg-orange-500/10 px-2 py-1 rounded-full border border-orange-500/20">
-                تتطلب مستوى 10 فما فوق
-              </span>
-            )}
+            <span className="text-[10px] text-indigo-400/60 font-mono tracking-wider">المنصة متاحة لجميع رواد الفضاء</span>
           </div>
         </div>
 
@@ -491,10 +551,10 @@ export default function FleetsView({ user }: { user: UserData }) {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0a0b16] p-6 rounded-3xl border border-indigo-500/30 shadow-2xl mb-8"
+            className="bg-[#0a0b16]/95 backdrop-blur-xl p-8 rounded-3xl border border-indigo-500/30 shadow-2xl mb-8 relative"
           >
-            <h3 className="text-2xl font-bold text-white mb-4">
-              تأسيس أسطول جديد 🚀
+            <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span>تأسيس أسطول جديد ✨</span>
             </h3>
             <form onSubmit={handleCreateFleet} className="space-y-4">
               <div>
@@ -506,7 +566,7 @@ export default function FleetsView({ user }: { user: UserData }) {
                   value={newFleetName}
                   onChange={(e) => setNewFleetName(e.target.value)}
                   maxLength={25}
-                  className="w-full bg-[#090915] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-[#05060d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   placeholder="مثال: رواد التميز..."
                 />
               </div>
@@ -519,7 +579,7 @@ export default function FleetsView({ user }: { user: UserData }) {
                   value={newFleetDesc}
                   onChange={(e) => setNewFleetDesc(e.target.value)}
                   maxLength={150}
-                  className="w-full bg-[#090915] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 h-24 transition-colors resize-none"
+                  className="w-full bg-[#05060d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 h-24 transition-colors resize-none"
                   placeholder="نطمح لأن نكون الأسطول الأول في المجرة..."
                 />
               </div>
@@ -551,10 +611,10 @@ export default function FleetsView({ user }: { user: UserData }) {
               {invitedFleets.map((fleet) => (
                 <div
                   key={fleet.id}
-                  className="bg-fuchsia-900/10 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-lg"
+                  className="bg-fuchsia-900/10 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-lg relative overflow-hidden group hover:border-fuchsia-500/40 transition-all duration-300"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 flex items-center justify-center text-white font-black text-2xl">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 flex items-center justify-center text-white font-black text-2xl shadow-[0_0_15px_rgba(217,70,239,0.3)]">
                       {fleet.name.charAt(0)}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-bold bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-indigo-300">
@@ -596,7 +656,7 @@ export default function FleetsView({ user }: { user: UserData }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-[#0a0b16]/90 backdrop-blur-md rounded-3xl p-6 border border-white/10 hover:border-indigo-500/50 transition-colors relative overflow-hidden group shadow-lg"
+              className="bg-[#0a0b16]/85 backdrop-blur-xl rounded-3xl p-6 border border-white/10 hover:border-indigo-500/40 hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] transition-all duration-350 relative overflow-hidden group shadow-md hover:-translate-y-1"
             >
               <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
 
@@ -616,18 +676,18 @@ export default function FleetsView({ user }: { user: UserData }) {
               </p>
 
               <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-                <div className="flex flex-col items-center bg-white/5 rounded-xl py-2 px-1">
+                <div className="flex flex-col items-center bg-white/[0.03] border border-white/5 rounded-xl py-2 px-1 hover:bg-white/[0.06] transition-colors">
                   <span className="text-yellow-400 font-black text-lg flex items-center gap-1">
                     <Star size={14} /> {fleet.xp}
                   </span>
-                  <span className="text-[10px] text-gray-500">نقاط الخبرة</span>
+                  <span className="text-[10px] text-gray-500 font-medium">نقاط الخبرة</span>
                 </div>
-                <div className="flex flex-col items-center bg-white/5 rounded-xl py-2 px-1">
+                <div className="flex flex-col items-center bg-white/[0.03] border border-white/5 rounded-xl py-2 px-1 hover:bg-white/[0.06] transition-colors">
                   <span className="text-sky-400 font-black text-lg flex items-center gap-1">
                     <Timer size={14} />{" "}
                     {Math.floor((fleet.totalFocusHours || 0) * 10) / 10}
                   </span>
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-gray-500 font-medium">
                     ساعات التركيز
                   </span>
                 </div>
@@ -636,18 +696,33 @@ export default function FleetsView({ user }: { user: UserData }) {
               <button
                 onClick={() => handleJoinFleet(fleet.id)}
                 disabled={fleet.members?.length >= 10}
-                className="w-full relative z-10 py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 transition-colors border border-dashed border-indigo-500/30"
+                className="w-full relative z-10 py-3 rounded-xl bg-[#0c0d1e] hover:bg-indigo-500 hover:text-white border border-indigo-500/20 hover:border-indigo-500 transition-all font-bold duration-300 disabled:bg-[#0c0d1e]/50 disabled:text-gray-500 disabled:border-transparent disabled:cursor-not-allowed"
               >
                 {fleet.members?.length >= 10 ? "الأسطول ممتلئ" : "انضم للأسطول"}
               </button>
             </motion.div>
           ))}
           {allFleets.length === 0 && !isCreating && (
-            <div className="col-span-full py-20 bg-white/5 rounded-3xl border border-white/10 border-dashed flex flex-col items-center justify-center text-gray-500">
-              <Rocket className="w-16 h-16 text-gray-600 mb-4 opacity-50" />
-              <p className="text-lg">
-                لا توجد أساطيل بعد. كن أول من يؤسس أسطولاً في المجرة!
-              </p>
+            <div className="col-span-full py-24 bg-[#0a0b16]/70 rounded-3xl border border-transparent flex flex-col items-center justify-center text-center relative overflow-hidden select-none">
+              {/* Subtle background circles */}
+              <div className="absolute w-72 h-72 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute w-[400px] h-[400px] border border-dashed border-white/[0.02] rounded-full pointer-events-none animate-[spin_60s_linear_infinite]" />
+              
+              <div className="relative z-10 flex flex-col items-center max-w-md px-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/5 to-slate-800/10 rounded-full flex items-center justify-center mb-6 border border-white/5 shadow-inner">
+                  <Rocket className="w-10 h-10 text-indigo-400/50 animate-bounce" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">المدار خالٍ بالكامل</h3>
+                <p className="text-gray-400/90 text-sm leading-relaxed mb-8">
+                  لا توجد أساطيل فضائية مسجلة في هذا القطاع حتى الآن. كن البادئ بالخطوة الأولى وأرسل رسالتك التاريخية لتأسيس أول حلف برّاق!
+                </p>
+                <button
+                  onClick={() => setIsCreating(true)}
+                  className="px-6 py-3 bg-[#0c0d1e] hover:bg-indigo-600 hover:text-white text-indigo-400 border border-indigo-500/20 hover:border-indigo-500 font-bold rounded-xl transition-all duration-300"
+                >
+                  تأسيس الأسطول الأول 🚀
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -660,9 +735,9 @@ export default function FleetsView({ user }: { user: UserData }) {
       className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
       dir="rtl"
     >
-      <div className="bg-[#0a0b16] rounded-3xl p-8 border border-white/10 shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+      <div className="bg-[#060713]/85 backdrop-blur-3xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-full h-2 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
+        <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
           <div className="flex items-center gap-6">
@@ -678,13 +753,13 @@ export default function FleetsView({ user }: { user: UserData }) {
                   أسطولك التعاوني
                 </span>
               </div>
-              <p className="text-gray-400 mt-2 max-w-lg">
+              <p className="text-gray-400 mt-2 max-w-lg font-sans">
                 {activeFleet.description}
               </p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-3 shrink-0">
-            <div className="flex items-center gap-6 bg-white/5 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center gap-6 bg-white/[0.03] rounded-2xl p-4 border border-white/5 hover:border-white/10 transition-colors duration-300">
               <div className="text-center">
                 <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-t from-yellow-500 to-yellow-200">
                   {activeFleet.xp}
@@ -795,7 +870,7 @@ export default function FleetsView({ user }: { user: UserData }) {
                 className={`flex ${msg.userId === user.uid ? "justify-start md:flex-row" : "justify-end md:flex-row"} gap-3`}
               >
                 <img
-                  src={msg.userPhoto}
+                  src={msg.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`}
                   alt=""
                   className="w-10 h-10 rounded-full border-2 border-white/10 shadow-sm"
                   referrerPolicy="no-referrer"
@@ -862,7 +937,7 @@ export default function FleetsView({ user }: { user: UserData }) {
                 className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all group"
               >
                 <img
-                  src={m.photoURL}
+                  src={m.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${m.uid}`}
                   alt=""
                   className="w-11 h-11 rounded-full border-2 border-white/10 group-hover:border-indigo-400 transition-colors shadow-sm"
                   referrerPolicy="no-referrer"
