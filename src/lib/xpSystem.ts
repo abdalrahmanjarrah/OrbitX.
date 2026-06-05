@@ -121,11 +121,11 @@ export const requestXpGrant = async (
        
        const updates: any = {
            xp: increment(amount),
-           lastXpUpdate: now,
+           ...(amount > 0 ? { lastXpUpdate: now } : {}),
            ...levelUpdates
        };
        if (isFocusLoop) {
-           updates.lastFocusXpUpdate = now;
+           if (amount > 0) updates.lastFocusXpUpdate = now;
        }
        
        transaction.update(userRef, updates);

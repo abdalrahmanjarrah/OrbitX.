@@ -84,11 +84,7 @@ function StudyRoomHeaderComponent({
 
           <button
             onClick={() => {
-              if (room.timerStatus === "focus") {
-                setShowExitDialog(true);
-              } else {
-                handleConfirmExit();
-              }
+              setShowExitDialog(true);
             }}
             disabled={isExiting}
             className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"

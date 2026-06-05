@@ -598,11 +598,15 @@ export default function UserModal({
                     key={ex.id}
                     className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 group relative"
                   >
-                    <img
-                      src={ex.url}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                    {ex.url ? (
+                      <img
+                        src={ex.url}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">LOADING</div>
+                    )}
                     <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <span className="text-xs font-bold">
                         {ex.timestamp

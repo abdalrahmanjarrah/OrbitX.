@@ -1,35 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  MessageCircle, Plus, X, Trash2, Heart, Flame, Rocket, SkipBack, Eye, ChevronRight, Hash, Pin, MessageSquare
+  MessageCircle, Plus, X, Trash2, Heart, Flame, Rocket, ChevronRight, Hash, MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import {
   collection, doc, addDoc, serverTimestamp, updateDoc, increment, deleteDoc,
-  query, orderBy, limit as firestoreLimit, onSnapshot as originalOnSnapshot, 
-  where, getDocs, arrayUnion, arrayRemove // Fallback for batch fetch if needed
+  query, orderBy, limit as firestoreLimit, getDocs, arrayUnion, arrayRemove
 } from "firebase/firestore";
 import { Discussion, Reply, UserData } from "../shared";
 import { cn } from "../lib/utils";
-
-// Custom wrapper to intercept onSnapshot errors safely
-function onSnapshot(...args: any[]) {
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
-}
 
 export default function DiscussionsView({ user }: { user: UserData }) {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);

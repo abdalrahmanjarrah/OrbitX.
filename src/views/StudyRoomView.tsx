@@ -357,6 +357,7 @@ function StudyRoomContent({
 
       {/* Grouped Dialogs & Modals */}
       <StudyRoomDialogs
+        room={room}
         user={user}
         stationId={stationId}
         safeUpdateRoom={safeUpdateRoom}

@@ -229,7 +229,7 @@ export default function StationCard({
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onEnter(); }}
       className={cn(
-        "relative rounded-[2rem] p-6 text-right flex flex-col justify-between aspect-square md:aspect-[4/5] overflow-hidden group cursor-pointer border transition-all duration-700 hover:-translate-y-2",
+        "relative rounded-[1.75rem] p-5 text-right flex flex-col justify-between aspect-[1.12/1] sm:aspect-square md:aspect-[1.08/1] overflow-hidden group cursor-pointer border transition-all duration-700 hover:-translate-y-2",
         room.imageUrl ? "border-transparent" : (isFocusing ? "bg-[#0b0c1b] border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]" : "bg-[#080914] border-white/5 hover:border-white/10")
       )}
       style={
@@ -254,44 +254,44 @@ export default function StationCard({
 
       {/* Header logic */}
       <div className="relative z-10 flex items-start justify-between">
-         <div className={cn("px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 text-xs font-bold border shadow-sm", isFocusing ? "bg-indigo-500/20 text-indigo-200 border-indigo-400/30" : "bg-white/5 text-gray-400 border-white/10")}>
+         <div className={cn("px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 text-[11px] md:text-xs font-bold border shadow-sm", isFocusing ? "bg-indigo-500/20 text-indigo-200 border-indigo-400/30" : "bg-white/5 text-gray-400 border-white/10")}>
             <div className={cn("w-1.5 h-1.5 rounded-full", isFocusing ? "bg-cyan-400 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" : "bg-gray-500")} />
             {isFocusing ? "حالة التدفق" : "في المدار"}
          </div>
          {isAdmin && (
             <button
                onClick={async (e) => { e.stopPropagation(); if(window.confirm('حذف المحطة؟')) await deleteDoc(doc(db, "rooms", room.id)).catch(()=>{}); }}
-               className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-colors backdrop-blur-md"
+               className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-colors backdrop-blur-md"
             >
-               <Trash2 size={14} />
+               <Trash2 size={13} />
             </button>
          )}
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 mt-auto pb-4">
+      <div className="relative z-10 mt-auto pb-3 md:pb-4">
          {room.isChallenge && (
-            <div className="inline-flex items-center gap-1.5 bg-fuchsia-600 font-bold text-white px-2 py-1 rounded-md text-[10px] mb-2 shadow-sm shadow-fuchsia-600/30">
-               <Swords size={12} /> تحدي خاص
+            <div className="inline-flex items-center gap-1 bg-fuchsia-600 font-bold text-white px-2 py-0.5 rounded-md text-[9px] mb-1.5 shadow-sm shadow-fuchsia-600/30">
+               <Swords size={10} /> تحدي خاص
             </div>
          )}
-         <h4 className="text-2xl sm:text-3xl font-black font-display text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-l group-hover:from-white group-hover:to-cyan-300 transition-all duration-500 leading-tight">
+         <h4 className="text-xl sm:text-2xl font-black font-display text-white mb-1.5 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-l group-hover:from-white group-hover:to-cyan-300 transition-all duration-500 leading-tight">
             {room.name}
          </h4>
-         <div className="flex items-center gap-2 text-sm font-bold text-indigo-300/80">
-            <Timer size={14} className={isFocusing ? "text-cyan-400/80 animate-pulse" : "text-gray-500"} /> {uptime}
+         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-indigo-300/80">
+            <Timer size={13} className={isFocusing ? "text-cyan-400/80 animate-pulse" : "text-gray-500"} /> {uptime}
          </div>
       </div>
 
       {/* Footer / Participants */}
-      <div className="relative z-10 pt-4 border-t border-white/5 flex justify-between items-center bg-gradient-to-t from-[#000]/40 to-transparent -mx-6 px-6 -mb-6 h-16 backdrop-blur-[2px]">
-         <div className="flex flex-row-reverse items-center -space-x-3 w-1/2 justify-end">
+      <div className="relative z-10 pt-3 border-t border-white/5 flex justify-between items-center bg-gradient-to-t from-[#000]/40 to-transparent -mx-5 px-5 -mb-5 h-14 md:h-[3.75rem] backdrop-blur-[2px]">
+         <div className="flex flex-row-reverse items-center -space-x-2.5 w-1/2 justify-end">
             {room.participants.slice(0, 4).map((p, i) => {
               const userMatch = activeUsers?.find((u) => u.uid === p);
               return (
                 <div
                   key={i}
-                  className="w-8 h-8 rounded-full border-2 border-[#090a16] bg-gray-800 overflow-hidden relative z-10 hover:z-20 transform transition-all duration-300 hover:scale-125 shadow-lg"
+                  className="w-7 h-7 rounded-full border-2 border-[#090a16] bg-gray-800 overflow-hidden relative z-10 hover:z-20 transform transition-all duration-300 hover:scale-125 shadow-lg"
                   title={userMatch?.displayName || "رائد"}
                 >
                   <img src={userMatch?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p}`} alt="user" className="w-full h-full object-cover" />
@@ -299,13 +299,13 @@ export default function StationCard({
               );
             })}
             {room.participants.length > 4 && (
-              <div className="w-8 h-8 rounded-full border-2 border-[#090a16] bg-indigo-600/80 backdrop-blur-sm flex items-center justify-center text-[10px] font-black text-white relative z-10 shadow-lg">
+              <div className="w-7 h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 backdrop-blur-sm flex items-center justify-center text-[9px] font-black text-white relative z-10 shadow-lg">
                 +{room.participants.length - 4}
               </div>
             )}
          </div>
-         <div className="flex items-center gap-1 text-[11px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase">
-            استكشاف <ChevronLeft size={14} className="group-hover:-translate-x-1.5 transition-transform duration-300" />
+         <div className="flex items-center gap-1 text-[10px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase">
+            استكشاف <ChevronLeft size={13} className="group-hover:-translate-x-1 transition-transform duration-300" />
          </div>
       </div>
     </motion.div>

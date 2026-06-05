@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, useInView } from "motion/react";
-import { Play, Shield, Globe, Award, Target, Zap, Activity, Rocket, Clock } from "lucide-react";
+import { motion, AnimatePresence, useInView } from "motion/react";
+import { 
+  Play, Shield, Globe, Award, Target, Zap, Activity, Rocket, Clock, 
+  Volume2, VolumeX, X, ChevronRight, ChevronLeft, ArrowRight, Eye, 
+  Users, AlertTriangle, Atom, Flame, HelpCircle, BookOpen, Compass, CheckCircle2, ShieldAlert
+} from "lucide-react";
 import StarBackground from "./StarBackground";
+import HeroSolarSystem from "./HeroSolarSystem";
+import InteractiveSecretGlobe from "./InteractiveSecretGlobe";
 
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+// Optimized CountUp Component using easing for zero frame drops with cleanup
 function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef(null);
@@ -10,460 +21,1128 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 
   useEffect(() => {
     if (isInView) {
-      let start = 0;
-      const dur = 1800;
+      let active = true;
+      const dur = 2000;
       let startTimestamp: number;
       const step = (ts: number) => {
+        if (!active) return;
         if (!startTimestamp) startTimestamp = ts;
         const p = Math.min((ts - startTimestamp) / dur, 1);
-        const ease = 1 - Math.pow(1 - p, 3);
+        const ease = 1 - Math.pow(1 - p, 4); // Quartic ease out
         setCount(Math.floor(ease * target));
-        if (p < 1) requestAnimationFrame(step);
+        if (p < 1) {
+          requestAnimationFrame(step);
+        }
       };
       requestAnimationFrame(step);
+      return () => {
+        active = false;
+      };
     }
   }, [isInView, target]);
 
   return (
-    <span ref={ref}>
+    <span ref={ref} className="font-mono">
       {count.toLocaleString()}
       {suffix}
     </span>
   );
 }
 
-const steps = [
-  {
-    num: "01",
-    title: "اختر كوكبك وابدأ الجلسة",
-    desc: "حدد المادة وكأنك تختار وجهتك في الفضاء. اضبط التايمر، وانطلق. كل دقيقة تُحسب كطاقة لمحرك مركبتك.",
-    visual: (
-      <div className="flex flex-col items-center gap-4 w-full w-max-md">
-        <div className="text-xs text-indigo-300/70 mb-1 tracking-widest font-mono">SYSTEM READY</div>
-        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-3xl p-6 text-center w-full backdrop-blur-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative z-10 text-6xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-white to-indigo-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-            25:00
-          </div>
-          <div className="text-sm text-indigo-200/60 mt-3 font-mono tracking-widest uppercase">Target: Mathematics</div>
-          <div className="mt-5 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl p-3 text-sm font-bold text-white shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_40px_rgba(79,70,229,0.5)] transition-all cursor-pointer">
-            🚀 إطلاق المركبة (Start Session)
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    num: "02",
-    title: "اجمع الموارد والـ XP",
-    desc: "كل جلسة ناجحة تضيف XP لرصيدك. ركز بانتظام لترقية رتبتك وفتح شارات الملاحة الفضائية النادرة.",
-    visual: (
-      <div className="flex flex-col items-center gap-4 w-full">
-        <div className="text-xs text-emerald-400/70 mb-1 font-mono tracking-widest">MISSION ACCOMPLISHED</div>
-        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-3xl p-6 text-center w-full backdrop-blur-xl">
-          <div className="text-5xl mb-3 drop-shadow-[0_0_20px_rgba(52,211,153,0.5)]">⚡</div>
-          <div className="text-2xl font-bold font-display text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
-            +150 XP
-          </div>
-          <div className="mt-5 bg-black/40 rounded-xl p-4 border border-white/5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent" />
-            <div className="relative z-10 flex justify-between text-xs text-gray-400 mb-2">
-              <span className="text-emerald-300 font-bold">مستكشف المدارات</span>
-              <span className="font-mono">85%</span>
-            </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="w-[85%] h-full bg-emerald-500 rounded-full shadow-[0_0_10px_theme(colors.emerald.400)]" />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-start gap-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4 w-full backdrop-blur-xl">
-          <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-2xl animate-pulse">🚀</div>
-          <div className="text-right flex-1">
-            <div className="text-lg font-bold text-indigo-400">ساعات التركيز المعتمدة</div>
-            <div className="text-xs text-indigo-200/50">تطور مستمر نحو نجوم المدار</div>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    num: "03",
-    title: "تفوّق في مجرة المتصدرين",
-    desc: "أين موقعك في الكون؟ تنافس مع رواد الفضاء الآخرين، واصعد في الرتب حتى تصبح سيّد المجرة.",
-    visual: (
-      <div className="flex flex-col w-full" dir="rtl">
-        <div className="text-xs text-amber-300/70 mb-3 text-center font-mono tracking-widest">GLOBAL LEADERBOARD</div>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3 p-4 bg-amber-950/40 border border-amber-500/30 rounded-2xl relative overflow-hidden group">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
-            <span className="text-lg font-black text-amber-500 w-6 text-center drop-shadow-[0_0_10px_theme(colors.amber.500)]">1</span>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-sm font-bold text-amber-400 border border-amber-500/30">SA</div>
-            <span className="flex-1 text-sm font-bold text-gray-200">سارة الأحمد</span>
-            <span className="text-sm font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">4,890 XP</span>
-          </div>
-          <div className="flex items-center gap-3 p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl relative">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
-            <span className="text-lg font-black text-indigo-400 w-6 text-center">4</span>
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-300 border border-indigo-500/30">أنت</div>
-            <span className="flex-1 text-sm font-bold text-indigo-300">أنت</span>
-            <span className="text-sm font-mono font-bold text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg">3,120 XP</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-];
-
 export default function LandingPage({ onLogin }: { onLogin: () => void }) {
-  const [activeStep, setActiveStep] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [oscillators, setOscillators] = useState<any[]>([]);
 
+  // Sound Synth matching the theme rules
+  const toggleAmbientSound = () => {
+    if (isSoundOn) {
+      oscillators.forEach(osc => { try { osc.stop(); } catch(e){} });
+      setOscillators([]);
+      setIsSoundOn(false);
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().then(() => {
+          audioCtxRef.current = null;
+        });
+      }
+    } else {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContextClass();
+        audioCtxRef.current = ctx;
+
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(75, ctx.currentTime);
+
+        osc2.type = "triangle";
+        osc2.frequency.setValueAtTime(76.5, ctx.currentTime);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(120, ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start();
+        osc2.start();
+
+        setOscillators([osc1, osc2]);
+        setIsSoundOn(true);
+      } catch (e) {
+        console.error("Audio Context initialization blocked", e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      oscillators.forEach(osc => { try { osc.stop(); } catch(e){} });
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, [oscillators]);
+
+  // Handle subtle mouse movements for beautiful depth effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({
-        x: (e.clientX / window.innerWidth - 0.5) * 40,
-        y: (e.clientY / window.innerHeight - 0.5) * 40,
+        x: (e.clientX / window.innerWidth - 0.5) * 35,
+        y: (e.clientY / window.innerHeight - 0.5) * 35,
       });
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // -------------------------------------------------------------
+  // SIMULATOR STATE ENGINE (Section 3: Live interactive cockpit simulator)
+  // -------------------------------------------------------------
+  const [simActive, setSimActive] = useState(false);
+  const [simTime, setSimTime] = useState(1500); // 25:00
+  const [simXp, setSimXp] = useState(350);
+  const [floatingXps, setFloatingXps] = useState<{ id: number; y: number }[]>([]);
+  const [simAlertActive, setSimAlertActive] = useState(false);
+  const [simAlertCountdown, setSimAlertCountdown] = useState(15);
+  const [selectedSimStation, setSelectedSimStation] = useState("سديم نبتون الهادئ");
+  const [simSuccess, setSimSuccess] = useState(false);
+
+  // Auto incremental XP & Ticking timer Simulator loop when active
+  useEffect(() => {
+    let timerId: any = null;
+    if (simActive && simTime > 0 && !simAlertActive) {
+      timerId = setInterval(() => {
+        setSimTime(prev => {
+          if (prev <= 1) {
+            setSimActive(false);
+            setSimSuccess(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+        
+        // Randomly add some XP to show active progression
+        if (Math.random() < 0.25) {
+          const newId = Date.now();
+          setSimXp(prev => prev + 15);
+          setFloatingXps(prev => [...prev, { id: newId, y: 0 }]);
+          setTimeout(() => {
+            setFloatingXps(prev => prev.filter(x => x.id !== newId));
+          }, 1500);
+        }
+      }, 1000);
+    }
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [simActive, simTime, simAlertActive]);
+
+  // Siren alert warning timer (Simulation step)
+  useEffect(() => {
+    let alertTimer: any = null;
+    if (simAlertActive) {
+      alertTimer = setInterval(() => {
+        setSimAlertCountdown(prev => {
+          if (prev <= 1) {
+            // Deduct XP to simulate fail penalization
+            setSimXp(curr => Math.max(0, curr - 50));
+            setSimAlertActive(false);
+            setSimActive(false);
+            return 15;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (alertTimer) clearInterval(alertTimer);
+    };
+  }, [simAlertActive]);
+
+  const toggleSim = () => {
+    if (simSuccess) {
+      setSimSuccess(false);
+      setSimTime(1500);
+      setSimXp(350);
+    }
+    setSimActive(!simActive);
+    setSimAlertActive(false);
+  };
+
+  const triggerMockDistraction = () => {
+    if (!simActive) {
+      setSimActive(true);
+    }
+    setSimAlertCountdown(15);
+    setSimAlertActive(true);
+  };
+
+  const cancelMockDistraction = () => {
+    setSimAlertActive(false);
+    setSimAlertCountdown(15);
+  };
+
+  const formatSimTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remaining = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remaining.toString().padStart(2, '0')}`;
+  };
+
+  // -------------------------------------------------------------
+  // TIMELINE STEP ENGINE (Section 2)
+  // -------------------------------------------------------------
+  const [activeTimelineStep, setActiveTimelineStep] = useState(0);
+  const timelineSteps = [
+    {
+      title: "الحصول على رتبة أول خطوة",
+      phase: "البداية الكونية",
+      desc: "تقوم بإنشاء حسابك الفضائي الملحمي والتحليق بمقود مركبتك الخالية تماماً من المشتتات والبدء بالتركيز فورياً لتحصيل رتبة أول خطوة.",
+      detail: "قفل المشتتات بالكامل وتهيئة رادار التايمر المستدام"
+    },
+    {
+      title: "استكشاف الجولة الفضائية",
+      phase: "جولة الاستكشاف",
+      desc: "تدخل لتستكشف زوايا النظام الشمسي والمحطات الحية، وتتحكم بترددات التركيز والتفاعل لتدير محركات الإنتاجية بذكاء.",
+      detail: "توجيه خطوط الطيران الفعلي ومراقبة الوجود"
+    },
+    {
+      title: "مشاركة المجتمع ومساعدة بعضنا",
+      phase: "الاتصال الكوني",
+      desc: "تشوف المجتمع وتتعرف على الزملاء والمستشكفين في الأساطيل المتنوعة لتتعاونوا مع بعض لمساعدة بعضكم وكسر حواجز الكسل.",
+      detail: "تبادل همم الطيران، تأسيس تحالفات، وتنافس جماعي دافئ"
+    },
+    {
+      title: "تحدي الثقب الأسود والجوائز",
+      phase: "البلورة والجوائز",
+      desc: "تنضم لتحدي الثقب الأسود لجمع أثمن الساعات والمحافظة على الانضباط لتكسبوا أنبل المكافآت الأسبوعية القيمة.",
+      detail: "أقوى الجوائز الاستثنائية والقلائد لرواد الفضاء بنهاية كل أسبوع"
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#05050A] text-[#f0eeff] font-sans selection:bg-indigo-500/30 overflow-x-hidden relative" dir="ltr">
+    <div className="min-h-screen bg-[#030308] text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative" dir="rtl">
+      {/* Star Field Background Rendering Layer */}
       <StarBackground />
-      
-      {/* NavBar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-5 backdrop-blur-xl bg-[#05050A]/40 border-b border-white/5 disabled-shadow transition-all">
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-8 h-8">
-            <div className="absolute inset-0 border-[1.5px] border-indigo-500/30 rounded-full"></div>
-            <div className="absolute inset-0 border-[1.5px] border-transparent border-t-indigo-400 border-l-fuchsia-400 rounded-full animate-[spin_3s_linear_infinite]"></div>
-            <div className="absolute inset-1 border-[1.5px] border-transparent border-b-cyan-400 border-r-indigo-400 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
-            <div className="absolute w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,1)] z-10" />
+
+      {/* Embedded Futuristic Ambient Sound / Particle Animations */}
+      <style>{`
+        @keyframes subtle-float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(1deg); }
+        }
+        @keyframes cosmic-pulse {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.08); }
+        }
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+        @keyframes aura-rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes warning-breathe {
+          0%, 100% { background-color: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2); }
+          50% { background-color: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.5); }
+        }
+        .animate-subtle-float {
+          animation: subtle-float 8s ease-in-out infinite;
+        }
+        .animate-cosmic-pulse {
+          animation: cosmic-pulse 5s ease-in-out infinite;
+        }
+        .animate-warning-breathe {
+          animation: warning-breathe 2s ease-in-out infinite;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(99, 102, 241, 0.3);
+          border-radius: 9px;
+        }
+      `}</style>
+
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[#030308]/60 border-b border-indigo-500/10 transition-all select-none">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          {/* Logo Brand with animated ring */}
+          <div className="flex items-center gap-3" dir="ltr">
+            <div className="relative flex items-center justify-center w-9 h-9">
+              <div className="absolute inset-0 border-[1.5px] border-indigo-500/30 rounded-full" />
+              <div className="absolute inset-0 border-[1.5px] border-transparent border-t-indigo-500 border-l-fuchsia-500 rounded-full animate-[spin_4s_linear_infinite]" />
+              <div className="absolute inset-1 border-[1.5px] border-transparent border-b-cyan-400 border-r-indigo-400 rounded-full animate-[spin_2.5s_linear_infinite_reverse]" />
+              <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_12px_rgba(255,255,255,1)] z-10" />
+            </div>
+            <div className="font-display font-black tracking-[0.2em] text-[19px] text-white">
+              ORBIT<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">X</span>
+            </div>
           </div>
-          <div className="font-display font-black tracking-[0.2em] text-[20px] text-white">
-            ORBIT<span className="text-indigo-400">X</span>
+
+          {/* Nav links */}
+          <nav className="hidden lg:flex items-center gap-10">
+            {[
+              { label: "بروتوكول العمل", href: "#how-it-works" },
+              { label: "عرض المحاكي الحي", href: "#simulate-cockpit" },
+              { label: "درع الأمن الفضائي", href: "#anti-cheat" },
+              { label: "مستودع الوعي", href: "#awareness" },
+              { label: "لوحة الضمان", href: "#metrics" }
+            ].map((link, idx) => (
+              <a 
+                key={idx} 
+                href={link.href}
+                className="text-xs font-bold text-gray-400 hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all tracking-wide"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          {/* Access Button and Volume Trigger */}
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={toggleAmbientSound}
+              className={cn(
+                "p-2.5 rounded-xl border transition-all hover:scale-105",
+                isSoundOn 
+                  ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                  : "bg-white/5 border-white/5 text-gray-400 hover:text-white"
+              )}
+              title="مولد الترددات الكونية"
+            >
+              {isSoundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="relative group bg-white hover:bg-white/95 text-black font-black px-6 py-2.5 rounded-xl text-xs tracking-wide transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] flex items-center gap-2"
+            >
+              <Rocket className="w-4 h-4 stroke-[2.5]" />
+              <span>تسجيل دخول</span>
+            </button>
           </div>
         </div>
-        <ul className="hidden md:flex gap-10 text-[13px] font-medium tracking-wide text-gray-400" dir="rtl">
-          <li><a href="#features" className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all">المميزات</a></li>
-          <li><a href="#how" className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all">كيف العمل</a></li>
-        </ul>
-        <button
-          onClick={onLogin}
-          className="relative group bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md px-6 py-2.5 rounded-full text-[13px] font-bold transition-all overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-fuchsia-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute -inset-[100%] group-hover:animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,#8b5cf6_100%)] opacity-0 group-hover:opacity-30 pointer-events-none" />
-          <span className="relative z-10">إطلاق النظام</span>
-        </button>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center text-center px-4 pt-32 pb-20 z-10 overflow-hidden perspective-[1000px]">
-        {/* Animated Orbits and Planets */}
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-1000 ease-out"
-          style={{ transform: `translate(calc(-50% + ${mousePos.x * 0.5}px), calc(-50% + ${mousePos.y * 0.5}px)) rotateX(60deg)` }}
-        >
-          {/* Inner Orbit (Focus) */}
-          <div className="w-[500px] sm:w-[600px] h-[500px] sm:h-[600px] rounded-full border border-indigo-500/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_40s_linear_infinite] shadow-[inset_0_0_40px_rgba(99,102,241,0.05)]">
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <div className="w-16 h-16 bg-indigo-500/10 rounded-full blur-md absolute" />
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-blue-600 shadow-[0_0_30px_theme(colors.indigo.500)] flex items-center justify-center animate-[spin_5s_linear_infinite_reverse]">
-                   <Target size={12} className="text-white/80" />
-                </div>
-             </div>
-          </div>
-          {/* Middle Orbit (Focus Time) */}
-          <div className="w-[750px] sm:w-[900px] h-[750px] sm:h-[900px] rounded-full border border-cyan-500/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_60s_linear_infinite_reverse]">
-             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 flex items-center justify-center">
-                <div className="w-20 h-20 bg-cyan-500/10 rounded-full blur-md absolute" />
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-600 shadow-[0_0_40px_theme(colors.cyan.500)] flex items-center justify-center animate-[spin_10s_linear_infinite_reverse]">
-                   <Zap size={16} className="text-white/80" />
-                </div>
-             </div>
-          </div>
-          {/* Outer Orbit (XP/Leaderboard) */}
-          <div className="w-[1000px] sm:w-[1300px] h-[1000px] sm:h-[1300px] rounded-full border border-fuchsia-500/5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_90s_linear_infinite]">
-             <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <div className="w-24 h-24 bg-fuchsia-500/10 rounded-full blur-md absolute" />
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fuchsia-400 to-purple-700 shadow-[0_0_50px_theme(colors.fuchsia.500)] flex items-center justify-center animate-[spin_15s_linear_infinite]">
-                   <Award size={20} className="text-white/80" />
-                </div>
-             </div>
-          </div>
-        </div>
+      {/* -------------------------------------------------------------
+          SECTION 1: HERO SOLAR SYSTEM SECTION
+         ------------------------------------------------------------- */}
+      <section className="relative min-h-screen flex items-center justify-center p-6 pt-32 pb-24 z-10 overflow-hidden">
+        {/* Absolute Background Planets and Orbits Component */}
+        <HeroSolarSystem mousePos={mousePos} />
 
-        <div 
-          className="relative z-10 max-w-[900px] mx-auto flex flex-col items-center transition-transform duration-1000 ease-out"
-          style={{ transform: `translate(${-mousePos.x}px, ${-mousePos.y}px)` }}
-        >
+        {/* Ambient Top Bottom vignette gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none" />
+
+        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
+          {/* Tag status with pilot info */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="inline-flex items-center gap-2 bg-[#0a0f25]/80 backdrop-blur-md border border-indigo-500/30 rounded-full px-5 py-2 text-xs text-indigo-300 font-bold tracking-widest mb-10 shadow-[0_0_30px_rgba(99,102,241,0.2)]"
-            dir="rtl"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+            className="inline-flex items-center gap-2.5 bg-indigo-950/40 backdrop-blur-xl border border-indigo-500/30 rounded-full px-5 py-2.5 text-xs text-indigo-300 font-bold tracking-widest mb-8 shadow-[0_0_40px_rgba(99,102,241,0.2)]"
           >
-            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_10px_theme(colors.indigo.400)]" />
-            مركبتك جاهزة للإقلاع
-            <div className="w-px h-4 bg-white/10 mx-2" />
-            <span className="text-gray-400 font-mono">v2.0</span>
+            <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_12px_#6366f1]" />
+            بروتوكول البث المداري نشط ومكتمل
+            <span className="w-px h-4 bg-white/10 mx-1.5" />
+            <span className="text-gray-400 font-mono tracking-wider">v2.5_SYS_STABLE</span>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-            className="text-[clamp(40px,7vw,85px)] font-black font-display leading-[1.1] tracking-tight mb-8 drop-shadow-2xl"
-          >
-            <span className="block text-white mb-2">ليست منصة دراسة...</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-rose-400 animate-[gradient_8s_ease_infinite] bg-[length:200%_200%]">
-              بل نظام تشغيل للتركيز.
+          {/* Gigantic Cinematic Title with smooth split animation */}
+          <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.1] tracking-tight mb-8 drop-shadow-2xl">
+            <span className="block text-white mb-3">ليست مجرّد منصة دراسة...</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-fuchsia-400 to-cyan-400 drop-shadow-[0_0_30px_rgba(99,102,241,0.1)]">
+              بل نظام تشغيل متكامل للإنتاجية العميقة.
             </span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="text-lg md:text-xl text-gray-400 max-w-[650px] leading-relaxed mb-14 drop-shadow-lg"
-            dir="rtl"
-          >
-            حوّل جلساتك الدراسية إلى رحلة فضائية غامرة. راكم ساعات التركيز الفعلي، وارتقِ بمستواك وعزز انضباطك المداري مع زملائك في الزمن الحقيقي.
-          </motion.p>
+          {/* Epic descriptive passage */}
+          <p className="text-base md:text-xl text-gray-400 max-w-4xl leading-relaxed mb-12" dir="rtl">
+            تخلّص من فوضى التشتت والمنصات التقليدية الباهتة. انضم لنظام تشغيل حركي حسي يحوّل ساعات التزامك الفعلي إلى وقود يحرك مجرتك، معزز بحماية نشطة للوجود البشري، مزارع موارد فضائية وسباقات مجتمعية حية.
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-            className="flex flex-col sm:flex-row items-center gap-5 justify-center w-full sm:w-auto"
-            dir="rtl"
-          >
+          {/* Action launcher buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 justify-center w-full sm:w-auto relative z-10">
             <button
-              onClick={onLogin}
-              className="group relative w-full sm:w-auto overflow-hidden bg-gradient-to-r from-indigo-600 to-fuchsia-600 rounded-full px-10 py-4 md:py-5 text-[16px] md:text-[18px] font-bold text-white shadow-[0_0_40px_rgba(99,102,241,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(99,102,241,0.7)]"
+              onClick={() => setShowLoginModal(true)}
+              className="group relative w-full sm:w-auto overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl px-12 py-4.5 text-sm font-black text-white shadow-[0_0_50px_rgba(99,102,241,0.45)] hover:shadow-[0_0_70px_rgba(99,102,241,0.65)] transition-all hover:scale-[1.03]"
             >
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute -inset-[100%] group-hover:animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,#c084fc_100%)] opacity-0 group-hover:opacity-25 pointer-events-none" />
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                ابدأ رحلتك الآن
+                أطلق المركبة وابدأ العمل
               </span>
             </button>
+
             <button
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              className="w-full sm:w-auto bg-[#0a0f25]/50 backdrop-blur-md border border-white/10 hover:border-white/30 rounded-full px-8 py-4 md:py-5 text-[16px] text-gray-300 hover:text-white transition-all flex items-center justify-center gap-2 group"
+              onClick={() => document.getElementById('simulate-cockpit')?.scrollIntoView({ behavior: 'smooth' })}
+              className="w-full sm:w-auto bg-black/40 backdrop-blur-xl border border-white/5 hover:border-white/10 rounded-2xl px-10 py-4.5 text-sm font-bold text-gray-300 hover:text-white transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
             >
-              <Play className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" /> استكشف النظام
+              <Play className="w-4 h-4 text-cyan-400" />
+              <span>تجربة وحدة المحاكي الحي</span>
             </button>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.8 }}
-            className="mt-20 md:mt-32 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 border-t border-white/10 pt-10"
-            dir="rtl"
-          >
-            <div className="text-center group">
-              <div className="text-3xl md:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 group-hover:from-indigo-400 group-hover:to-fuchsia-400 transition-all">
-                <CountUp target={48} suffix="K+" />
-              </div>
-              <div className="text-[10px] md:text-xs text-indigo-300/70 mt-2 font-mono tracking-widest">رواد نشطون</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-3xl md:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 group-hover:from-indigo-400 group-hover:to-fuchsia-400 transition-all">
-                <CountUp target={2.1} suffix="M" />
-              </div>
-              <div className="text-[10px] md:text-xs text-indigo-300/70 mt-2 font-mono tracking-widest">ساعات طيران</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-3xl md:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 group-hover:from-indigo-400 group-hover:to-fuchsia-400 transition-all">
-                <CountUp target={94} suffix="%" />
-              </div>
-              <div className="text-[10px] md:text-xs text-indigo-300/70 mt-2 font-mono tracking-widest">تحسن بالاستمرارية</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-3xl md:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 group-hover:from-indigo-400 group-hover:to-fuchsia-400 transition-all">
-                <CountUp target={12} suffix="" />
-              </div>
-              <div className="text-[10px] md:text-xs text-indigo-300/70 mt-2 font-mono tracking-widest">رتبة استكشافية</div>
-            </div>
-          </motion.div>
+          {/* Beautiful mini inline tags */}
+          <div className="mt-16 text-[10px] md:text-xs font-mono tracking-widest text-[#a5b4fc]/40 uppercase flex items-center gap-4 flex-wrap justify-center">
+            <span>🛡️ NO ADS IN CABIN</span>
+            <span className="w-1.5 h-1.5 bg-indigo-500/20 rounded-full" />
+            <span>🌌 REALTIME MULTIPLAYER</span>
+            <span className="w-1.5 h-1.5 bg-indigo-500/20 rounded-full" />
+            <span>🛸 RESOURCE HARVESTING</span>
+          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-32 px-6 relative z-10 max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          className="text-center max-w-3xl mx-auto mb-20 text-right flex flex-col items-center"
-          dir="rtl"
-        >
-          <div className="inline-flex items-center gap-3 font-mono text-[12px] text-indigo-400 tracking-[0.2em] mb-6 uppercase">
-            <span className="w-8 h-px bg-indigo-500/50" />
-            أنظمة المركبة
-            <span className="w-8 h-px bg-indigo-500/50" />
-          </div>
-          <h2 className="text-[clamp(32px,4vw,48px)] font-black font-display leading-[1.1] tracking-tight mb-6 text-center">
-            توقف عن الدراسة بالطريقة التقليدية.<br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">ادخل عصر الدراسة المعززة.</span>
-          </h2>
-          <p className="text-gray-400 text-lg leading-relaxed text-center max-w-2xl">
-            كل نظام في OrbitX مصمم لجعلك مدمناً على الإنجاز. لا مجال للتشتت حين تطلق العنان لقواك المدارية وتراكم ساعات تركيزك الفعلي.
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" dir="rtl">
-          {[
-            { title: "نظام XP المتقدم", desc: "حول تركيزك لنقاط خبرة ملموسة تُحدث فرقاً في مستواك المجري.", icon: <Award className="w-6 h-6"/>, tag: "ترقية مستمرة", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-            { title: "ساعات التركيز المعتمدة", desc: "راكم ساعات طيران مخصصة للدراسة. الدقائق تترجم مباشرة لتقدم مستدام في رصيدك.", icon: <Clock className="w-6 h-6"/>, tag: "أثر مستدام", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-            { title: "تحديات المدار", desc: "مهام يومية وأسبوعية تفتح لك شارات خاصة وأندر الإنجازات.", icon: <Target className="w-6 h-6"/>, tag: "مكافآت حصرية", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-            { title: "المتصدرون (Leaderboards)", desc: "تنافس مع صفوة العقول في المجرة. أثبت أنك الأكثر تركيزاً وإنتاجية.", icon: <Globe className="w-6 h-6"/>, tag: "منافسة شرسة", color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
-            { title: "ردار التحليلات", desc: "خريطة حرارية (Heatmap) توضح أفضل أوقات تركيزك وتوزيع جهدك.", icon: <Activity className="w-6 h-6"/>, tag: "بيانات حقيقية", color: "text-fuchsia-400", bg: "bg-fuchsia-500/10", border: "border-fuchsia-500/20" },
-            { title: "حماية ضد التشتت", desc: "تصميم داكن عالي التباين، بدون إعلانات، وبيئة تجبرك على التركيز العميق.", icon: <Shield className="w-6 h-6"/>, tag: "Focus Mode", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          ].map((f, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-              className={`p-8 rounded-3xl bg-[#0a0f25]/40 backdrop-blur-xl border border-white/5 hover:${f.border} hover:bg-[#0a0f25]/80 transition-all group overflow-hidden relative`}
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700 ease-out" />
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${f.bg} ${f.color} group-hover:scale-110 transition-transform duration-500`}>
-                {f.icon}
+      {/* -------------------------------------------------------------
+          SECTION 2: PATH SYSTEM & TIMELINE
+         ------------------------------------------------------------- */}
+      <section id="how-it-works" className="py-28 px-6 relative z-10 border-t border-white/5 bg-gradient-to-b from-[#030308] to-[#040410]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2.5 font-mono text-xs text-fuchsia-400 tracking-[0.2em] mb-4 uppercase">
+                <span className="w-8 h-px bg-fuchsia-500/50" />
+                بروتوكول تحصيل رتب الملاحة
               </div>
-              <h3 className="font-display font-black text-[22px] text-white mb-3 tracking-tight">{f.title}</h3>
-              <p className="text-gray-400 leading-relaxed mb-6">{f.desc}</p>
-              <span className={`inline-flex items-center text-[11px] font-mono tracking-wider uppercase px-3 py-1.5 rounded-full border ${f.bg} ${f.border} ${f.color}`}>
-                __{f.tag}
-              </span>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it Works / Interactive Demo */}
-      <section id="how" className="py-32 px-6 relative z-10 max-w-7xl mx-auto" dir="rtl">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          className="text-right"
-        >
-          <div className="inline-flex items-center gap-3 font-mono text-[12px] text-fuchsia-400 tracking-[0.2em] mb-4 uppercase">
-            <span className="w-8 h-px bg-fuchsia-500/50" />
-            بروتوكول التشغيل
+              <h2 className="text-[clamp(30px,4vw,48px)] font-black leading-tight">
+                مسيرتك المهنية <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-l from-fuchsia-400 via-rose-400 to-indigo-400">كمستكشف في خادم المدار.</span>
+              </h2>
+            </div>
+            <p className="text-gray-400 text-sm max-w-lg leading-relaxed text-right md:text-left">
+              من مرحلة الإطلاق بمستوى مبدئي إلى درجة سيادة وتحالف كامل، هكذا يقوم OrbitX بهيكلة إنتاجيتك وصناعة نظام يعزز التركيز بمرور الوقت.
+            </p>
           </div>
-          <h2 className="text-[clamp(32px,5vw,56px)] font-black font-display leading-[1.05] tracking-tight mb-16">
-            من الجلسة الأولى<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-l from-fuchsia-400 to-rose-400">لأعلى رتبة فضائية.</span>
-          </h2>
-        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-12 lg:gap-20 items-center">
-          <div className="flex flex-col gap-2">
-            {steps.map((step, i) => (
-              <div
-                key={i}
-                onMouseEnter={() => setActiveStep(i)}
-                onClick={() => setActiveStep(i)}
-                className={`p-6 rounded-2xl cursor-pointer transition-all duration-300 border-l-[3px] ${
-                  activeStep === i 
-                    ? 'bg-[#0a0f25]/80 border-indigo-500 shadow-xl' 
-                    : 'bg-transparent border-transparent hover:bg-white/5 opacity-60 hover:opacity-100'
-                }`}
-              >
-                <div className="flex items-center gap-4 mb-3">
-                  <div className={`font-mono text-xl font-bold ${activeStep === i ? 'text-indigo-400' : 'text-gray-600'}`}>
-                    {step.num}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Steps Navigation UI */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+              {timelineSteps.map((step, idx) => {
+                const isActive = activeTimelineStep === idx;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveTimelineStep(idx)}
+                    className={cn(
+                      "p-6 rounded-2xl cursor-pointer text-right transition-all duration-300 border-r-4",
+                      isActive
+                        ? "bg-[#0b0c1c]/80 border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-[1.01]"
+                        : "bg-transparent border-transparent hover:bg-white/5 opacity-50 hover:opacity-100"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-mono tracking-wider text-indigo-400 font-bold bg-indigo-500/10 px-2.5 py-0.5 rounded-full uppercase">
+                        {step.phase}
+                      </span>
+                      <span className="font-mono text-xs text-gray-400/50 font-black">
+                        STEP_0{idx + 1}
+                      </span>
+                    </div>
+                    <h3 className={cn("text-base font-black mb-2 transition-colors", isActive ? "text-white" : "text-gray-400")}>
+                      {step.title}
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed pr-0">
+                      {step.desc}
+                    </p>
                   </div>
-                  <h3 className={`font-display font-bold text-[18px] ${activeStep === i ? 'text-white' : 'text-gray-400'}`}>
-                    {step.title}
-                  </h3>
+                );
+              })}
+            </div>
+
+            {/* Right Rich Visual Space Node Representation */}
+            <div className="lg:col-span-7 bg-[#060713]/80 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden min-h-[420px] flex items-center justify-center">
+              {/* Animated cyber nodes in backup */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/5 via-indigo-500/5 to-cyan-500/5" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/5 rounded-full filter blur-[100px] animate-pulse" />
+
+              <div className="relative z-10 w-full text-center">
+                {/* Simulated Diagnostic Dashboard Graphics */}
+                <div className="w-full flex justify-between text-[10px] font-mono text-gray-500 mb-6 border-b border-white/5 pb-3">
+                  <span>NODE: 0x89C_SEC</span>
+                  <span>SYS_STAGE: READY</span>
                 </div>
-                <div 
-                  className={`text-[15px] text-gray-400 leading-relaxed overflow-hidden transition-all duration-500 pr-12 ${
-                    activeStep === i ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  {step.desc}
+
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTimelineStep}
+                    initial={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, x: 20, filter: "blur(5px)" }}
+                    transition={{ duration: 0.5 }}
+                    className="flex flex-col items-center"
+                  >
+                    <div className="w-20 h-20 rounded-2xl bg-indigo-950/50 border-2 border-indigo-400/40 flex items-center justify-center text-4xl mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)] animate-subtle-float">
+                      {activeTimelineStep === 0 && "👨‍🚀"}
+                      {activeTimelineStep === 1 && "🥕"}
+                      {activeTimelineStep === 2 && "⚡"}
+                      {activeTimelineStep === 3 && "🚀"}
+                    </div>
+                    
+                    <h4 className="text-xl font-bold font-sans text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 mb-4 text-center">
+                      {timelineSteps[activeTimelineStep].title}
+                    </h4>
+
+                    {/* Step Visual interactive blueprint element */}
+                    <div className="bg-black/40 border border-white/5 p-4.5 rounded-2xl text-right max-w-md w-full relative">
+                      <div className="absolute top-2.5 left-3 text-[8px] font-mono text-indigo-400/60 font-bold uppercase">
+                        Active Telemetry
+                      </div>
+                      <div className="text-[11px] text-gray-400 leading-relaxed mb-3">
+                        {timelineSteps[activeTimelineStep].desc}
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-indigo-950/20 border border-indigo-500/10 text-[10px] text-indigo-300 font-mono">
+                        <CheckCircle2 size={12} className="shrink-0 text-indigo-400" />
+                        <span>{timelineSteps[activeTimelineStep].detail}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Simulated Grid Connector */}
+                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-center gap-4">
+                  {timelineSteps.map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-300",
+                        activeTimelineStep === i 
+                          ? "w-8 bg-gradient-to-r from-indigo-500 to-fuchsia-500" 
+                          : "w-2.5 bg-white/10"
+                      )}
+                    />
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="relative flex items-center justify-center p-8 bg-[#05050A]/50 border border-white/10 rounded-[3rem] min-h-[500px] overflow-hidden backdrop-blur-3xl shadow-2xl">
-            {/* Ambient inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 to-fuchsia-500/5" />
-            <motion.div
-              key={activeStep}
-              initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="w-full max-w-md relative z-10"
-            >
-              {steps[activeStep].visual}
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA section */}
-      <section className="py-32 px-6 relative z-10 text-center overflow-hidden h-screen flex items-center justify-center">
-        {/* Massive dramatic glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-gradient-to-b from-indigo-600/20 to-fuchsia-600/20 blur-[150px] pointer-events-none rounded-full" />
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-[800px] mx-auto relative z-10" 
-          dir="rtl"
-        >
-          <div className="inline-flex items-center justify-center gap-3 font-mono text-[12px] text-white tracking-[0.3em] uppercase mb-8">
-            <span className="w-12 h-px bg-white/30" />
-            استعد للإقلاع
-            <span className="w-12 h-px bg-white/30" />
+      {/* -------------------------------------------------------------
+          SECTION 3: LIVE STATIONS SIMULATION
+         ------------------------------------------------------------- */}
+      <section id="simulate-cockpit" className="py-28 px-6 relative z-10 bg-gradient-to-b from-[#040410] to-[#030308]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 font-mono text-xs text-cyan-400 tracking-[0.2em] mb-4 uppercase">
+              <span className="w-6 h-px bg-cyan-500/50" />
+              تفاعل حي مباشر
+            </div>
+            <h2 className="text-[clamp(32px,5vw,52px)] font-black leading-tight mb-4">
+              جرّب كبينة القيادة الآن 🛸
+            </h2>
+            <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+              هذه محاكاة حية لوحدة التحكم التي ستختبر تقدمك فيها عند تسجيل دخولك. اختبر تشغيل المحرك، راقب زيادة الـ XP، أو كبسة محاكاة التشتت لتري كيف يحميك الرادار.
+            </p>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
+            {/* Control Pad Left */}
+            <div className="lg:col-span-4 flex flex-col gap-5 justify-between bg-[#060712]/90 border border-white/5 p-6 md:p-8 rounded-[2rem] text-right">
+              <div>
+                <h3 className="text-lg font-black text-white mb-2">لوحة تفعيل المدارات</h3>
+                <p className="text-xs text-gray-400 leading-relaxed mb-6">
+                  اختر المحطة الصوتية والهيكلية التي تريد الطفو بداخلها. كل محطة تدعم ترددات عزل وموسيقى فريدة.
+                </p>
+
+                {/* Pill selection */}
+                  <div className="space-y-2.5 dropdown-list">
+                    {[
+                      { name: "سديم نبتون الهادئ", label: "🌌 سديم نبتون الهادئ (Cosmic Lofi)", bg: "from-blue-500/10 to-transparent", desc: "ترددات كونية هادئة مهدئة للأعصاب لعمق التركيز" },
+                      { name: "مكة المكرمة", label: "🕌 رحاب مكة المكرمة (قراءة خاشعة)", bg: "from-emerald-500/10 to-transparent", desc: "تلاوات قرآنية عذبة ترتقي بروحك" }
+                    ].map((station) => (
+                      <button
+                        key={station.name}
+                        onClick={() => {
+                          setSelectedSimStation(station.name);
+                          if (station.name === "مكة المكرمة") {
+                            setSimTime(1800); // 30 mins
+                          } else {
+                            setSimTime(1500); // 25 mins
+                          }
+                          setSimSuccess(false);
+                        }}
+                        className={cn(
+                          "w-full text-right p-4 rounded-xl border text-xs font-bold transition-all flex flex-col gap-1",
+                          selectedSimStation === station.name 
+                            ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                            : "bg-black/40 border-white/5 text-gray-400 hover:text-white"
+                        )}
+                      >
+                        <span>{station.label}</span>
+                        <span className="text-[10px] text-gray-500 font-normal">{station.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+              </div>
+
+              {/* Live instructions alert */}
+              <div className="border border-indigo-500/10 bg-indigo-950/10 p-4.5 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 bottom-0 left-0 w-1 bg-indigo-500" />
+                <h4 className="text-xs font-bold text-indigo-300 flex items-center gap-1.5 mb-1.5">
+                  <Activity size={13} />
+                  <span>بروتوكول تحصيل الـ XP بالتجريب</span>
+                </h4>
+                <p className="text-[11px] text-indigo-200/50 leading-relaxed">
+                  عند تشغيل الجلساء، يزداد مخزون طاقة القيادة تلقائياً. المدار يضمن التزام الكابتن وعدم هجر الشاشة.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Cabin Dashboard Center-Right */}
+            <div className="lg:col-span-8 bg-[#04040a] border-2 border-indigo-500/15 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden flex flex-col justify-between shadow-[0_0_60px_rgba(99,102,241,0.1)]">
+              {/* Hologram scanline */}
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] pointer-events-none opacity-30" />
+              
+              {/* Alert Mode active background effect */}
+              {simAlertActive && (
+                <div className="absolute inset-0 bg-red-950/20 z-0 animate-warning-breathe pointer-events-none" />
+              )}
+
+              {/* Station Simulator Header */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-4.5 mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                    <Atom className="w-5 h-5 animate-[spin_6s_linear_infinite]" />
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-mono text-cyan-400 font-bold tracking-widest block uppercase">ACTIVE SIMULATED SECTOR</span>
+                    <span className="text-sm font-black text-white">محطة: {selectedSimStation}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] text-gray-400 font-mono">1,480 PILOTS ONLINE</span>
+                </div>
+              </div>
+
+              {/* Primary Content Container */}
+              <div className="relative z-10 my-auto text-center py-6">
+                {/* Float XP Numbers animation inside simulator */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 h-20 w-40 pointer-events-none">
+                  {floatingXps.map((fx) => (
+                    <motion.div
+                      key={fx.id}
+                      initial={{ opacity: 1, y: 15 }}
+                      animate={{ opacity: 0, y: -45 }}
+                      transition={{ duration: 1.2, ease: "easeOut" }}
+                      className="absolute left-1/2 -translate-x-1/2 text-emerald-400 text-xs font-mono font-black"
+                    >
+                      +15 XP ⚡ CAPTURED
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Simulated Timer Counter */}
+                <div className="text-[clamp(45px,6vw,70px)] font-mono font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-200 to-indigo-400 mb-2 drop-shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                  {formatSimTime(simTime)}
+                </div>
+
+                <div className="text-xs text-gray-400/70 font-mono tracking-widest uppercase mb-8">
+                  CHRONONOMETER: REGISTRY ON TRACK
+                </div>
+
+                {/* Active XP Energy Display */}
+                <div className="inline-flex items-center gap-6 bg-black/40 border border-white/5 p-4 rounded-2xl mb-8">
+                  <div className="text-right">
+                    <div className="text-[9px] text-[#818cf8] font-mono leading-none mb-1">XP ENERGY BANK</div>
+                    <div className="text-lg font-black font-mono text-emerald-400">{simXp} XP</div>
+                  </div>
+                  <div className="w-px h-8 bg-white/10" />
+                  <div className="text-right">
+                    <div className="text-[9px] text-[#818cf8] font-mono leading-none mb-1">XP MULTIPLIER</div>
+                    <div className="text-sm font-bold font-mono text-white">
+                      1.0x NORMAL
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simulate interactive Alert Warnings message */}
+                <AnimatePresence>
+                  {simAlertActive && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="max-w-md mx-auto p-4 border border-red-500/30 bg-red-950/20 rounded-xl text-right mb-8"
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-bounce" />
+                        <div>
+                          <h4 className="text-xs font-black text-red-300">خرق الحضور! غادرت كبينة القيادة 🚨</h4>
+                          <p className="text-[11px] text-red-200/50 leading-relaxed mt-1">
+                            رصد النظام تشتتاً أو تغييراً في النشاط. العودة الفورية مطلوبة في غضون <b className="text-white font-mono text-xs">{simAlertCountdown}ث</b> لتجنب سحب كتل طاقة الـ XP.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2 justify-end">
+                        <button 
+                          onClick={cancelMockDistraction}
+                          className="bg-red-500 hover:bg-red-600 text-white font-bold text-[10px] px-3.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          تأكيد الحضور (إلغاء الإنذار)
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {simSuccess && (
+                  <div className="max-w-md mx-auto p-4 border border-emerald-500/30 bg-emerald-950/10 rounded-xl text-center mb-8">
+                    <h4 className="text-xs font-black text-emerald-400">انتهت الرحلة المدارية بنجاح! 🎉</h4>
+                    <p className="text-[11px] text-emerald-200/50 mt-1">
+                      اكتملت جلسة التركيز المفعمة بالنشاط وحصدت محاصيل إضافية. مستعد للمزيد؟
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Board controls in Simulator */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/5 pt-6 relative z-10 select-none">
+                <button
+                  onClick={toggleSim}
+                  className={cn(
+                    "flex-1 min-w-[150px] font-black rounded-xl py-3.5 text-xs transition-all flex items-center justify-center gap-2",
+                    simActive 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.2)]" 
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  )}
+                >
+                  <Rocket className="w-4 h-4" />
+                  <span>{simActive ? "إيقاف الجلسة التفاعلية" : "إطلاق جلسة المحاكاة"}</span>
+                </button>
+
+                <button
+                  onClick={triggerMockDistraction}
+                  disabled={simAlertActive}
+                  className="bg-black/40 hover:bg-white/5 border border-white/10 hover:border-red-500/40 text-xs font-bold font-sans text-gray-400 hover:text-red-400 rounded-xl px-5 py-3.5 transition-all text-center flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ShieldAlert className="w-4 h-4 text-red-500 animate-pulse" />
+                  <span>محاكاة alert الوجود التشتيتي</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------------
+          SECTION 4: DISTRACTION SECURITY SHIELD
+         ------------------------------------------------------------- */}
+      <section id="anti-cheat" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#010105] border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left Content Description info */}
+            <div className="lg:col-span-6 text-right" dir="rtl">
+              <div className="inline-flex items-center gap-2 font-mono text-xs text-rose-500 tracking-[0.2em] mb-4 uppercase">
+                <span className="w-6 h-px bg-rose-500/50" />
+                نظام الرادار اللصيق
+              </div>
+              <h3 className="text-[clamp(28px,4vw,44px)] font-black leading-tight mb-6">
+                درع حماية الوجود البشري <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-l from-rose-400 to-amber-400">ومكافحة التحايل والشرود.</span>
+              </h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                في خادم OrbitX، لا نزاحمك بتايمر زائف يمكنك إغلاق عينيك عنه والذهاب. النظام مصمم لضمان تفويض الوجود الكامل باستخدام آليات تتبع التفاعل اللحظية:
+              </p>
+
+              {/* Core shield lists */}
+              <div className="space-y-4">
+                {[
+                  { title: "رادار الحضور التلقائي", desc: "ينذرك النظام بمجرد هجرك للتبويب أو قفل الشاشة، ويفتح عداد مهلة العودة ل cockpit خلال ثوانٍ معدودة." },
+                  { title: "خصم كتل الـ XP عند الاستهتار", desc: "في حال تكرار خرق المدار، يقوم الرادار بتشغيل بروتوكول خصم نقاط الخبرة (XP) لمنع اللامبالاة والتأكيد على الانضباط." },
+                  { title: "حظر التحايل الميكانيكي", desc: "رصد كامل لحركات الفأرة الوهمية أو نقرات الـ Auto-Clicker منعا للغش في معارك المتصدرين." }
+                ].map((sh, index) => (
+                  <div key={index} className="flex gap-4">
+                    <div className="w-6 h-6 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0 text-xs text-rose-400 mt-1 font-bold">
+                      ✓
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-white">{sh.title}</h4>
+                      <p className="text-[11px] text-gray-500 leading-relaxed mt-0.5">{sh.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Tech visual UI representing the Shields status */}
+            <div className="lg:col-span-6 bg-[#090508]/80 border border-rose-500/20 rounded-[2.5rem] p-8 relative overflow-hidden flex flex-col justify-between shadow-[0_0_60px_rgba(239,68,68,0.06)] min-h-[380px]">
+              {/* Matrix glow line */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500 to-transparent animate-pulse" />
+
+              <div className="flex items-center justify-between border-b border-rose-500/10 pb-4 mb-6" dir="ltr">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-rose-400" />
+                  <span className="font-mono text-[10px] text-rose-400 font-bold tracking-widest uppercase">ANTI_DISTRACTION_SHIELD</span>
+                </div>
+                <span className="text-[10px] text-gray-400 font-mono">STATUS: ARMED</span>
+              </div>
+
+              {/* Graphics representing checking guards */}
+              <div className="space-y-4 text-right">
+                {[
+                  { label: "BIOMETRIC PRESENCE PROXY", percent: "99.8%", color: "text-emerald-400", status: "STABLE" },
+                  { label: "WINDOW FOCUS GUARANTOR", percent: "ACTIVE", color: "text-rose-500 animate-pulse", status: "LOCKDOWN" },
+                  { label: "MECHANICAL CLICK DETECTOR", percent: "100%", color: "text-indigo-400", status: "ARMED" }
+                ].map((guard, idx) => (
+                  <div key={idx} className="bg-black/40 border border-white/5 p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-mono text-[10px]">
+                      <span className={cn("px-2 py-0.5 rounded border border-white/5 inline-block text-[9px] uppercase", guard.color)}>
+                        {guard.status}
+                      </span>
+                      <span className="text-gray-400 font-bold">{guard.percent}</span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-white block font-bold">{guard.label}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 text-center bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 text-[10px] text-rose-400 font-mono tracking-wide uppercase">
+                ⚠️ PENALTY OF ESCAPING THE CABIN: -50 XP PER LEAVE INTRUSION
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------------
+          SECTION 5: BLACK HOLE MODE ACCRETION SOUND
+         ------------------------------------------------------------- */}
+      <section className="py-28 px-6 relative z-10 overflow-hidden bg-black flex items-center justify-center">
+        {/* Accretion Disk CSS Rotation Backdrop. Ultra optimized, pure GPU layered CSS transform */}
+        <div className="absolute inset-0 z-0 pointer-events-none w-full h-full flex items-center justify-center">
+          <div className="absolute w-[800px] h-[800px] rounded-full border border-fuchsia-600/10 bg-gradient-to-tr from-[#9d174d]/15 via-transparent to-[#1e1b4b]/20 filter blur-[90px] animate-cosmic-pulse" />
           
-          <h2 className="text-[clamp(40px,7vw,80px)] font-black font-display leading-[1.1] tracking-tight mb-8">
-            جاهز لترك المجرة القديمة؟<br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-white">ابنِ إمبراطوريتك الدراسية.</span>
-          </h2>
-          
-          <p className="text-[18px] md:text-[22px] text-gray-300 leading-relaxed mb-12 max-w-2xl mx-auto">
-            انضم لآلاف الرواد الذين غيروا مفهوم الإنتاجية للأبد. مجاني، خالي من التشتت، ومليء بالتطور.
+          {/* Black hole Accretion Disk spinning elements */}
+          <div 
+            className="absolute w-[450px] h-[450px] rounded-full border-[10px] border-amber-500/10 border-t-amber-400/50 border-b-indigo-500/40"
+            style={{
+              filter: "blur(18px)",
+              animation: "aura-rotate 16s linear infinite"
+            }}
+          />
+          <div 
+            className="absolute w-[470px] h-[470px] rounded-full border-[2px] border-dashed border-rose-500/20"
+            style={{
+              filter: "blur(4px)",
+              animation: "aura-rotate 28s linear infinite reverse"
+            }}
+          />
+
+          {/* Core Singularity Void sphere */}
+          <div className="absolute w-52 h-52 rounded-full bg-black shadow-[0_0_120px_rgba(244,63,94,0.35),0_0_40px_rgba(0,0,0,1)] z-10" />
+        </div>
+
+        <div className="relative z-10 max-w-3xl mx-auto text-center py-10 px-4">
+          <div className="inline-flex items-center gap-2 bg-[#1c0812]/50 border border-rose-500/30 rounded-full px-4 py-1.5 text-[10px] text-rose-300 font-bold tracking-widest mb-8">
+            <Flame className="w-3.5 h-3.5 text-rose-400 animate-bounce" />
+            بروتوكول التركيز الأقصى والأكثر شراسة
+          </div>
+
+          <h3 className="text-[clamp(32px,5vw,60px)] font-black leading-tight mb-8">
+            وضع الثقب الأسود <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-amber-400 to-indigo-500">تجميع الساعات وجوائز نهاية الأسبوع!</span>
+          </h3>
+
+          <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-12 max-w-2xl mx-auto" dir="rtl">
+            وضع الثقب الأسود هو التحدي الأقوى لرجال الفضاء والملتزمين؛ حيث يتعاون الجميع لجمع ساعات تركيز خارقة والتغلب على الجاذبية. وإذا أكملتم وإنجزتم مهمة الثقب الأسود بنجاح قبل انقضاء الأسبوع، تفوزون بالكامل بجائزة قيّمة ومكافأة استثنائية فريدة في نهاية كل أسبوع!
           </p>
-          
+
           <button
-            onClick={onLogin}
-            className="group relative overflow-hidden bg-white rounded-full px-12 py-5 text-[18px] font-black text-black shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.6)]"
+            onClick={() => setShowLoginModal(true)}
+            className="group relative overflow-hidden bg-[#2d020c] hover:bg-[#470313] border border-rose-500/50 rounded-2xl px-12 py-4.5 text-xs font-black text-rose-200 shadow-[0_0_35px_rgba(239,68,68,0.25)] hover:shadow-[0_0_55px_rgba(239,68,68,0.45)] transition-all"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              <Rocket className="w-6 h-6 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
-              ابدأ الآن — إنها مجانية
-            </span>
+            <span className="relative z-10">إخضاع الجاذبية وتجربتها الآن</span>
           </button>
-        </motion.div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 px-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 bg-black/50 backdrop-blur-lg" dir="rtl">
-        <div className="font-display font-black tracking-[0.2em] text-[18px] text-white text-left" dir="ltr">
-          ORBIT<span className="text-indigo-400">X</span>
+      {/* -------------------------------------------------------------
+          SECTION 6: AWARENESS / MINDSET SECTION
+         ------------------------------------------------------------- */}
+      <section id="awareness" className="py-24 px-6 relative z-10 bg-[#020207] border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-right mb-16" dir="rtl">
+            <div className="inline-flex items-center gap-2 font-mono text-xs text-purple-400 tracking-[0.2em] mb-4 uppercase">
+              <span className="w-6 h-px bg-purple-500/50" />
+              معهد غسل التشتت والـ Mindset
+            </div>
+            <h3 className="text-[clamp(28px,4vw,42px)] font-black leading-tight">
+              الوعي المداري للإنتاجية <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-l from-purple-400 via-indigo-400 to-cyan-400">بناء عقلية الكائن الملتزم.</span>
+            </h3>
+            <p className="text-gray-400 text-sm max-w-2xl mt-4 leading-relaxed">
+              التركيز ليس ميكانيكياً فحسب، بل هو وعي سلوكي. يقدم لك مستودع الوعي في OrbitX مقالات، خلاصات إرشادية وتدريبات مبنية لتغيير نظرتك للتشتت المعاصر.
+            </p>
+          </div>
+
+          {/* Interactive Secure Mini Globe for Classified Intelligence */}
+          <InteractiveSecretGlobe />
         </div>
-        <div className="text-[13px] text-gray-500 font-mono">
-          OrbitX Space Protocol © 2026. Made for focused minds.
+      </section>
+
+      {/* -------------------------------------------------------------
+          SECTION 7: LIVE COGNITIVE STATS
+         ------------------------------------------------------------- */}
+      <section id="metrics" className="py-20 px-6 relative z-10 bg-gradient-to-b from-[#010105] to-[#040410]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-14 bg-[#050510]/80 backdrop-blur-3xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
+            
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="text-4xl font-mono font-black text-white leading-none tracking-tight">
+                <CountUp target={14298} />
+              </div>
+              <span className="text-[10px] text-indigo-300/60 font-mono tracking-widest mt-2 block uppercase">EXPLORERS ONBOARD</span>
+            </div>
+
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center text-fuchsia-400 mb-4 shadow-[0_0_15px_rgba(240,70,240,0.1)]">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="text-4xl font-mono font-black text-white leading-none tracking-tight">
+                <CountUp target={329481} suffix=" H" />
+              </div>
+              <span className="text-[10px] text-fuchsia-300/60 font-mono tracking-widest mt-2 block uppercase">TOTAL FLIGHT TIMERS</span>
+            </div>
+
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
+                <Zap className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="text-4xl font-mono font-black text-white leading-none tracking-tight">
+                <CountUp target={429} suffix="M+" />
+              </div>
+              <span className="text-[10px] text-cyan-300/60 font-mono tracking-widest mt-2 block uppercase">TOTAL HARVESTED XP</span>
+            </div>
+
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-4 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+                <Rocket className="w-5 h-5" />
+              </div>
+              <div className="text-4xl font-mono font-black text-white leading-none tracking-tight">
+                <CountUp target={89} suffix=" F" />
+              </div>
+              <span className="text-[10px] text-rose-300/60 font-mono tracking-widest mt-2 block uppercase">SQUADRON SQUAD FLEETS</span>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* -------------------------------------------------------------
+          SECTION 9: SYSTEM FOOTER OS THEME
+         ------------------------------------------------------------- */}
+      <footer className="bg-[#020205] border-t border-white/5 pt-20 pb-12 px-6 relative z-10 text-right">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 mb-16" dir="rtl">
+          {/* Column Brand */}
+          <div className="md:col-span-5">
+            <div className="flex items-center gap-3 mb-6" dir="ltr">
+              <div className="relative flex items-center justify-center w-8 h-8">
+                <div className="absolute inset-0 border-2 border-indigo-500 rounded-full" />
+                <div className="absolute w-2.5 h-2.5 bg-indigo-400 rounded-full" />
+              </div>
+              <div className="font-display font-black tracking-[0.2em] text-[18px] text-white">
+                ORBIT<span className="text-indigo-400">X</span>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-400 leading-relaxed max-w-sm mb-6">
+              "OrbitX isn’t a timer. It’s an operating system for focus."
+            </p>
+            <p className="text-xs text-gray-500">
+              نظام تشغيل حشد التركيز وإدارة الأداء البشري دون تشتيت. صُمم للمصممين، المهندسين، وصناع العلوم الكونية الاستكشافية.
+            </p>
+          </div>
+
+          {/* Links 1 */}
+          <div className="md:col-span-3">
+            <h4 className="text-xs font-black text-white font-sans tracking-wide uppercase mb-5">وحدات النظام</h4>
+            <ul className="space-y-3 text-[11px] text-gray-400">
+              <li><a href="#how-it-works" className="hover:text-indigo-400 transition-colors">مخطط السفر</a></li>
+              <li><a href="#simulate-cockpit" className="hover:text-indigo-400 transition-colors">قمرة الاستكشاف</a></li>
+              <li><a href="#anti-cheat" className="hover:text-indigo-400 transition-colors">حظر التشتيت والوجود</a></li>
+              <li><a href="#awareness" className="hover:text-indigo-400 transition-colors">منشورات الوعي المنهجي</a></li>
+            </ul>
+          </div>
+
+          {/* Contact Details */}
+          <div className="md:col-span-4">
+            <h4 className="text-xs font-black text-white font-sans tracking-wide uppercase mb-5">مركز الإرشاد الكوني DSupport</h4>
+            <p className="text-[11px] text-gray-400 leading-relaxed mb-4">
+              للاستشارات، الإبلاغ عن اختلالات تواصل مع القيادة:
+            </p>
+            <div className="bg-black/40 border border-white/5 p-4 rounded-xl text-left font-mono text-[10px]" dir="ltr">
+              <span className="text-[#a5b4fc] block font-bold mb-1">PROPRIETARY OS TERMINAL</span>
+              <span className="text-gray-400">Email: abdalrahmanjarrah1@gmail.com</span>
+              <span className="text-gray-500 block mt-1">Creator: abdalrahman nabeel Al jarrah</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom copyright banner */}
+        <div className="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-gray-400 font-mono" dir="rtl">
+          <div>
+            ORBITX SPACE PROTOCOL © 2026. Developed and Crafted by <span className="text-indigo-400 font-bold font-sans">abdalrahman nabeel Al jarrah</span>.
+          </div>
+          <div className="flex items-center gap-1.5" dir="ltr">
+            <span>Ground Support Email:</span>
+            <a href="mailto:abdalrahmanjarrah1@gmail.com" className="text-cyan-400 hover:underline">abdalrahmanjarrah1@gmail.com</a>
+          </div>
         </div>
       </footer>
+
+      {/* Futuristic Cosmic Login Modal */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Ambient Animated Blurred Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-[#020205]/90 backdrop-blur-xl"
+            />
+
+            {/* Glowing Space Dashboard Card */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
+              className="relative bg-[#070814]/95 border border-indigo-500/40 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg shadow-[0_0_100px_rgba(99,102,241,0.25)] overflow-hidden text-right"
+              dir="rtl"
+            >
+              {/* Absolute Cosmic Flares */}
+              <div className="absolute -top-20 -left-20 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -right-20 w-44 h-44 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Rocket className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white font-sans">بصمة العبور للـ OrbitX</h2>
+                    <p className="text-[11px] text-indigo-300/60 font-mono tracking-wider mt-0.5">LAUNCH_CONTROL_GATEWAY</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="p-2 border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Inside the modal: Profile Image & Info Card */}
+              <div className="relative border border-white/5 bg-[#0a0b16]/70 rounded-2.5xl p-5 flex items-center gap-4 mb-6 overflow-hidden group">
+                {/* Simulated Holographic Scan line */}
+                <motion.div
+                  animate={{ y: [0, 80, 0] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                  className="absolute left-0 right-0 h-[1.5px] bg-indigo-500/30 pointer-events-none"
+                />
+                
+                <div className="w-14 h-14 rounded-2xl border border-indigo-500/30 bg-indigo-950/40 flex items-center justify-center overflow-hidden shrink-0">
+                  <Rocket className="w-7 h-7 text-indigo-400 animate-pulse" />
+                </div>
+                <div className="flex-1 text-right">
+                  <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1 uppercase">PILOT REGISTER STATUS</div>
+                  <div className="text-sm font-bold text-white">رائد فضاء مستكشف</div>
+                  <div className="text-xs text-indigo-200/50 mt-1">المدار: بانتظار الترشيح الشخصي</div>
+                </div>
+                <div className="text-left font-mono text-[9px] text-indigo-400/40 flex flex-col items-end shrink-0 select-none">
+                  <div>SYS: ON</div>
+                  <div>SEC: SECURE</div>
+                  <div>DB: READY</div>
+                </div>
+              </div>
+
+              {/* Onboarding info points */}
+              <div className="space-y-3 mb-8 text-right text-xs text-gray-400 bg-black/40 p-5 rounded-2xl border border-white/5 font-sans leading-relaxed">
+                <div className="font-black text-gray-200 text-sm mb-2">رحلتك الإنجازية اليوم تشمل:</div>
+                <div className="flex items-start gap-3">
+                  <span className="text-indigo-400">🌌</span>
+                  <span><strong>غرف دراسة حية (Study Rooms)</strong> بلا تشتت أو مقاطعات إعلانية.</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-indigo-400">⚡</span>
+                  <span>كسب نقاط الغطس (XP)، وترقية الشارات الفضائية المخصصة.</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-indigo-400">🐾</span>
+                  <span>رعاية مواشيك الفضائية وحصاد نتاج المعرفة بالمزرعة.</span>
+                </div>
+              </div>
+
+              {/* Google OAuth Launcher control with spectacular shadow */}
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                  onLogin();
+                }}
+                className="relative w-full group overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl py-4.5 text-[16px] font-black text-white shadow-[0_0_35px_rgba(99,102,241,0.35)] hover:shadow-[0_0_55px_rgba(99,102,241,0.55)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3"
+              >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <svg className="w-5 h-5 fill-white shrink-0" viewBox="0 0 24 24">
+                  <path d="M12.24 10.285V13.4h6.86c-.277 1.56-1.602 4.585-6.86 4.585-4.54 0-8.24-3.765-8.24-8.4s3.7-8.4 8.24-8.4c2.58 0 4.307 1.095 5.298 2.045l2.465-2.37C18.435 1.21 15.62 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.795-.085-1.4-.195-1.925H12.24z" />
+                </svg>
+                <span>التحليق الفوري الآمن باستخدام Google</span>
+              </button>
+
+              <div className="text-center text-[10px] text-gray-500 font-mono tracking-wide mt-5 uppercase">
+                SECURITY CLEARED BY ORBITX SPACE COMMAND PROTOCOL
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

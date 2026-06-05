@@ -207,10 +207,37 @@ export default function Dashboard({
     | "challenges"
   >("home");
   const [activeStation, setActiveStation] = useState<string | null>(null);
+
+  // Automatically pull the user back into their active station if they are already in one (e.g., opened in a new tab or recovered session)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    try {
+      const q = query(
+        collection(db, "rooms"),
+        where("participants", "array-contains", user.uid)
+      );
+
+      getDocs(q).then((snap) => {
+        if (!snap.empty) {
+          const activeRoom = snap.docs[0];
+          console.log("[Dashboard] Auto-loaded active station:", activeRoom.id);
+          setActiveStation(activeRoom.id);
+        }
+      }).catch((err) => {
+        console.warn("[Dashboard] Error looking up active user stations on mount:", err);
+      });
+    } catch (e) {
+      console.warn("[Dashboard] Error in active station lookup effect:", e);
+    }
+  }, [user?.uid]);
+
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(
     !user?.missionRole && !localStorage.getItem("hasSkippedRoleModal"),
   );
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [dailyFocusTarget, setDailyFocusTarget] = useState("2 ساعتان");
   const [customRole, setCustomRole] = useState("");
   const [runTour, setRunTour] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -356,45 +383,202 @@ export default function Dashboard({
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-[#0b0c16] border border-indigo-500/30 rounded-[2rem] p-8 w-full max-w-xl shadow-[0_0_80px_rgba(99,102,241,0.2)] text-center relative overflow-hidden"
+              className="bg-[#0b0c16]/95 border border-indigo-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-xl shadow-[0_0_100px_rgba(99,102,241,0.25)] text-center relative overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                <Rocket size={160} className="text-indigo-500" />
+              <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
+                <Rocket size={240} className="text-indigo-500" />
               </div>
 
-              <div className="relative z-10">
-                <h2 className="text-2xl lg:text-3xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-l from-indigo-300 to-cyan-300">
-                  حدد هويتك الفضائية 🚀
-                </h2>
-                <p className="text-indigo-200/60 mb-8 max-w-sm mx-auto text-sm leading-relaxed">
-                  ما هو تخصصك الأكاديمي أو المهني؟ سترافقك هذه الهوية في رحلتك عبر المدار.
-                </p>
+              {/* Progress Bar inside Wizard */}
+              <div className="relative z-10 flex items-center justify-center gap-2 mb-8" dir="rtl">
+                {[0, 1, 2].map((s) => (
+                  <div
+                    key={s}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      onboardingStep === s ? "w-8 bg-indigo-500" : "w-2 bg-indigo-950/80 border border-white/5"
+                    )}
+                  />
+                ))}
+              </div>
 
-                <div className="pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-                  <div className="flex w-full max-w-sm gap-2">
+              {/* STEP 0: Introduction Card */}
+              {onboardingStep === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="relative z-10 text-right"
+                  dir="rtl"
+                >
+                  <h2 className="text-2xl md:text-3xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-l from-indigo-300 via-cyan-300 to-white leading-tight">
+                    أهلاً بك على متن المدار، يا قائد 🚀
+                  </h2>
+                  <p className="text-sm text-indigo-200/60 mb-6 leading-relaxed">
+                    تم رصد تفويضك بنجاح. يستعد البروتوكول المداري لإعداد وحدة التحكم الخاصة بك وعزل المؤثرات الحركية المحيطة لضمان أقصى مستويات التركيز البشري.
+                  </p>
+
+                  <div className="bg-[#060711] border border-white/5 rounded-2.5xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden">
+                    <img 
+                      src={user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"} 
+                      className="w-16 h-16 rounded-2xl border border-indigo-500/30 object-cover shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="flex-1">
+                      <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1">ASTRONAUT REGISTRY ID</div>
+                      <div className="text-base font-bold text-white mb-0.5">{user.displayName || "رائد مستكشف"}</div>
+                      <div className="text-xs text-indigo-300/60 leading-relaxed font-sans mt-0.5">تبدأ رحلتك الآن بمستوى 1 ومخزون 0 XP. استعد للارتقاء بالرتب والمجموعات المجرية!</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      playSound("message");
+                      setOnboardingStep(1);
+                    }}
+                    className="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 rounded-2xl font-black text-sm text-white shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all flex items-center justify-center gap-3 group"
+                  >
+                    <span>لوحة الهوية والبدء بيولوجياً</span>
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                  </button>
+                </motion.div>
+              )}
+
+              {/* STEP 1: Select/Input Specialist designation */}
+              {onboardingStep === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 text-right"
+                  dir="rtl"
+                >
+                  <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
+                    تحديد التخصص والوظيفة المدارية 🔬
+                  </h2>
+                  <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
+                    اختر هويتك العلمية أو الأكاديمية. ستعرض هذه الهوية في الملف التعريفي وقائمة تصنيفات المدار العامة.
+                  </p>
+
+                  {/* Predefined Beautiful Sector Badges */}
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {[
+                      { label: "🔬 باحث ومحلل بيانات", icon: "🔬" },
+                      { label: "💻 مهندس برمجيات مداري", icon: "💻" },
+                      { label: "📚 طالب علم ومعرفة", icon: "📚" },
+                      { label: "✍️ منشئ عوالم وصانع محتوى", icon: "✍️" },
+                    ].map((badge) => (
+                      <button
+                        key={badge.label}
+                        onClick={() => {
+                          setCustomRole(badge.label);
+                          playSound("message");
+                        }}
+                        className={cn(
+                          "p-4 rounded-2xl border text-right transition-all duration-300 flex flex-col justify-between gap-3 relative overflow-hidden",
+                          customRole === badge.label
+                            ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                            : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200 hover:border-white/10"
+                        )}
+                      >
+                        <span className="text-xl">{badge.icon}</span>
+                        <span className="text-xs font-bold leading-tight">{badge.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Slot */}
+                  <div className="flex w-full gap-2 mb-6">
                     <input
                       type="text"
                       value={customRole}
                       onChange={(e) => setCustomRole(e.target.value)}
-                      placeholder="أدخل تخصصك الفضائي..."
-                      className="flex-1 bg-[#060711] border border-white/10 rounded-2xl px-5 py-4 text-right focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-sm transition-all"
+                      placeholder="أو اكتب تخصصاً مخصصاً بنفسك..."
+                      className="flex-1 bg-[#060711] border border-white/10 rounded-2xl px-5 py-4 text-right focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
                     />
+                  </div>
+
+                  <div className="flex gap-4">
                     <button
-                      onClick={() => handleSelectRole(customRole)}
-                      disabled={!customRole.trim()}
-                      className="px-6 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-[#131526] disabled:text-gray-500 transition-colors rounded-2xl font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.2)] disabled:shadow-none"
+                      onClick={() => setOnboardingStep(0)}
+                      className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
                     >
-                      تأكيد
+                      السابق
+                    </button>
+                    <button
+                      onClick={() => {
+                        playSound("message");
+                        setOnboardingStep(2);
+                      }}
+                      disabled={!customRole.trim()}
+                      className="flex-1 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-[#131526] disabled:text-gray-500 transition-colors rounded-2xl font-black text-xs text-white shadow-[0_0_20px_rgba(99,102,241,0.15)] disabled:shadow-none"
+                    >
+                      وقود والالتزام المداري
                     </button>
                   </div>
-                  <button
-                    onClick={handleSkipRole}
-                    className="text-xs font-bold text-gray-500 hover:text-indigo-400 transition-colors mt-2"
-                  >
-                    تجاوز مؤقتاً
-                  </button>
-                </div>
-              </div>
+                </motion.div>
+              )}
+
+              {/* STEP 2: Goal target setting */}
+              {onboardingStep === 2 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 text-right"
+                  dir="rtl"
+                >
+                  <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
+                    كمية شحن مولد الوقود اليومي 🔋
+                  </h2>
+                  <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
+                    اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت وحصاد المحاصيل.
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                    {[
+                      { title: "⏱️ 1 ساعة: حارس المدار الهادئ (المرحلة الأساسية)", rate: "1 ساعة" },
+                      { title: "🚀 2 ساعتان: كابتن الأنظمة وداعم الطاقة", rate: "2 ساعتان" },
+                      { title: "🌌 4 ساعات: بطل المجرة السحيقة والجاذبية المطلقة", rate: "4 ساعات" },
+                    ].map((target) => (
+                      <button
+                        key={target.rate}
+                        onClick={() => {
+                          setDailyFocusTarget(target.rate);
+                          playSound("message");
+                        }}
+                        className={cn(
+                          "w-full p-4 rounded-2.5xl border text-right transition-all flex items-center justify-between text-xs font-bold font-sans",
+                          dailyFocusTarget === target.rate
+                            ? "bg-indigo-500/10 border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+                            : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200"
+                        )}
+                      >
+                        <span>{target.title}</span>
+                        {dailyFocusTarget === target.rate ? (
+                          <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-mono">SELECTED</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setOnboardingStep(1)}
+                      className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
+                    >
+                      السابق
+                    </button>
+                    <button
+                      onClick={() => {
+                        playSound("levelup");
+                        handleSelectRole(customRole);
+                      }}
+                      className="flex-1 py-4 bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all rounded-2xl font-black text-xs text-white"
+                    >
+                      تفعيل بروتوكول الإقلاع وعزل التشتت 👨‍🚀
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           </div>
         )}

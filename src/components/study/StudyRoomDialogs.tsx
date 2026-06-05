@@ -17,9 +17,10 @@ import { cn } from "../../lib/utils";
 import { requestXpGrant } from "../../lib/xpSystem";
 import { serverTimestamp, deleteField, doc, deleteDoc } from "firebase/firestore";
 import { db } from "../../firebase";
-import { UserData } from "../../shared";
+import { UserData, Room } from "../../shared";
 
 export interface StudyRoomDialogsProps {
+  room: Room;
   user: UserData;
   stationId: string;
   safeUpdateRoom: (data: any) => Promise<void>;
@@ -73,6 +74,7 @@ export interface StudyRoomDialogsProps {
 }
 
 function StudyRoomDialogsComponent({
+  room,
   user,
   stationId,
   safeUpdateRoom,
@@ -117,6 +119,14 @@ function StudyRoomDialogsComponent({
   setStudyLink,
   studyLinkRef,
 }: StudyRoomDialogsProps) {
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+
+  React.useEffect(() => {
+    if (!showDeleteDialog) {
+      setDeleteConfirmText("");
+    }
+  }, [showDeleteDialog]);
+
   useRenderLog("StudyRoomDialogs", { showBetModal, showAFKCheck, showFuelLeak, showAlert, showDeleteDialog, showExitDialog, showNextMissionModal, showStudyLinkModal });
   return (
     <>
@@ -374,26 +384,41 @@ function StudyRoomDialogsComponent({
           >
             <div className="bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20 text-right" dir="rtl">
               <h2 className="text-xl font-black mb-4 text-center text-red-500">
-                حذف المحطة
+                ⚠️ تدمير المحطة المدارية
               </h2>
-              <p className="text-gray-300 text-center text-sm mb-6">
-                هل أنت متأكد من حذف هذه المحطة نهائياً؟ هذا الإجراء لا يمكن
-                التراجع عنه.
+              <p className="text-gray-300 text-center text-xs mb-4 leading-relaxed">
+                هل أنت متأكد من تدمير وحذف هذه المحطة نهائياً؟ هذا الإجراء فوري وسيطرد كافة الرواد المتواجدين ولا يمكن التراجع عنه.
               </p>
+              
+              <div className="mb-5">
+                <label className="block text-[11px] text-gray-400 font-bold mb-1">
+                  اكتب <span className="text-red-500 font-bold">"تدمير"</span> لتأكيد تدمير المحطة:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="اكتب لتأكيد الإجراء"
+                  className="w-full px-3 py-2 bg-slate-950 border border-red-500/25 rounded-xl text-center text-xs font-bold text-red-400 placeholder-gray-700 focus:outline-none focus:border-red-500 transition-all font-mono"
+                />
+              </div>
+
               <div className="flex gap-4">
                 <button
                   onClick={() => setShowDeleteDialog(false)}
-                  className="flex-1 px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 rounded-xl text-white font-bold transition-all text-sm"
+                  className="flex-1 px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 rounded-xl text-white font-bold transition-all text-sm border border-white/5"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={async () => {
+                    if (deleteConfirmText !== "تدمير") return;
                     setShowDeleteDialog(false);
                     await deleteDoc(doc(db, "rooms", stationId));
                     performSafeExit({ skipFirebaseUpdate: true });
                   }}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white font-bold transition-all shadow-sm shadow-red-600/30 text-sm"
+                  disabled={deleteConfirmText !== "تدمير"}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-30 disabled:hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-sm shadow-red-600/30 text-sm disabled:cursor-not-allowed"
                 >
                   تأكيد الحذف
                 </button>
@@ -412,25 +437,35 @@ function StudyRoomDialogsComponent({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
           >
-            <div className="bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20 text-right">
+            <div className="bg-[#0a0b16] border border-indigo-500/20 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-950/40 text-right">
               <h2 className="text-xl font-black mb-4 text-center text-white flex items-center justify-center gap-2">
-                <Rocket size={24} />
-                مغادرة المحطة
+                <Rocket size={24} className="text-indigo-400" />
+                مغادرة المحطة المدارية
               </h2>
-              <p className="text-gray-300 text-center text-sm mb-6 leading-relaxed">
-                هل تريد حقاً المغادرة؟ التايمر الآن يعمل في وضع الدراسة. إذا غادرت الآن سيتم خصم 10 XP من رصيدك.
-              </p>
+              
+              <div className="text-center mb-6">
+                {room?.timerStatus === "focus" ? (
+                  <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-2xl text-red-300 text-xs leading-relaxed font-semibold">
+                    ⚠️ تنبيه كوني: التايمر يعمل بوضع الدراسة حالياً. المغادرة الآن ستكلفك خصم 10 XP من رصيدك كعقوبة انسحاب!
+                  </div>
+                ) : (
+                  <div className="p-3 bg-green-500/15 border border-green-500/30 rounded-2xl text-green-300 text-xs leading-relaxed font-semibold">
+                    ✨ يمكنك المغادرة بسلام ومشاركتها مع رفاقك الآن دون أي خصم لنقاط الخبرة (XP).
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 flex-col sm:flex-row">
                 <button
                   onClick={() => setShowExitDialog(false)}
-                  className="flex-1 px-4 py-3 bg-indigo-500 hover:bg-indigo-700 rounded-xl text-white font-bold transition-all text-sm shadow-sm shadow-indigo-500/20"
+                  className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white font-bold transition-all text-sm shadow-sm shadow-indigo-500/20"
                 >
                   البقاء والمتابعة
                 </button>
                 <button
                   onClick={handleConfirmExit}
                   disabled={isExiting}
-                  className="px-4 py-3 bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-3 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white border border-white/10 rounded-xl font-bold transition-all text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isExiting ? "جاري المغادرة..." : "مغادرة الآن"}
                 </button>

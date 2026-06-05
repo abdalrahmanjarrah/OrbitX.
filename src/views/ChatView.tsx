@@ -543,20 +543,21 @@ export default function ChatView({
                                   >
                                     <Markdown
                                       components={{
-                                        img: ({ ...props }) => (
-                                          <img
-                                            {...props}
-                                            className="max-h-60 rounded-xl mt-2 border border-white/10 hover:scale-[1.01] transition-all cursor-zoom-in object-cover max-w-full block shadow-md"
-                                            referrerPolicy="no-referrer"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (props.src) setLightboxImage(props.src); const win: any = null;
-                                              if (win) {
-                                                win.document.write(`<title>مشاهدة الصورة</title><body style="margin:0;background:#060713;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;"><img src="${props.src}" style="max-width:95%;max-height:95%;object-fit:contain;margin:auto;display:block;border-radius:12px;box-shadow:0 25px 50px rgba(0,0,0,0.8);"/></body>`);
-                                              }
-                                            }}
-                                          />
-                                        ),
+                                         img: ({ ...props }) => {
+                                           if (!props.src) return null;
+                                           return (
+                                             <img
+                                               {...props}
+                                               src={props.src || undefined}
+                                               className="max-h-60 rounded-xl mt-2 border border-white/10 hover:scale-[1.01] transition-all cursor-zoom-in object-cover max-w-full block shadow-md"
+                                               referrerPolicy="no-referrer"
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 if (props.src) setLightboxImage(props.src);
+                                               }}
+                                             />
+                                           );
+                                         },
                                         a: ({ ...props }) => {
                                           const isDataUrl = props.href?.startsWith('data:');
                                           return (

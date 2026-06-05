@@ -474,7 +474,11 @@ export default function ProfileView({
                           i % 3 === 0 ? "col-span-2 aspect-[2/1]" : "aspect-square"
                         )}
                       >
-                        <img src={ex.url || undefined} className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110" referrerPolicy="no-referrer" />
+                        {ex.url ? (
+                          <img src={ex.url} className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">LOADING</div>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/ex:opacity-100 transition-opacity flex flex-col justify-end p-3">
                            <span className="text-[10px] font-mono text-gray-300 font-bold mb-2">
                              {ex.timestamp ? new Date(ex.timestamp.toDate()).toLocaleDateString("en-US") : "LOG"}

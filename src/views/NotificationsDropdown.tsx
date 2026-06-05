@@ -310,7 +310,7 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <img
-                            src={n.senderPhoto}
+                            src={n.senderPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${n.senderName || n.id}`}
                             className="w-6 h-6 rounded-full"
                           />
                           <span className="font-bold text-indigo-400">

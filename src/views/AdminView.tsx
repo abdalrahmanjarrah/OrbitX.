@@ -384,7 +384,7 @@ export default function AdminView({ user }: { user: UserData }) {
               <div key={u.uid} className="bg-[#020308] border border-cyan-900 hover:border-cyan-500 transition-colors rounded p-3 flex items-center justify-between group">
                 <div className="flex items-center gap-4">
                   <div className="relative">
-                    <img src={u.photoURL} alt="Avatar" className="w-10 h-10 rounded border border-cyan-700 object-cover" />
+                    <img src={u.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.uid}`} alt="Avatar" className="w-10 h-10 rounded border border-cyan-700 object-cover" />
                     {Date.now() - (u.lastActiveTime || 0) < 300000 && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_lime]"></div>}
                   </div>
                   <div>
@@ -458,7 +458,7 @@ export default function AdminView({ user }: { user: UserData }) {
            <div className="grid grid-cols-3 gap-2 h-60 overflow-y-auto custom-scrollbar pr-1">
              {exhibitions.map(ex => (
                <div key={ex.id} className="relative group aspect-square border border-cyan-900 overflow-hidden rounded">
-                 <img src={ex.url} alt="Media" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" referrerPolicy="no-referrer" />
+                 <img src={ex.url || undefined} alt="Media" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" referrerPolicy="no-referrer" />
                  <div className="absolute inset-0 bg-transparent border-2 border-transparent group-hover:border-cyan-400 pointer-events-none transition-all rounded"></div>
                  <button onClick={() => handleDeleteDoc('exhibitions', ex.id)} className="absolute top-1 right-1 bg-red-900/80 text-white p-1 rounded opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
                </div>

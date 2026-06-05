@@ -15,7 +15,7 @@ export interface StudyRoomChatProps {
   user: UserData;
   stationId: string;
   isHost: boolean;
-  handleSendMessage: (customText?: string) => void;
+  handleSendMessage: (customText?: string) => Promise<any> | any;
   onSelectUser: (id: string) => void;
   isChatDrawerOpen: boolean;
   setIsChatDrawerOpen: (open: boolean) => void;
@@ -38,31 +38,88 @@ function StudyRoomChatComponent({
   useRenderLog("StudyRoomChat", { messagesCount: messages.length, typingNames, isChatDrawerOpen });
   const [localNewMessage, setLocalNewMessage] = useState("");
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastTypingUpdate = useRef(0);
   const typingTimeoutRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
 
-  const onSend = () => {
+  // Safely manage component mount state to defeat memory leaks & post-unmount updates
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Auto-clear chat errors
+  useEffect(() => {
+    if (chatError) {
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          setChatError(null);
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [chatError]);
+
+  const onSend = async () => {
     if (!localNewMessage.trim()) return;
-    handleSendMessage(localNewMessage);
-    setLocalNewMessage("");
+    const msgText = localNewMessage;
+
+    // Instantly wipe typing state, clear timeouts, and reset timestamps
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
     }
-    deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+    lastTypingUpdate.current = 0;
+
+    try {
+      const success = await handleSendMessage(msgText);
+      if (success !== false) {
+        if (isMountedRef.current) {
+          setLocalNewMessage("");
+        }
+        deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+      }
+    } catch (e) {
+      console.error("[StudyRoomChat] Send failed:", e);
+    }
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const container = chatContainerRef.current;
+    if (!container) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const lastMsg = messages[messages.length - 1];
+    const isMyMsg = lastMsg && lastMsg.userId === user.uid;
+
+    // Check if user is near the bottom of the chat container (allow 120 pixels buffer)
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+
+    if (isMyMsg || isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, user.uid]);
 
   useEffect(() => {
+    const capturedUid = user?.uid;
+    const capturedStationId = stationId;
+
     return () => {
+      // Clear timers and erase the indicator immediately upon unmount/re-effect
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
-      if (user?.uid) {
-        deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+      if (capturedUid && capturedStationId) {
+        deleteDoc(doc(db, "rooms", capturedStationId, "typing", capturedUid)).catch(() => {});
       }
     };
   }, [user?.uid, stationId]);
@@ -112,7 +169,12 @@ function StudyRoomChatComponent({
               </button>
             </div>
 
-            <div className="flex-1 p-3 overflow-y-auto space-y-3 relative custom-scrollbar">
+            <div ref={chatContainerRef} className="flex-1 p-3 overflow-y-auto space-y-3 relative custom-scrollbar">
+              {chatError && (
+                <div className="sticky top-0 z-25 text-[11px] text-red-300 font-bold bg-red-950/80 border border-red-500/20 p-2.5 rounded-xl backdrop-blur-sm mb-2 text-center shadow-lg animate-bounce" dir="rtl">
+                  {chatError}
+                </div>
+              )}
               {typingNames.length > 0 && (
                 <div
                   className="sticky top-0 z-10 text-[10px] text-indigo-400 italic mb-2 animate-pulse text-right bg-[#0a0b16]/80 p-1.5 rounded-lg backdrop-blur-sm self-start inline-block"
@@ -157,6 +219,8 @@ function StudyRoomChatComponent({
                                   OperationType.DELETE,
                                   `rooms/${stationId}/messages/${msg.id}`,
                                 );
+                                setChatError("⚠️ عذراً، فشل تدمير الرسالة! تحقق من الاتصال بالشبكة.");
+                                setDeletingMsgId(null);
                               }
                             }}
                             className="text-[9px] text-red-500 hover:text-white font-bold"
@@ -220,52 +284,69 @@ function StudyRoomChatComponent({
 
             <div className="p-3 bg-[#0a0b16]/80 border-t border-white/10 shrink-0">
               <div className="relative">
-                {room?.isChatLocked && !isHost ? (
-                  <div className="w-full bg-[#050510] border border-red-500/30 rounded-xl px-4 py-3 text-center text-sm text-red-400 font-bold bg-opacity-50">
-                    الدردشة مغلقة من قبل المشرف 🔒
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={localNewMessage}
-                      onChange={(e) => {
-                        setLocalNewMessage(e.target.value);
-                        const now = Date.now();
-                        if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
-                          return; // Guard typing indicator when Firestore quota has run out
-                        }
-                        if (now - lastTypingUpdate.current > 10000) {
-                          lastTypingUpdate.current = now;
-                          setDoc(
-                            doc(db, "rooms", stationId, "typing", user.uid),
-                            { name: user.displayName, time: now },
-                          ).catch(() => {});
-                        }
-                        if (typingTimeoutRef.current) {
-                          clearTimeout(typingTimeoutRef.current);
-                        }
-                        typingTimeoutRef.current = setTimeout(() => {
-                          if (user?.uid) {
-                            deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+                {(() => {
+                  const isLockedForMe = room?.isChatLocked && !isHost;
+                  return (
+                    <>
+                      <input
+                        type="text"
+                        disabled={isLockedForMe}
+                        value={localNewMessage}
+                        onChange={(e) => {
+                          setLocalNewMessage(e.target.value);
+                          const now = Date.now();
+                          if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+                            return; // Guard typing indicator when Firestore quota has run out
                           }
-                        }, 4000);
-                      }}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && onSend()
-                      }
-                      placeholder="اكتب رسالة..."
-                      className="w-full bg-[#050510] shadow-inner border border-white/5 rounded-xl px-4 py-3 text-right text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600"
-                      dir="rtl"
-                    />
-                    <button
-                      onClick={onSend}
-                      className="absolute left-1.5 top-1.5 bottom-1.5 px-3 bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </>
-                )}
+                          if (now - lastTypingUpdate.current > 10000) {
+                            lastTypingUpdate.current = now;
+                            setDoc(
+                              doc(db, "rooms", stationId, "typing", user.uid),
+                              { name: user.displayName, time: now },
+                            ).catch(() => {});
+                          }
+                          if (typingTimeoutRef.current) {
+                            clearTimeout(typingTimeoutRef.current);
+                            typingTimeoutRef.current = null;
+                          }
+                          typingTimeoutRef.current = setTimeout(() => {
+                            if (isMountedRef.current && user?.uid) {
+                              deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+                            }
+                            if (isMountedRef.current) {
+                              typingTimeoutRef.current = null;
+                            }
+                          }, 4000);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !isLockedForMe) {
+                            onSend();
+                          }
+                        }}
+                        placeholder={isLockedForMe ? "الدردشة مغلقة حالياً من قبل المشرف 🔒" : "اكتب رسالة..."}
+                        className={cn(
+                          "w-full bg-[#050510] shadow-inner border rounded-xl px-4 py-3 pl-14 text-right text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
+                          isLockedForMe
+                            ? "border-red-500/30 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-red-400/60"
+                            : "border-white/5"
+                        )}
+                        dir="rtl"
+                      />
+                      <button
+                        onClick={onSend}
+                        disabled={isLockedForMe}
+                        className={cn(
+                          "absolute left-1.5 top-1.5 bottom-1.5 px-3 rounded-lg transition-colors flex items-center justify-center",
+                          isLockedForMe
+                            ? "bg-red-500/10 text-red-400/50 cursor-not-allowed"
+                            : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                        )}
+                      >
+                        <Send size={16} />
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </motion.div>

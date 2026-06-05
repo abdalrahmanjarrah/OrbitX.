@@ -157,6 +157,7 @@ import DockButton from './DockButton';
 import ChallengeModal from './ChallengeModal';
 import ArticleModal from './ArticleModal';
 import StationCard from './StationCard';
+import { getGreetingForTime } from '../lib/dashboardGreetings';
 import ExhibitionGallery from './ExhibitionGallery';
 import SuggestionsSection from './SuggestionsSection';
 import QuranPlayer from './QuranPlayer';
@@ -216,6 +217,14 @@ export default function HomeView({
   const [newRoomTask, setNewRoomTask] = useState("");
   const [newRoomImageUrl, setNewRoomImageUrl] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [greeting, setGreeting] = useState<{ text: string; subtext: string }>({
+    text: "أهلاً بك في فضاء الإنجاز",
+    subtext: "محطتك الفضائية بانتظارك للبدء."
+  });
+
+  useEffect(() => {
+    setGreeting(getGreetingForTime());
+  }, []);
 
   useEffect(() => {
     let unsubscribeUsers: () => void;
@@ -352,10 +361,10 @@ export default function HomeView({
         <motion.div variants={bentoItem} className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6">
           <div className="flex-1 space-y-4">
             <h1 className="text-4xl md:text-5xl font-black font-display text-transparent bg-clip-text bg-gradient-to-l from-white via-indigo-100 to-indigo-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-              أهلاً {user.displayName}... جاهز للتركيز؟
+              {greeting.text} يا {user.displayName}
             </h1>
             <p className="text-lg text-indigo-200/80 max-w-lg shadow-sm">
-              محطتك الفضائية بانتظارك. انطلق في رحلة جديدة من الإنتاجية واخترق حدود المعرفة.
+              {greeting.subtext}
             </p>
             
             <div className="flex gap-4 pt-2">

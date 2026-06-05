@@ -158,23 +158,43 @@ export function useSessionEngine(
     };
   }, [user.uid]);
 
-  // Window unload listener to clear participant entry immediately
+  // Window unload listener to clear participant entry immediately using a keepalive beacon to the backend
   useEffect(() => {
     const handleUnload = () => {
       activeHookInstances.delete(userRef.current.uid);
       // Synchronously trigger exit cleanup if user was joined
       if (isJoinedRef.current && !isSpectator) {
-        const xhr = new XMLHttpRequest();
-        // Best effort synchronous XMLHttp request to remove user from active session
-        // Note: Firestore updates via REST are possible but direct doc updates might be halted, 
-        // we at least try to clean up active registrations.
+        const payload = JSON.stringify({
+          userId: userRef.current.uid,
+          roomId: stationId,
+          userName: userRef.current.displayName || userRef.current.uid
+        });
+
+        // Use keepalive fetch which is fully supported by modern browsers for unload telemetry
+        try {
+          fetch("/api/leave-room", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: payload,
+            keepalive: true
+          });
+        } catch (e) {
+          try {
+            const blob = new Blob([payload], { type: "application/json" });
+            navigator.sendBeacon("/api/leave-room", blob);
+          } catch (e2) {}
+        }
       }
     };
     window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
     };
-  }, [isSpectator]);
+  }, [stationId, isSpectator]);
 
   // Clock Offset Alignment system to offset local computer clock drift/skews
   const clockOffsetRef = useRef<number>(0);
@@ -219,6 +239,7 @@ export function useSessionEngine(
   const lastXpUpdateTimeRef = useRef<number | null>(null);
   const sessionXpCountRef = useRef<number>(0);
   const afkFailCountRef = useRef<number>(0);
+  const focusSessionKeyRef = useRef<string>("");
   const xpIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageTime = useRef<number>(0);
   const toggleCallLockRef = useRef<boolean>(false);
@@ -365,94 +386,125 @@ export function useSessionEngine(
 
     console.log("[Exit Engine] Mutex engaged. Clearing intervals & loops.");
 
-    // Clean up all timers and intervals locally first to block any trailing ticks
-    if (xpIntervalRef.current) {
-      clearInterval(xpIntervalRef.current);
-      xpIntervalRef.current = null;
-    }
-    if (fuelLeakIntervalRef.current) {
-      clearInterval(fuelLeakIntervalRef.current);
-      fuelLeakIntervalRef.current = null;
-    }
-
-    if (isSpectator) {
-      console.log("[Exit Engine] Spectator clean local exit.");
+    // Hard fallback timeout to guarantee exit under any network/Firestore conditions
+    const hardTimeoutId = setTimeout(() => {
+      console.warn("[Exit Engine] Hard fallback timeout triggered. Forcing exit callback.");
+      setIsExiting(false);
+      isExitingRef.current = false;
       onExitRef.current();
-      return;
-    }
+    }, 3800);
 
-    if (options.isPenalty && options.penaltyReason) {
-      try {
-        console.log("[Exit Engine] Applying penalty transactional write:", options.penaltyAmount, options.penaltyReason);
-        await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true);
-      } catch (e) {
-        console.error("Failed to apply exit penalty:", e);
-      }
-    }
-
-    if (!options.skipFirebaseUpdate) {
-      try {
-        // Broadcast exit message if there's someone to read it
-        if (participantsCountRef.current > 1) {
-          await addDoc(collection(db, "rooms", stationId, "messages"), {
-            text: options.customExitMessage || (options.isPenalty 
-              ? `🚀 غادر المحرك (${userRef.current.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
-              : `🚀 غادر المحرك (${userRef.current.displayName}) المحطة.`),
-            userId: "system",
-            userName: "نظام التنبيه",
-            userPhoto: "",
-            timestamp: serverTimestamp(),
-            type: "text",
-          });
-        }
-
-        // Get snapshot of current room to update host or delete empty room correctly
-        const roomSnap = await getDoc(roomRef);
-        if (roomSnap.exists()) {
-          const rData = roomSnap.data() as Room;
-          const rem = (rData.participants || []).filter((p: string) => p !== userRef.current.uid);
-          
-          const updates: any = {
-            participants: arrayRemove(userRef.current.uid),
-            emptyAt: rem.length === 0 ? serverTimestamp() : deleteField(),
-          };
-          
-          const currentHostId = rData.hostId || rData.creatorId;
-          if (currentHostId === userRef.current.uid && rem.length > 0) {
-            updates.hostId = rem[0];
-          }
-          if (rem.length === 0) {
-            updates.timerStatus = "idle";
-          }
-          
-          await updateDoc(roomRef, updates);
-
-          // Delete room after 5 minutes if it remains empty
-          if (rem.length === 0) {
-            setTimeout(async () => {
-              try {
-                const checkSnap = await getDoc(roomRef);
-                if (checkSnap.exists() && (!(checkSnap.data() as any).participants || (checkSnap.data() as any).participants.length === 0)) {
-                  await deleteDoc(roomRef);
-                }
-              } catch (e) {}
-            }, 300000);
-          }
-        }
-      } catch (err) {
-        console.warn("[Exit Engine] Firebase exit update bypassed / failed:", err);
-      }
-    }
-
-    // Set user back to main dashboard activity
     try {
-      await updateDoc(doc(db, "users", userRef.current.uid), {
-        currentActivity: "في لوحة التحكم",
-      });
-    } catch (e) {}
+      // Clean up all timers and intervals locally first to block any trailing ticks
+      if (xpIntervalRef.current) {
+        clearInterval(xpIntervalRef.current);
+        xpIntervalRef.current = null;
+      }
+      if (fuelLeakIntervalRef.current) {
+        clearInterval(fuelLeakIntervalRef.current);
+        fuelLeakIntervalRef.current = null;
+      }
 
-    console.log("[Exit Engine] Cleanup complete. Invoking onExit callback.");
-    onExitRef.current();
+      if (isSpectator) {
+        console.log("[Exit Engine] Spectator clean local exit.");
+        clearTimeout(hardTimeoutId);
+        setIsExiting(false);
+        isExitingRef.current = false;
+        onExitRef.current();
+        return;
+      }
+
+      if (options.isPenalty && options.penaltyReason) {
+        try {
+          console.log("[Exit Engine] Applying penalty transactional write:", options.penaltyAmount, options.penaltyReason);
+          const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+            Promise.race([
+              promise,
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("timeout")), ms)
+              ),
+            ]);
+          await withTimeout(
+            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true),
+            2500
+          ).catch((err) => {
+            console.warn("[Exit Engine] Penalty grant timed out or failed:", err.message || err);
+          });
+        } catch (e) {
+          console.error("Failed to apply exit penalty:", e);
+        }
+      }
+
+      if (!options.skipFirebaseUpdate) {
+        try {
+          // Broadcast exit message if there's someone to read it
+          if (participantsCountRef.current > 1) {
+            await addDoc(collection(db, "rooms", stationId, "messages"), {
+              text: options.customExitMessage || (options.isPenalty 
+                ? `🚀 غادر المحرك (${userRef.current.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
+                : `🚀 غادر المحرك (${userRef.current.displayName}) المحطة.`),
+              userId: "system",
+              userName: "نظام التنبيه",
+              userPhoto: "",
+              timestamp: serverTimestamp(),
+              type: "text",
+            });
+          }
+
+          // Get snapshot of current room to update host or delete empty room correctly
+          const roomSnap = await getDoc(roomRef);
+          if (roomSnap.exists()) {
+            const rData = roomSnap.data() as Room;
+            const rem = (rData.participants || []).filter((p: string) => p !== userRef.current.uid);
+            
+            const updates: any = {
+              participants: arrayRemove(userRef.current.uid),
+              emptyAt: rem.length === 0 ? serverTimestamp() : deleteField(),
+            };
+            
+            const currentHostId = rData.hostId || rData.creatorId;
+            if (currentHostId === userRef.current.uid && rem.length > 0) {
+              updates.hostId = rem[0];
+            }
+            if (rem.length === 0) {
+              updates.timerStatus = "idle";
+            }
+            
+            await updateDoc(roomRef, updates);
+
+            // Delete room after 5 minutes if it remains empty
+            if (rem.length === 0) {
+              setTimeout(async () => {
+                try {
+                  const checkSnap = await getDoc(roomRef);
+                  if (checkSnap.exists() && (!(checkSnap.data() as any).participants || (checkSnap.data() as any).participants.length === 0)) {
+                    await deleteDoc(roomRef);
+                  }
+                } catch (e) {}
+              }, 300000);
+            }
+          }
+        } catch (err) {
+          console.warn("[Exit Engine] Firebase exit update bypassed / failed:", err);
+        }
+      }
+
+      // Set user back to main dashboard activity
+      try {
+        await updateDoc(doc(db, "users", userRef.current.uid), {
+          currentActivity: "في لوحة التحكم",
+        });
+      } catch (e) {}
+
+      console.log("[Exit Engine] Cleanup complete inside try block.");
+    } catch (e) {
+      console.error("[Exit Engine] Fatal error during clean exit. Forcing exit anyway.", e);
+    } finally {
+      clearTimeout(hardTimeoutId);
+      setIsExiting(false);
+      isExitingRef.current = false;
+      onExitRef.current();
+    }
   }, [stationId, isSpectator]);
 
   const handleConfirmExit = useCallback(async () => {
@@ -532,6 +584,17 @@ export function useSessionEngine(
     };
     autoJoin();
   }, [stationId, isSpectator]);
+
+  // Real-time presence synchronization across tabs and kick actions
+  useEffect(() => {
+    if (room && isJoined && !isSpectator && !isExitingRef.current) {
+      const isStillParticipant = (room.participants || []).includes(user.uid);
+      if (!isStillParticipant) {
+        console.log("[Presence Sync] User was removed from participants on another client. Exiting locally.");
+        performSafeExit({ skipFirebaseUpdate: true });
+      }
+    }
+  }, [room?.participants, user.uid, isJoined, isSpectator, performSafeExit]);
 
   // Main Room, Messaging and Typing Listeners
   useEffect(() => {
@@ -791,9 +854,7 @@ export function useSessionEngine(
         // Securely handle pending Firestore server timestamps in latency-compensation phase
         const seconds = r.startTime.seconds || (r.startTime as any).seconds;
         if (seconds === undefined && typeof r.startTime.toDate !== "function") {
-          const duration = (r.timerStatus === "focus" ? r.timerDuration : r.breakDuration) * 60;
-          setTimeLeft(duration);
-          return;
+          return; // تجاهل الـ tick، انتظر الـ startTime الحقيقي
         }
 
         const start = typeof r.startTime.toDate === "function"
@@ -833,11 +894,26 @@ export function useSessionEngine(
     setTimeout(() => setShowAlert(false), 4000);
   }, [stationId, isSpectator]);
 
+  // Manage Session Key to handle resets cleanly across re-syncs
+  if (!isJoined) {
+    focusSessionKeyRef.current = "";
+  } else if (room?.timerStatus === "focus" && room?.startTime) {
+    const seconds = room.startTime.seconds || (room.startTime as any).seconds;
+    if (seconds !== undefined || typeof room.startTime.toDate === "function") {
+      const sessionKey = seconds?.toString() || (typeof room.startTime.toDate === "function" ? room.startTime.toDate().getTime().toString() : "");
+      if (sessionKey && focusSessionKeyRef.current !== sessionKey) {
+        focusSessionKeyRef.current = sessionKey;
+        lastXpUpdateTimeRef.current = null;
+        sessionXpCountRef.current = 0;
+        afkFailCountRef.current = 0;
+      }
+    }
+  }
+
   // Interactive interval positive XP progression loop
   useEffect(() => {
     if (isSpectator) return;
     if (!isJoined || room?.timerStatus !== "focus") {
-      lastXpUpdateTimeRef.current = null;
       if (xpIntervalRef.current) {
         clearInterval(xpIntervalRef.current);
         xpIntervalRef.current = null;
@@ -847,8 +923,6 @@ export function useSessionEngine(
 
     if (lastXpUpdateTimeRef.current === null) {
       lastXpUpdateTimeRef.current = Date.now() + clockOffsetRef.current;
-      sessionXpCountRef.current = 0;
-      afkFailCountRef.current = 0;
     }
 
     if (xpIntervalRef.current) {
@@ -1002,7 +1076,7 @@ export function useSessionEngine(
       const elapsed = (Date.now() + clockOffsetRef.current) - startMs;
 
       // Ensure 90% of the session time has objectively elapsed to guard against fast-forward timing glitches
-      if (elapsed < durationMs - 5000) return;
+      if (elapsed < durationMs - 15000) return;
 
       const isLegitEnd = elapsed <= durationMs + 2 * 60 * 1000;
 
@@ -1090,7 +1164,13 @@ export function useSessionEngine(
 
       // Rule: Only Host is primary authorized writer.
       // If Host is absent, the next alphabetical participant (rank 0 or 1) steps up after 5 seconds to heal the timer stall.
-      const transitionDelay = isHost 
+      // Calculate isHost directly using roomSnapshotRef.current to avoid race conditions when room is initially null.
+      const currentRoomForTransition = roomSnapshotRef.current;
+      const currentIsHost = currentRoomForTransition
+        ? ((currentRoomForTransition.hostId || currentRoomForTransition.creatorId) === userRef.current.uid || userRef.current.role === "admin")
+        : false;
+
+      const transitionDelay = currentIsHost 
         ? 0 
         : (myAlphabeticalRank === 0 ? 5000 : 8000 + Math.random() * 4000);
 
@@ -1195,14 +1275,14 @@ export function useSessionEngine(
 
   const handleSendMessage = useCallback(async (customText?: string) => {
     const textToSend = typeof customText === "string" ? customText : newMessage;
-    if (!textToSend.trim()) return;
+    if (!textToSend.trim()) return false;
     if (textToSend.length > 500) {
       alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
-      return;
+      return false;
     }
     if (roomSnapshotRef.current?.isChatLocked && !isHost) {
       alert("الدردشة مغلقة من قبل المشرف.");
-      return;
+      return false;
     }
 
     if (roomSnapshotRef.current?.timerStatus === "focus") {
@@ -1210,7 +1290,7 @@ export function useSessionEngine(
       if (now - lastMessageTime.current < 5 * 60 * 1000) {
         const remainingMinutes = Math.ceil((5 * 60 * 1000 - (now - lastMessageTime.current)) / 60000);
         alert(`التايمر يعمل بوضع الدراسة! يمكنك إرسال رسالة واحدة فقط كل 5 دقائق. يرجى الانتظار ${remainingMinutes} دقيقة.`);
-        return;
+        return false;
       }
       lastMessageTime.current = now;
     }
@@ -1231,7 +1311,7 @@ export function useSessionEngine(
       if (typeof customText !== "string") {
         setNewMessage("");
       }
-      return;
+      return true;
     }
 
     try {
@@ -1246,6 +1326,7 @@ export function useSessionEngine(
       if (typeof customText !== "string") {
         setNewMessage("");
       }
+      return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `rooms/${stationId}/messages`);
       // Fallback locally even if write failed dynamically mid-flight
@@ -1263,6 +1344,7 @@ export function useSessionEngine(
       if (typeof customText !== "string") {
         setNewMessage("");
       }
+      return true;
     }
   }, [stationId, isHost, newMessage]);
 
