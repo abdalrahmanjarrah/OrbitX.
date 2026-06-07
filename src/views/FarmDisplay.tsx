@@ -178,6 +178,7 @@ import BlackHolesView from './BlackHolesView';
 import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function FarmDisplay({
   user,
@@ -189,26 +190,37 @@ export default function FarmDisplay({
   isStudying?: boolean;
 }) {
   const [show3DFarm, setShow3DFarm] = useState(false);
+  const { isAr, t } = useLanguage();
 
   return (
     <>
       {show3DFarm && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
            <div className="bg-[#050510] border border-cyan-800 p-8 rounded-2xl text-center">
-             <h2 className="text-xl text-cyan-300 mb-4">Farm 3D is under construction</h2>
-             <button onClick={() => setShow3DFarm(false)} className="px-6 py-2 bg-cyan-900 border border-cyan-400 rounded-lg text-cyan-100 hover:bg-cyan-800">Close</button>
+             <h2 className="text-xl text-cyan-300 mb-4">
+               {isAr ? "قسم العوالم ثلاثية الأبعاد قيد التطوير والبرمجة" : "Farm 3D is under construction"}
+             </h2>
+             <button onClick={() => setShow3DFarm(false)} className="px-6 py-2 bg-cyan-900 border border-cyan-400 rounded-lg text-cyan-100 hover:bg-cyan-800">
+               {isAr ? "إغلاق" : "Close"}
+             </button>
            </div>
         </div>
       )}
 
-      <div className="bg-[#0b0c16] border border-white/5 rounded-3xl p-8 shadow-2xl relative mb-8 overflow-hidden">
+      <div className={cn("bg-[#0b0c16] border border-white/5 rounded-3xl p-8 shadow-2xl relative mb-8 overflow-hidden", isAr ? "text-right" : "text-left")}>
         {/* Work In Progress Lock Overlay */}
         <div className="absolute inset-0 z-50 bg-[#0a0b16]/70 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
             <div className="p-4 bg-[#0a0b16] rounded-full shadow-2xl shadow-yellow-500/20 mb-4 border border-yellow-500/30">
               <Lock className="w-10 h-10 text-yellow-500" />
             </div>
-            <h3 className="text-2xl font-black text-white mb-2 font-['Space_Grotesk']">قريباً.. 🚀</h3>
-            <p className="text-gray-300 max-w-sm">نعمل حالياً على تطوير قسم عوالم الإنجاز (3D) ليكون جاهزاً وممتعاً. سيتم إطلاقه قريباً!</p>
+            <h3 className="text-2xl font-black text-white mb-2 font-['Space_Grotesk']">
+              {isAr ? "قريباً.. 🚀" : "Coming Soon.. 🚀"}
+            </h3>
+            <p className="text-gray-300 max-w-sm">
+              {isAr 
+                ? "نعمل حالياً على تطوير قسم عوالم الإنجاز (3D) ليكون جاهزاً وممتعاً. سيتم إطلاقه قريباً!"
+                : "We are currently developing the cosmic achievements outer worlds (3D) to be interactive and fun. Launching soon!"}
+            </p>
         </div>
 
         <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1623512224734-8c88682a85e6?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center"></div>
@@ -216,20 +228,20 @@ export default function FarmDisplay({
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           <h2 className="text-3xl font-bold text-white mb-2 font-['Space_Grotesk']">
-            عوالم الإنجاز (3D)
+            {isAr ? "عوالم الإنجاز (3D)" : "Achievement Worlds (3D)"}
           </h2>
           <p className="text-gray-400 mb-8 max-w-lg">
             {isOwner
-              ? "ادخل إلى عالمك الخاص في تجربة ثلاثية الأبعاد، ازرع، اربِ الحيوانات وابنِ مزرعتك!"
-              : `استكشف عالم ${user.displayName} الخاص`}
+              ? (isAr ? "ادخل إلى عالمك الخاص في تجربة ثلاثية الأبعاد، ازرع، اربِ الحيوانات وابنِ مزرعتك!" : "Enter your personal universe in an interactive 3D space. Cultivate cosmic flora and fauna!")
+              : (isAr ? `استكشف عالم ${user.displayName} الخاص` : `Explore ${user.displayName}'s private biome`)}
           </p>
 
           <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl w-full max-w-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-              <div className="bg-black/40 p-4 rounded-xl border border-white/5 flex gap-4 justify-center items-center">
+              <div className={cn("bg-black/40 p-4 rounded-xl border border-white/5 flex gap-4 justify-center items-center", isAr ? "flex-row" : "flex-row-reverse")}>
                 <div className="flex flex-col items-center">
                   <span className="text-gray-400 text-xs mb-1">
-                    الخبرة (XP)
+                    {isAr ? "الخبرة (XP)" : "Experience (XP)"}
                   </span>
                   <span className="text-emerald-400 text-xl font-bold">
                     💎 {user.xp || 0}
@@ -237,7 +249,9 @@ export default function FarmDisplay({
                 </div>
                 <div className="w-px h-8 bg-white/10"></div>
                 <div className="flex flex-col items-center">
-                  <span className="text-gray-400 text-xs mb-1">المستوى</span>
+                  <span className="text-gray-400 text-xs mb-1">
+                    {isAr ? "المستوى" : "Level"}
+                  </span>
                   <span className="text-sky-400 text-xl font-bold">
                     ⭐ {user.level || 1}
                   </span>
@@ -250,7 +264,9 @@ export default function FarmDisplay({
               >
                 <span className="text-3xl">🌍</span>
                 <span className="text-xl">
-                  {isOwner ? "دخول عالمي الخاص" : "دخول العالم"}
+                  {isOwner 
+                    ? (isAr ? "دخول عالمي الخاص" : "Deploy My Universe")
+                    : (isAr ? "دخول العالم" : "Enter Universe")}
                 </span>
               </button>
             </div>

@@ -1,19 +1,55 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  LogOut, User as UserIcon, Rocket, Edit3, Image as ImageIcon,
-  Plus, Trash2, Users, Flame, Activity, Award, CheckCircle,
-  Eye, Zap, Globe, Target, Clock, Calendar, BarChart3, Star, Shield, Swords
+  LogOut,
+  User as UserIcon,
+  Rocket,
+  Edit3,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  Users,
+  Flame,
+  Activity,
+  Award,
+  CheckCircle,
+  Eye,
+  Zap,
+  Globe,
+  Target,
+  Clock,
+  Calendar,
+  BarChart3,
+  Star,
+  Shield,
+  Swords,
 } from "lucide-react";
-import { auth, db, logout, handleFirestoreError, OperationType } from "../firebase";
 import {
-  collection, doc, updateDoc, query, where, orderBy, onSnapshot,
-  getDocs, addDoc, deleteDoc, serverTimestamp, limit
+  auth,
+  db,
+  logout,
+  handleFirestoreError,
+  OperationType,
+} from "../firebase";
+import {
+  collection,
+  doc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  serverTimestamp,
+  limit,
 } from "firebase/firestore";
 import { UserData, getAstronautRank, BADGES } from "../shared";
 import { cn } from "../lib/utils";
 import FocusHeatmap from "./FocusHeatmap";
 import FarmDisplay from "./FarmDisplay";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function ProfileView({
   user,
@@ -22,8 +58,11 @@ export default function ProfileView({
   user: UserData;
   isStudying?: boolean;
 }) {
+  const { isAr, t } = useLanguage();
   const [exhibitions, setExhibitions] = useState<any[]>([]);
-  const [deletingExhibitionId, setDeletingExhibitionId] = useState<string | null>(null);
+  const [deletingExhibitionId, setDeletingExhibitionId] = useState<
+    string | null
+  >(null);
   const [friends, setFriends] = useState<UserData[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(user.bio || "");
@@ -38,12 +77,18 @@ export default function ProfileView({
         const q = query(
           collection(db, "exhibitions"),
           where("userId", "==", user.uid),
-          orderBy("timestamp", "desc")
+          orderBy("timestamp", "desc"),
         );
         const snapshot = await getDocs(q);
-        setExhibitions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setExhibitions(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        );
       } catch (e) {
-        handleFirestoreError(e, OperationType.GET, `exhibitions_user_${user.uid}`);
+        handleFirestoreError(
+          e,
+          OperationType.GET,
+          `exhibitions_user_${user.uid}`,
+        );
       }
     };
     fetchExhibitions();
@@ -52,11 +97,17 @@ export default function ProfileView({
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const q = query(collection(db, "users", user.uid, "friends"), limit(20));
+        const q = query(
+          collection(db, "users", user.uid, "friends"),
+          limit(20),
+        );
         const snapshot = await getDocs(q);
         const friendIds = snapshot.docs.map((doc) => doc.id);
         if (friendIds.length > 0) {
-          const friendsQuery = query(collection(db, "profiles"), where("uid", "in", friendIds));
+          const friendsQuery = query(
+            collection(db, "profiles"),
+            where("uid", "in", friendIds),
+          );
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map((doc) => doc.data() as UserData));
         } else {
@@ -85,7 +136,8 @@ export default function ProfileView({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return alert("الرجاء اختيار ملف صورة صالح.");
+    if (!file.type.startsWith("image/"))
+      return alert("الرجاء اختيار ملف صورة صالح.");
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -95,25 +147,52 @@ export default function ProfileView({
         let width = img.width;
         let height = img.height;
         if (width > height) {
-          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
         } else {
-          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
         }
-        canvas.width = width; canvas.height = height;
+        canvas.width = width;
+        canvas.height = height;
         canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
         try {
           await updateDoc(doc(db, "users", user.uid), { photoURL: dataUrl });
-          const collectionsToUpdate = ["global_chat", "discussions", "suggestions"];
+          const collectionsToUpdate = [
+            "global_chat",
+            "discussions",
+            "suggestions",
+          ];
           for (const col of collectionsToUpdate) {
-            getDocs(query(collection(db, col), where("userId", "==", user.uid))).then(snap => {
-              snap.forEach(docSnap => updateDoc(doc(db, col, docSnap.id), { userPhoto: dataUrl }).catch(() => {}));
+            getDocs(
+              query(collection(db, col), where("userId", "==", user.uid)),
+            ).then((snap) => {
+              snap.forEach((docSnap) =>
+                updateDoc(doc(db, col, docSnap.id), {
+                  userPhoto: dataUrl,
+                }).catch(() => {}),
+              );
             });
           }
-          getDocs(collection(db, "discussions")).then(discSnap => {
-            discSnap.forEach(discDoc => {
-              getDocs(query(collection(db, "discussions", discDoc.id, "replies"), where("userId", "==", user.uid))).then(repliesSnap => {
-                repliesSnap.forEach(replyDoc => updateDoc(doc(db, "discussions", discDoc.id, "replies", replyDoc.id), { userPhoto: dataUrl }).catch(() => {}));
+          getDocs(collection(db, "discussions")).then((discSnap) => {
+            discSnap.forEach((discDoc) => {
+              getDocs(
+                query(
+                  collection(db, "discussions", discDoc.id, "replies"),
+                  where("userId", "==", user.uid),
+                ),
+              ).then((repliesSnap) => {
+                repliesSnap.forEach((replyDoc) =>
+                  updateDoc(
+                    doc(db, "discussions", discDoc.id, "replies", replyDoc.id),
+                    { userPhoto: dataUrl },
+                  ).catch(() => {}),
+                );
               });
             });
           });
@@ -126,28 +205,42 @@ export default function ProfileView({
     reader.readAsDataURL(file);
   };
 
-  const handleExhibitionFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExhibitionFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return alert("الرجاء اختيار ملف صورة صالح.");
+    if (!file.type.startsWith("image/"))
+      return alert("الرجاء اختيار ملف صورة صالح.");
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = async () => {
         const canvas = document.createElement("canvas");
         const MAX_SIZE = 800;
-        let width = img.width; let height = img.height;
+        let width = img.width;
+        let height = img.height;
         if (width > height) {
-          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
         } else {
-          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
         }
-        canvas.width = width; canvas.height = height;
+        canvas.width = width;
+        canvas.height = height;
         canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
         try {
           await addDoc(collection(db, "exhibitions"), {
-            url: dataUrl, userId: user.uid, userName: user.displayName, timestamp: serverTimestamp(),
+            url: dataUrl,
+            userId: user.uid,
+            userName: user.displayName,
+            timestamp: serverTimestamp(),
           });
         } catch (err) {
           handleFirestoreError(err, OperationType.WRITE, "exhibitions");
@@ -165,141 +258,228 @@ export default function ProfileView({
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
-  const achievementCount = BADGES.filter(b => user.xp >= b.minXp).length;
+  const achievementCount = BADGES.filter((b) => user.xp >= b.minXp).length;
   const userRank = getAstronautRank(user.xp);
   const rankColor = userRank.color.replace("text-", "bg-");
   const rankTextColor = userRank.color;
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-24 overflow-x-hidden min-h-screen font-sans selection:bg-indigo-500/30 text-white" dir="rtl">
-      
+    <div
+      className="w-full max-w-6xl mx-auto pb-24 overflow-x-hidden min-h-screen font-sans selection:bg-indigo-500/30 text-white"
+      dir={isAr ? "rtl" : "ltr"}
+    >
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-[-1] pointer-events-none opacity-40">
-         <div className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] bg-indigo-600/20 blur-[120px] rounded-full mix-blend-screen animate-[pulse_10s_ease-in-out_infinite]" />
-         <div className="absolute bottom-[20%] right-[10%] w-[50vw] h-[50vw] bg-fuchsia-600/10 blur-[150px] rounded-full mix-blend-screen animate-[pulse_15s_ease-in-out_infinite_reverse]" />
+        <div className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] bg-indigo-600/20 blur-[120px] rounded-full mix-blend-screen animate-[pulse_10s_ease-in-out_infinite]" />
+        <div className="absolute bottom-[20%] right-[10%] w-[50vw] h-[50vw] bg-fuchsia-600/10 blur-[150px] rounded-full mix-blend-screen animate-[pulse_15s_ease-in-out_infinite_reverse]" />
       </div>
 
       {/* Main Profile Hero Section */}
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative mb-12">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative mb-12"
+      >
         <div className="bg-[#080b1a]/80 backdrop-blur-3xl border border-indigo-500/20 rounded-[3rem] p-8 md:p-12 shadow-[0_0_80px_rgba(30,27,75,0.8)] overflow-hidden relative group">
           {/* Subtle Grid Pattern Overlay */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] opacity-20 pointer-events-none" />
 
           {/* Action Buttons Top Left */}
           <div className="absolute top-8 left-8 flex gap-3 z-20">
-             <button onClick={() => setIsEditing(!isEditing)} className="p-3 bg-white/5 hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/50 rounded-2xl transition-all group/edit shadow-lg">
-                <Edit3 className="w-5 h-5 text-indigo-300 group-hover/edit:text-indigo-200" />
-             </button>
-             <button onClick={logout} className="p-3 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 rounded-2xl transition-all group/logout shadow-lg">
-                <LogOut className="w-5 h-5 text-red-300 group-hover/logout:text-red-200" />
-             </button>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="p-3 bg-white/5 hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/50 rounded-2xl transition-all group/edit shadow-lg"
+            >
+              <Edit3 className="w-5 h-5 text-indigo-300 group-hover/edit:text-indigo-200" />
+            </button>
+            <button
+              onClick={logout}
+              className="p-3 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 rounded-2xl transition-all group/logout shadow-lg"
+            >
+              <LogOut className="w-5 h-5 text-red-300 group-hover/logout:text-red-200" />
+            </button>
           </div>
-          
+
           <div className="flex flex-col md:flex-row items-center gap-10 md:gap-14 relative z-10 w-full text-center md:text-right">
-             
-             {/* Avatar with Orbit */}
-             <div className="relative w-48 h-48 md:w-56 md:h-56 shrink-0 flex items-center justify-center">
-                {/* Rotating Rings */}
-                <div className="absolute inset-0 border-[1px] border-indigo-500/20 rounded-full animate-[spin_10s_linear_infinite]" />
-                <div className="absolute inset-2 border-[1px] border-dashed border-fuchsia-500/30 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
-                
-                {/* Glowing Aura based on Rank */}
-                <div className={cn("absolute inset-6 rounded-full blur-[40px] opacity-60 animate-[pulse_4s_ease-in-out_infinite]", rankColor)} />
-                
-                {/* Level Badge Float - Top Left */}
-                <motion.div 
-                  initial={{ y: 0 }} 
-                  animate={{ y: [-5, 5, -5] }} 
-                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                  className={cn("absolute top-2 left-2 px-3 py-1.5 rounded-full text-[11px] font-black border z-30 shadow-[0_0_20px_currentColor] flex items-center gap-1", rankColor.replace('bg-', 'text-'), "border-current bg-[#080b1a]")}
-                >
-                  <Award size={12} />
-                  LVL {user.level}
-                </motion.div>
+            {/* Avatar with Orbit */}
+            <div className="relative w-48 h-48 md:w-56 md:h-56 shrink-0 flex items-center justify-center">
+              {/* Rotating Rings */}
+              <div className="absolute inset-0 border-[1px] border-indigo-500/20 rounded-full animate-[spin_10s_linear_infinite]" />
+              <div className="absolute inset-2 border-[1px] border-dashed border-fuchsia-500/30 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
 
-                {/* Main Avatar Avatar */}
-                <div 
-                  className={cn("w-36 h-36 md:w-44 md:h-44 rounded-full border-4 relative z-20 overflow-hidden cursor-pointer group/avatar max-w-full bg-[#080b1a] shrink-0", "border-indigo-400")}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                  <img src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`} alt={user.displayName} className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110" referrerPolicy="no-referrer" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-xs font-bold text-white tracking-widest uppercase flex flex-col items-center gap-1"><ImageIcon size={16} />تغيير الصورة</span>
-                  </div>
+              {/* Glowing Aura based on Rank */}
+              <div
+                className={cn(
+                  "absolute inset-6 rounded-full blur-[40px] opacity-60 animate-[pulse_4s_ease-in-out_infinite]",
+                  rankColor,
+                )}
+              />
+
+              {/* Level Badge Float - Top Left */}
+              <motion.div
+                initial={{ y: 0 }}
+                animate={{ y: [-5, 5, -5] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 4,
+                  ease: "easeInOut",
+                }}
+                className={cn(
+                  "absolute top-2 left-2 px-3 py-1.5 rounded-full text-[11px] font-black border z-30 shadow-[0_0_20px_currentColor] flex items-center gap-1",
+                  rankColor.replace("bg-", "text-"),
+                  "border-current bg-[#080b1a]",
+                )}
+              >
+                <Award size={12} />
+                LVL {user.level}
+              </motion.div>
+
+              {/* Main Avatar Avatar */}
+              <div
+                className={cn(
+                  "w-36 h-36 md:w-44 md:h-44 rounded-full border-4 relative z-20 overflow-hidden cursor-pointer group/avatar max-w-full bg-[#080b1a] shrink-0",
+                  "border-indigo-400",
+                )}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <img
+                  src={
+                    user.photoURL ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`
+                  }
+                  alt={user.displayName}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-xs font-bold text-white tracking-widest uppercase flex flex-col items-center gap-1">
+                    <ImageIcon size={16} />
+                    تغيير الصورة
+                  </span>
                 </div>
+              </div>
 
-                {/* XP Circular Progress */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none -rotate-90 scale-[0.85]" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
-                  <motion.circle 
-                    cx="50" cy="50" r="48" fill="none" 
-                    stroke="url(#xpGradient)" strokeWidth="4" 
-                    strokeLinecap="round" strokeDasharray={`${userRank.progressPercentage * 3.01} 301`}
-                    initial={{ strokeDasharray: "0 301" }}
-                    animate={{ strokeDasharray: `${userRank.progressPercentage * 3.01} 301` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
+              {/* XP Circular Progress */}
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none -rotate-90 scale-[0.85]"
+                viewBox="0 0 100 100"
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.05)"
+                  strokeWidth="4"
+                />
+                <motion.circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="none"
+                  stroke="url(#xpGradient)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={`${userRank.progressPercentage * 3.01} 301`}
+                  initial={{ strokeDasharray: "0 301" }}
+                  animate={{
+                    strokeDasharray: `${userRank.progressPercentage * 3.01} 301`,
+                  }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                />
+                <defs>
+                  <linearGradient
+                    id="xpGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#c084fc" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            {/* Inner Details */}
+            <div className="flex-1 space-y-5">
+              {isEditing ? (
+                <div className="space-y-4 max-w-xl text-right ml-auto">
+                  <input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="الأسم المستعار..."
+                    className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-5 py-3 focus:outline-none focus:border-indigo-400 text-2xl font-bold font-display shadow-inner"
                   />
-                  <defs>
-                    <linearGradient id="xpGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#818cf8" />
-                      <stop offset="100%" stopColor="#c084fc" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-             </div>
-
-             {/* Inner Details */}
-             <div className="flex-1 space-y-5">
-               {isEditing ? (
-                  <div className="space-y-4 max-w-xl text-right ml-auto">
-                    <input
-                      value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="الأسم المستعار..."
-                      className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-5 py-3 focus:outline-none focus:border-indigo-400 text-2xl font-bold font-display shadow-inner"
-                    />
-                    <input
-                      value={missionRoleStr} onChange={(e) => setMissionRoleStr(e.target.value)}
-                      placeholder="تخصصك الفضائي (مثل مبرمج، مهندس، الخ)..."
-                      className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-indigo-400 text-sm font-mono text-indigo-300"
-                    />
-                    <textarea
-                      value={bio} onChange={(e) => setBio(e.target.value)}
-                      placeholder="اكتب نبذتك..." rows={3}
-                      className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-400 text-sm resize-none"
-                    />
-                    <button onClick={handleUpdateBio} className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all flex items-center justify-center gap-2 w-full sm:w-auto ml-0">
-                      <CheckCircle size={16} /> حفظ الهوية
-                    </button>
-                  </div>
-               ) : (
-                  <>
-                    <div>
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[11px] font-mono tracking-widest text-indigo-300 mb-4 shadow-sm">
-                        <Rocket size={12} className="text-fuchsia-400" />
-                        {user.missionRole || "ROOKIE EXPLORER"}
-                      </div>
-                      <h1 className="text-4xl md:text-5xl font-black font-display tracking-tight text-white drop-shadow-lg mb-2 flex items-center gap-3">
-                        {user.displayName}
-                        {isStudying && (
-                           <span className="relative flex h-3 w-3" title="في وضع التركيز">
-                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                           </span>
-                        )}
-                      </h1>
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className={cn("text-lg font-bold drop-shadow-md", rankTextColor)}>{userRank.title}</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-600" />
-                        <span className="text-sm font-mono text-gray-400 bg-white/5 px-2 py-0.5 rounded-md">{user.xp} XP</span>
-                      </div>
-                      <div className="max-w-2xl text-gray-400 text-[15px] leading-relaxed">
-                        {user.bio || "مجرد شرارة تسبح في سديم واسع. لم يكتب صاحب هذا الحساب قصته بعد."}
-                      </div>
+                  <input
+                    value={missionRoleStr}
+                    onChange={(e) => setMissionRoleStr(e.target.value)}
+                    placeholder="تخصصك الفضائي (مثل مبرمج، مهندس، الخ)..."
+                    className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-indigo-400 text-sm font-mono text-indigo-300"
+                  />
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="اكتب نبذتك..."
+                    rows={3}
+                    className="w-full bg-[#0a0f25] border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-400 text-sm resize-none"
+                  />
+                  <button
+                    onClick={handleUpdateBio}
+                    className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all flex items-center justify-center gap-2 w-full sm:w-auto ml-0"
+                  >
+                    <CheckCircle size={16} /> حفظ الهوية
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[11px] font-mono tracking-widest text-indigo-300 mb-4 shadow-sm">
+                      <Rocket size={12} className="text-fuchsia-400" />
+                      {user.missionRole || "ROOKIE EXPLORER"}
                     </div>
-                  </>
-               )}
-             </div>
+                    <h1 className="text-4xl md:text-5xl font-black font-display tracking-tight text-white drop-shadow-lg mb-2 flex items-center gap-3">
+                      {user.displayName}
+                      {isStudying && (
+                        <span
+                          className="relative flex h-3 w-3"
+                          title="في وضع التركيز"
+                        >
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                      )}
+                    </h1>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span
+                        className={cn(
+                          "text-lg font-bold drop-shadow-md",
+                          rankTextColor,
+                        )}
+                      >
+                        {userRank.title}
+                      </span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                      <span className="text-sm font-mono text-gray-400 bg-white/5 px-2 py-0.5 rounded-md">
+                        {user.xp} XP
+                      </span>
+                    </div>
+                    <div className="max-w-2xl text-gray-400 text-[15px] leading-relaxed">
+                      {user.bio ||
+                        "مجرد شرارة تسبح في سديم واسع. لم يكتب صاحب هذا الحساب قصته بعد."}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -309,217 +489,385 @@ export default function ProfileView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
         {/* Left/Main Column */}
         <div className="lg:col-span-3 space-y-6">
-           
-           {/* Stats Section - Premium Glass Cards */}
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { title: "الخبرة الكلية", value: `${user.xp || 0} XP`, icon: <Zap size={20}/>, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-                { title: "ساعات التركيز", value: `${Math.round((user.xp / 60) * 10) / 10} س`, icon: <Clock size={20}/>, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-                { title: "النزالات الفائزة", value: user.challengeWins || 0, icon: <Swords size={20}/>, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
-                { title: "الأصدقاء", value: friends.length, icon: <Users size={20}/>, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }
-              ].map((stat, i) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-                  key={i} 
-                  className={`p-5 rounded-3xl bg-[#080b1a]/40 backdrop-blur-md border ${stat.border} hover:bg-[#080b1a]/80 transition-colors group relative overflow-hidden`}
+          {/* Stats Section - Premium Glass Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {
+                title: "الخبرة الكلية",
+                value: `${user.xp || 0} XP`,
+                icon: <Zap size={20} />,
+                color: "text-amber-400",
+                bg: "bg-amber-500/10",
+                border: "border-amber-500/20",
+              },
+              {
+                title: "ساعات التركيز",
+                value: `${Math.round((user.xp / 60) * 10) / 10} س`,
+                icon: <Clock size={20} />,
+                color: "text-blue-400",
+                bg: "bg-blue-500/10",
+                border: "border-blue-500/20",
+              },
+              {
+                title: "النزالات الفائزة",
+                value: user.challengeWins || 0,
+                icon: <Swords size={20} />,
+                color: "text-indigo-400",
+                bg: "bg-indigo-500/10",
+                border: "border-indigo-500/20",
+              },
+              {
+                title: "الأصدقاء",
+                value: friends.length,
+                icon: <Users size={20} />,
+                color: "text-emerald-400",
+                bg: "bg-emerald-500/10",
+                border: "border-emerald-500/20",
+              },
+            ].map((stat, i) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                key={i}
+                className={`p-5 rounded-3xl bg-[#080b1a]/40 backdrop-blur-md border ${stat.border} hover:bg-[#080b1a]/80 transition-colors group relative overflow-hidden`}
+              >
+                <div
+                  className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full ${stat.bg} -translate-y-8 translate-x-8 group-hover:scale-150 transition-transform duration-700 ease-out`}
+                />
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 shadow-lg ${stat.bg} ${stat.color} relative z-10 group-hover:scale-110 transition-transform`}
                 >
-                  <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full ${stat.bg} -translate-y-8 translate-x-8 group-hover:scale-150 transition-transform duration-700 ease-out`} />
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 shadow-lg ${stat.bg} ${stat.color} relative z-10 group-hover:scale-110 transition-transform`}>
-                    {stat.icon}
-                  </div>
-                  <div className="relative z-10 flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">{stat.title}</p>
-                      <p className={`text-2xl font-black font-display font-mono ${stat.color} drop-shadow-md`}>{stat.value}</p>
-                    </div>
-                    {stat.title === "الأصدقاء" && friends.length > 0 && (
-                       <div className="flex -space-x-2 space-x-reverse mb-1">
-                          {friends.slice(0, 3).map((f, idx) => (
-                             <img key={idx} src={f.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${f.uid}`} alt={f.displayName} className="w-6 h-6 rounded-full border-2 border-[#080b1a] object-cover" referrerPolicy="no-referrer" />
-                          ))}
-                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-           </div>
-
-           {/* Achievements Galaxy Section */}
-           <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-10 relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none"><Globe size={150} /></div>
-             <div className="flex items-center justify-between mb-8 relative z-10">
-                <div>
-                  <h3 className="text-2xl font-black font-display text-white flex items-center gap-3"><Star className="text-amber-400" /> مجرة الإنجازات</h3>
-                  <p className="text-sm text-gray-400 font-mono mt-1">{achievementCount} / {BADGES.length} UNLOCKED</p>
+                  {stat.icon}
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">التقدم الكلي</div>
-                  <div className="w-32 h-2 bg-black rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-amber-500/80 rounded-full" style={{ width: `${(achievementCount / BADGES.length) * 100}%` }} />
+                <div className="relative z-10 flex items-end justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                      {stat.title}
+                    </p>
+                    <p
+                      className={`text-2xl font-black font-display font-mono ${stat.color} drop-shadow-md`}
+                    >
+                      {stat.value}
+                    </p>
                   </div>
-                </div>
-             </div>
-
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 relative z-10">
-                {BADGES.map((badge, i) => {
-                  const unlocked = user.xp >= badge.minXp || (user.badges && user.badges.includes(badge.id));
-                  // Rarity logic mock for visuals
-                  const rarity = badge.minXp > 50000 ? "Legendary" : badge.minXp > 10000 ? "Epic" : badge.minXp > 1000 ? "Rare" : "Common";
-                  const rarityColors = {
-                    Legendary: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40 shadow-[0_0_20px_theme(colors.fuchsia.500/30)]",
-                    Epic: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30 shadow-[0_0_15px_theme(colors.indigo.500/20)]",
-                    Rare: "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_10px_theme(colors.blue.500/20)]",
-                    Common: "bg-green-500/10 text-green-400 border-green-500/20"
-                  };
-
-                  return (
-                    <div key={i} className={`p-4 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all duration-300 ${unlocked ? 'bg-[#0a0f25] border border-white/10 hover:-translate-y-1 hover:shadow-xl' : 'bg-black/40 border border-white/5 opacity-50 blur-[0.5px] hover:blur-none hover:opacity-100'}`}>
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3 transition-transform duration-500 group-hover:scale-110 ${unlocked ? rarityColors[rarity] : 'bg-white/5 text-gray-500 border-white/10'}`}>
-                         {unlocked ? badge.icon : <Shield size={20} />}
-                      </div>
-                      <h4 className={`font-bold text-[13px] mb-1 leading-tight ${unlocked ? 'text-white' : 'text-gray-500'}`}>{badge.title}</h4>
-                      <p className="text-[10px] text-gray-500 font-mono tracking-widest">{badge.minXp} XP</p>
-                      
-                      {/* Hover Tooltip/Detail inside the card container for simplicity (modern SaaS pop) */}
-                      <div className="absolute inset-0 bg-[#0a0f25]/95 backdrop-blur-md rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 border border-white/20 p-4 flex flex-col items-center justify-center text-center shadow-2xl z-50">
-                         <div className={`text-xl mb-2 ${unlocked ? rarityColors[rarity] : 'text-gray-500'}`}>{unlocked ? badge.icon : <Shield size={20} />}</div>
-                         <h4 className={`font-bold text-[13px] mb-1 ${unlocked ? 'text-white' : 'text-gray-500'}`}>{badge.title}</h4>
-                         <p className="text-[10px] text-gray-400 leading-tight mb-2 line-clamp-3">{unlocked ? badge.description : "مغلق. احصل على المزيد من الطاقة لفتحه."}</p>
-                         <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${unlocked ? rarityColors[rarity] : 'bg-white/5 text-gray-600'}`}>
-                           {unlocked ? rarity : 'LOCKED'}
-                         </span>
-                      </div>
+                  {stat.title === "الأصدقاء" && friends.length > 0 && (
+                    <div className="flex -space-x-2 space-x-reverse mb-1">
+                      {friends.slice(0, 3).map((f, idx) => (
+                        <img
+                          key={idx}
+                          src={
+                            f.photoURL ||
+                            `https://api.dicebear.com/7.x/bottts/svg?seed=${f.uid}`
+                          }
+                          alt={f.displayName}
+                          className="w-6 h-6 rounded-full border-2 border-[#080b1a] object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ))}
                     </div>
-                  )
-                })}
-             </div>
-           </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-           {/* Smart Analytics / Activity Box Placeholder (Futuristic layout)
+          {/* Achievements Galaxy Section */}
+          <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+              <Globe size={150} />
+            </div>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div>
+                <h3 className="text-2xl font-black font-display text-white flex items-center gap-3">
+                  <Star className="text-amber-400" /> مجرة الإنجازات
+                </h3>
+                <p className="text-sm text-gray-400 font-mono mt-1">
+                  {achievementCount} / {BADGES.length} UNLOCKED
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">
+                  التقدم الكلي
+                </div>
+                <div className="w-32 h-2 bg-black rounded-full overflow-hidden border border-white/5">
+                  <div
+                    className="h-full bg-amber-500/80 rounded-full"
+                    style={{
+                      width: `${(achievementCount / BADGES.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 relative z-10">
+              {BADGES.map((badge, i) => {
+                const unlocked =
+                  user.xp >= badge.minXp ||
+                  (user.badges && user.badges.includes(badge.id));
+                // Rarity logic mock for visuals
+                const rarity =
+                  badge.minXp > 50000
+                    ? "Legendary"
+                    : badge.minXp > 10000
+                      ? "Epic"
+                      : badge.minXp > 1000
+                        ? "Rare"
+                        : "Common";
+                const rarityColors = {
+                  Legendary:
+                    "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40 shadow-[0_0_20px_theme(colors.fuchsia.500/30)]",
+                  Epic: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30 shadow-[0_0_15px_theme(colors.indigo.500/20)]",
+                  Rare: "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_10px_theme(colors.blue.500/20)]",
+                  Common: "bg-green-500/10 text-green-400 border-green-500/20",
+                };
+
+                return (
+                  <div
+                    key={i}
+                    className={`p-4 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all duration-300 ${unlocked ? "bg-[#0a0f25] border border-white/10 hover:-translate-y-1 hover:shadow-xl" : "bg-black/40 border border-white/5 opacity-50 blur-[0.5px] hover:blur-none hover:opacity-100"}`}
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3 transition-transform duration-500 group-hover:scale-110 ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-500 border-white/10"}`}
+                    >
+                      {unlocked ? badge.icon : <Shield size={20} />}
+                    </div>
+                    <h4
+                      className={`font-bold text-[13px] mb-1 leading-tight ${unlocked ? "text-white" : "text-gray-500"}`}
+                    >
+                      {badge.title}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 font-mono tracking-widest">
+                      {badge.minXp} XP
+                    </p>
+
+                    {/* Hover Tooltip/Detail inside the card container for simplicity (modern SaaS pop) */}
+                    <div className="absolute inset-0 bg-[#0a0f25]/95 backdrop-blur-md rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 border border-white/20 p-4 flex flex-col items-center justify-center text-center shadow-2xl z-50">
+                      <div
+                        className={`text-xl mb-2 ${unlocked ? rarityColors[rarity] : "text-gray-500"}`}
+                      >
+                        {unlocked ? badge.icon : <Shield size={20} />}
+                      </div>
+                      <h4
+                        className={`font-bold text-[13px] mb-1 ${unlocked ? "text-white" : "text-gray-500"}`}
+                      >
+                        {badge.title}
+                      </h4>
+                      <p className="text-[10px] text-gray-400 leading-tight mb-2 line-clamp-3">
+                        {unlocked
+                          ? badge.description
+                          : "مغلق. احصل على المزيد من الطاقة لفتحه."}
+                      </p>
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-600"}`}
+                      >
+                        {unlocked ? rarity : "LOCKED"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Smart Analytics / Activity Box Placeholder (Futuristic layout)
                We use FocusHeatmap and mock a tech-like timeline
            */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative group">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/10 rounded-br-full -translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
-                <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6"><BarChart3 className="text-blue-400" /> تحليل النشاط الأسبوعي</h3>
-                <div className="relative z-10 w-full overflow-x-auto pb-4 custom-scrollbar">
-                   <FocusHeatmap />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative group">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/10 rounded-br-full -translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
+              <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6">
+                <BarChart3 className="text-blue-400" /> تحليل النشاط الأسبوعي
+              </h3>
+              <div className="relative z-10 w-full overflow-x-auto pb-4 custom-scrollbar">
+                <FocusHeatmap />
               </div>
+            </div>
 
-              <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative">
-                <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6"><Activity className="text-fuchsia-400" /> سجل العمليات</h3>
-                <div className="space-y-4">
-                  {/* Mock Activity nodes strictly visual based on data */}
-                  <div className="flex gap-4 relative">
-                    <div className="w-px h-full bg-gradient-to-b from-fuchsia-500 to-transparent absolute right-3 top-6" />
-                    <div className="w-6 h-6 rounded-full bg-fuchsia-500/20 border border-fuchsia-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.fuchsia.500/30)]"><Zap size={12} className="text-fuchsia-400" /></div>
-                    <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                      <p className="text-[13px] font-bold text-white mb-0.5">ترقية الرتبة المحتملة</p>
-                      <p className="text-[11px] text-gray-400">أنت في مستوى {userRank.title}. استمر لتحصل على {userRank.nextRankTitle}.</p>
-                    </div>
+            <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative">
+              <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6">
+                <Activity className="text-fuchsia-400" /> سجل العمليات
+              </h3>
+              <div className="space-y-4">
+                {/* Mock Activity nodes strictly visual based on data */}
+                <div className="flex gap-4 relative">
+                  <div className="w-px h-full bg-gradient-to-b from-fuchsia-500 to-transparent absolute right-3 top-6" />
+                  <div className="w-6 h-6 rounded-full bg-fuchsia-500/20 border border-fuchsia-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.fuchsia.500/30)]">
+                    <Zap size={12} className="text-fuchsia-400" />
                   </div>
-                  <div className="flex gap-4 relative">
-                    <div className="w-px h-full bg-gradient-to-b from-indigo-500 to-transparent absolute right-3 top-6 opacity-50" />
-                    <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.indigo.500/30)]"><Clock size={12} className="text-indigo-400" /></div>
-                    <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                      <p className="text-[13px] font-bold text-white mb-0.5">إجمالي ساعات محركك</p>
-                      <p className="text-[11px] text-gray-400">أكملت {formatTime(user.totalFocusTime)} من التركيز العميق.</p>
-                    </div>
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
+                    <p className="text-[13px] font-bold text-white mb-0.5">
+                      ترقية الرتبة المحتملة
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      أنت في مستوى {userRank.title}. استمر لتحصل على{" "}
+                      {userRank.nextRankTitle}.
+                    </p>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.emerald.500/30)]"><Award size={12} className="text-emerald-400" /></div>
-                    <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                      <p className="text-[13px] font-bold text-white mb-0.5">الاستقرار المداري</p>
-                      <p className="text-[11px] text-gray-400">محرك النبض نشط ومستقر. استمر في التدرب والدراسة للحفاظ على ريادتك في الفضاء.</p>
-                    </div>
+                </div>
+                <div className="flex gap-4 relative">
+                  <div className="w-px h-full bg-gradient-to-b from-indigo-500 to-transparent absolute right-3 top-6 opacity-50" />
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.indigo.500/30)]">
+                    <Clock size={12} className="text-indigo-400" />
+                  </div>
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
+                    <p className="text-[13px] font-bold text-white mb-0.5">
+                      إجمالي ساعات محركك
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      أكملت {formatTime(user.totalFocusTime)} من التركيز العميق.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.emerald.500/30)]">
+                    <Award size={12} className="text-emerald-400" />
+                  </div>
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
+                    <p className="text-[13px] font-bold text-white mb-0.5">
+                      الاستقرار المداري
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      محرك النبض نشط ومستقر. استمر في التدرب والدراسة للحفاظ على
+                      ريادتك في الفضاء.
+                    </p>
                   </div>
                 </div>
               </div>
-           </div>
+            </div>
+          </div>
         </div>
 
         {/* Right/Side Column */}
         <div className="lg:col-span-1 space-y-6 flex flex-col">
-          
           {/* Exhibitions Gallery Redesign - Masonry feel */}
           <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-indigo-400/20 rounded-[3rem] p-6 flex flex-col h-full relative overflow-hidden">
-             
-             <div className="flex items-center justify-between mb-6">
-                <div>
-                   <h3 className="text-lg font-black font-display text-white flex items-center gap-2"><ImageIcon className="w-5 h-5 text-indigo-400" /> معرض الذكريات</h3>
-                   <p className="text-[11px] text-gray-500 font-mono mt-1">{exhibitions.length} MEDIA LOGS</p>
-                </div>
-                <button
-                  onClick={() => fileInputExhibitionRef.current?.click()}
-                  className="w-10 h-10 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-full transition-all flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_theme(colors.indigo.500/50)] group/plus"
-                >
-                  <Plus size={18} className="group-hover/plus:rotate-90 transition-transform" />
-                </button>
-                <input type="file" ref={fileInputExhibitionRef} onChange={handleExhibitionFileChange} accept="image/*" className="hidden" />
-             </div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-black font-display text-white flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-indigo-400" /> معرض
+                  الذكريات
+                </h3>
+                <p className="text-[11px] text-gray-500 font-mono mt-1">
+                  {exhibitions.length} MEDIA LOGS
+                </p>
+              </div>
+              <button
+                onClick={() => fileInputExhibitionRef.current?.click()}
+                className="w-10 h-10 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-full transition-all flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_theme(colors.indigo.500/50)] group/plus"
+              >
+                <Plus
+                  size={18}
+                  className="group-hover/plus:rotate-90 transition-transform"
+                />
+              </button>
+              <input
+                type="file"
+                ref={fileInputExhibitionRef}
+                onChange={handleExhibitionFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
 
-             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1">
-                {exhibitions.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 pb-4">
-                    {exhibitions.map((ex, i) => (
-                      <motion.div
-                        key={ex.id}
-                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                        className={cn(
-                          "rounded-2xl overflow-hidden border border-white/10 bg-black relative group/ex",
-                          i % 3 === 0 ? "col-span-2 aspect-[2/1]" : "aspect-square"
-                        )}
-                      >
-                        {ex.url ? (
-                          <img src={ex.url} className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110" referrerPolicy="no-referrer" />
-                        ) : (
-                          <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">LOADING</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/ex:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                           <span className="text-[10px] font-mono text-gray-300 font-bold mb-2">
-                             {ex.timestamp ? new Date(ex.timestamp.toDate()).toLocaleDateString("en-US") : "LOG"}
-                           </span>
-                           {deletingExhibitionId === ex.id ? (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, "exhibitions", ex.id)).catch(() => {}); setDeletingExhibitionId(null); }}
-                                  className="flex-1 py-1 bg-red-500 text-white rounded-lg text-[10px] font-bold"
-                                >
-                                  حذف
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); setDeletingExhibitionId(null); }} className="flex-1 py-1 bg-white/20 text-white rounded-lg text-[10px] font-bold">
-                                  إلغاء
-                                </button>
-                              </div>
-                           ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setDeletingExhibitionId(ex.id); }}
-                                className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-md opacity-0 group-hover/ex:opacity-100 transition-all -translate-y-2 group-hover/ex:translate-y-0"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                           )}
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1">
+              {exhibitions.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 pb-4">
+                  {exhibitions.map((ex, i) => (
+                    <motion.div
+                      key={ex.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      className={cn(
+                        "rounded-2xl overflow-hidden border border-white/10 bg-black relative group/ex",
+                        i % 3 === 0
+                          ? "col-span-2 aspect-[2/1]"
+                          : "aspect-square",
+                      )}
+                    >
+                      {ex.url ? (
+                        <img
+                          src={ex.url}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover/ex:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">
+                          LOADING
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-48 flex flex-col items-center justify-center text-center opacity-50 relative group cursor-pointer" onClick={() => fileInputExhibitionRef.current?.click()}>
-                     <div className="absolute inset-0 border-2 border-dashed border-white/20 rounded-2xl group-hover:border-indigo-500/50 transition-colors" />
-                     <ImageIcon size={32} className="text-gray-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-500" />
-                     <p className="text-xs font-mono text-gray-400">NO MEDIA DETECTED<br/>CLICK TO UPLOAD LOG</p>
-                  </div>
-                )}
-             </div>
-
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/ex:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                        <span className="text-[10px] font-mono text-gray-300 font-bold mb-2">
+                          {ex.timestamp
+                            ? new Date(
+                                ex.timestamp.toDate(),
+                              ).toLocaleDateString("en-US")
+                            : "LOG"}
+                        </span>
+                        {deletingExhibitionId === ex.id ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteDoc(doc(db, "exhibitions", ex.id)).catch(
+                                  () => {},
+                                );
+                                setDeletingExhibitionId(null);
+                              }}
+                              className="flex-1 py-1 bg-red-500 text-white rounded-lg text-[10px] font-bold"
+                            >
+                              حذف
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingExhibitionId(null);
+                              }}
+                              className="flex-1 py-1 bg-white/20 text-white rounded-lg text-[10px] font-bold"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingExhibitionId(ex.id);
+                            }}
+                            className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-md opacity-0 group-hover/ex:opacity-100 transition-all -translate-y-2 group-hover/ex:translate-y-0"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="h-48 flex flex-col items-center justify-center text-center opacity-50 relative group cursor-pointer"
+                  onClick={() => fileInputExhibitionRef.current?.click()}
+                >
+                  <div className="absolute inset-0 border-2 border-dashed border-white/20 rounded-2xl group-hover:border-indigo-500/50 transition-colors" />
+                  <ImageIcon
+                    size={32}
+                    className="text-gray-500 mb-3 group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-500"
+                  />
+                  <p className="text-xs font-mono text-gray-400">
+                    NO MEDIA DETECTED
+                    <br />
+                    CLICK TO UPLOAD LOG
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

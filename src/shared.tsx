@@ -266,67 +266,93 @@ export const SURAHS = [
   "الناس",
 ];
 
-export const getAstronautRank = (xp: number, missionRole?: string) => {
-  const roleName = missionRole ? ` ${missionRole}` : "";
+export const getAstronautRank = (xp: number, missionRole?: string, lang: "ar" | "en" = "ar") => {
+  const roleSuffix = missionRole ? ` · ${missionRole}` : "";
+  const isEn = lang === "en";
+
+  const arTitles = [
+    "أول خطوة",
+    "مستكشف كوني",
+    "عاشق النجوم",
+    "رحالة فضائي",
+    "منضبط كوني",
+    "فارس الثقوب السوداء",
+    "خبير المجرة",
+    "حاكم سديم",
+    "أسطورة OrbitX"
+  ];
+
+  const enTitles = [
+    "First Step",
+    "Cosmic Explorer",
+    "Star Lover",
+    "Space Voyager",
+    "Cosmic Disciplined",
+    "Black Hole Knight",
+    "Galaxy Expert",
+    "Nebula Sovereign",
+    "OrbitX Legend"
+  ];
+
   const ranks = [
     {
-      title: `أول خطوة${roleName}`,
+      title: `${isEn ? enTitles[0] : arTitles[0]}${roleSuffix}`,
       color: "text-gray-400",
       icon: "👨‍🚀",
       planet: "bg-gray-500 shadow-gray-500/50",
       minXp: 0,
     },
     {
-      title: `مستكشف كوني${roleName}`,
+      title: `${isEn ? enTitles[1] : arTitles[1]}${roleSuffix}`,
       color: "text-green-400",
       icon: "🛰️",
       planet: "bg-green-500 shadow-green-500/50",
       minXp: 2000,
     },
     {
-      title: `عاشق النجوم${roleName}`,
+      title: `${isEn ? enTitles[2] : arTitles[2]}${roleSuffix}`,
       color: "text-blue-400",
       icon: "🚀",
       planet: "bg-blue-500 shadow-blue-500/50",
       minXp: 5000,
     },
     {
-      title: `رحالة فضائي${roleName}`,
+      title: `${isEn ? enTitles[3] : arTitles[3]}${roleSuffix}`,
       color: "text-purple-400",
       icon: "☄️",
       planet: "bg-purple-500 shadow-purple-500/50",
       minXp: 10000,
     },
     {
-      title: `منضبط كوني${roleName}`,
+      title: `${isEn ? enTitles[4] : arTitles[4]}${roleSuffix}`,
       color: "text-red-400",
       icon: "👨‍🚀",
       planet: "bg-red-500 shadow-red-500/50",
       minXp: 15000,
     },
     {
-      title: `فارس الثقوب السوداء${roleName}`,
+      title: `${isEn ? enTitles[5] : arTitles[5]}${roleSuffix}`,
       color: "text-orange-400",
       icon: "⚔️",
       planet: "bg-orange-500 shadow-orange-500/50",
       minXp: 22000,
     },
     {
-      title: `خبير المجرة${roleName}`,
+      title: `${isEn ? enTitles[6] : arTitles[6]}${roleSuffix}`,
       color: "text-indigo-500",
       icon: "👑",
       planet: "bg-indigo-500/20 shadow-indigo-400/50",
       minXp: 30000,
     },
     {
-      title: `حاكم سديم${roleName}`,
+      title: `${isEn ? enTitles[7] : arTitles[7]}${roleSuffix}`,
       color: "text-sky-400",
       icon: "⚡",
       planet: "bg-sky-500 shadow-sky-400/50",
       minXp: 40000,
     },
     {
-      title: `أسطورة OrbitX${roleName}`,
+      title: `${isEn ? enTitles[8] : arTitles[8]}${roleSuffix}`,
       color: "text-fuchsia-500",
       icon: "🌟",
       planet: "bg-fuchsia-500/20 shadow-fuchsia-400/50",
@@ -359,7 +385,7 @@ export const getAstronautRank = (xp: number, missionRole?: string) => {
   return {
     ...currentRank,
     progressPercentage,
-    nextRankTitle: nextRank ? nextRank.title : "أقصى رتبة",
+    nextRankTitle: nextRank ? nextRank.title : (isEn ? "Max Rank" : "أقصى رتبة"),
     nextRankMinXp: nextRank ? nextRank.minXp : currentRank.minXp,
   };
 };

@@ -178,10 +178,12 @@ import NavLink from './NavLink';
 import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function BlackHolesView({ user }: { user: UserData }) {
   const [globalProgress, setGlobalProgress] = useState(0);
   const [topContributors, setTopContributors] = useState<UserData[]>([]);
+  const { isAr, t } = useLanguage();
   const targetGoal = 1000;
 
   // calculate total focus sessions from all users
@@ -222,17 +224,19 @@ export default function BlackHolesView({ user }: { user: UserData }) {
   const progressPercent = Math.min((globalProgress / targetGoal) * 100, 100);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in relative z-10 px-4 md:px-0 mt-8 mb-32">
-      <div className="flex items-center gap-4 mb-8">
+    <div className={cn("max-w-5xl mx-auto space-y-8 animate-fade-in relative z-10 px-4 md:px-0 mt-8 mb-32", isAr ? "text-right" : "text-left")}>
+      <div className={cn("flex items-center gap-4 mb-8", isAr ? "flex-row" : "flex-row-reverse self-end justify-end")}>
         <div className="p-3 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 rounded-2xl border border-violet-500/30 text-violet-400">
           <Target size={28} />
         </div>
-        <div>
+        <div className={isAr ? "text-right" : "text-left"}>
           <h2 className="text-3xl font-bold font-display tracking-tight text-white mb-1">
-            الثقوب السوداء (تحديات جماعية)
+            {isAr ? "الثقوب السوداء (تحديات جماعية)" : "Black Holes (Cosmic Challenges)"}
           </h2>
           <p className="text-indigo-200">
-            تعاونوا مع جميع الرواد للوصول إلى الهدف وفك تشفير المعارف الكونية.
+            {isAr 
+              ? "تعاونوا مع جميع الرواد للوصول إلى الهدف وفك تشفير المعارف الكونية."
+              : "Collaborate with all cosmic pilots to reach target parameters and unlock classified space documents."}
           </p>
         </div>
       </div>
@@ -276,11 +280,12 @@ export default function BlackHolesView({ user }: { user: UserData }) {
             </div>
 
             <h3 className="text-2xl font-bold text-white mb-3 line-clamp-2 leading-snug">
-              تحدي الثقب الأسود: شفرة النجم المفقود
+              {isAr ? "تحدي الثقب الأسود: شفرة النجم المفقود" : "Black Hole: Code of the Lost Star"}
             </h3>
             <p className="text-indigo-200 mb-8 max-w-md leading-relaxed text-sm">
-              يجب على جميع رواد الفضاء في المنصة تجميع 1000 ساعة تركيز هذا
-              الأسبوع معاً لفك تشفير مقالة سرية جديدة في قسم الوعي الكوني.
+              {isAr
+                ? "يجب على جميع رواد الفضاء في المنصة تجميع 1000 ساعة تركيز هذا الأسبوع معاً لفك تشفير مقالة سرية جديدة في قسم الوعي الكوني."
+                : "All astronauts must collectively complete 1000 hours of focused study this week to decrypt and unlock a super-secret entry inside the Cosmic Awareness Hub."}
             </p>
 
             <div className="w-full max-w-md bg-black/50 rounded-full h-5 border border-white/10 overflow-hidden relative">
@@ -293,9 +298,11 @@ export default function BlackHolesView({ user }: { user: UserData }) {
             </div>
             <div className="flex justify-between w-full max-w-md mt-3 text-sm font-medium">
               <span className="text-violet-400">
-                {globalProgress} ساعة تركيز مكتملة
+                {isAr ? `${globalProgress} ساعة تركيز مكتملة` : `${globalProgress} hours focused completed`}
               </span>
-              <span className="text-gray-500">الهدف: {targetGoal} س</span>
+              <span className="text-gray-500">
+                {isAr ? `الهدف: ${targetGoal} س` : `Goal: ${targetGoal}h`}
+              </span>
             </div>
           </div>
         </div>
@@ -303,21 +310,22 @@ export default function BlackHolesView({ user }: { user: UserData }) {
         <div className="space-y-6">
           <div className="p-6 bg-[#0f1123]/80 backdrop-blur-md rounded-3xl border border-white/5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/50 to-transparent"></div>
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <h3 className={cn("text-lg font-bold text-white mb-4 flex items-center gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
               <Award size={20} className="text-fuchsia-400" />
-              الجائزة المخبأة
+              <span>{isAr ? "الجائزة المخبأة" : "Hidden Bounty"}</span>
             </h3>
-            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-4">
+            <div className={cn("p-4 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
               <div className="p-3 bg-black/50 rounded-xl">
                 <Lock size={20} className="text-gray-400" />
               </div>
-              <div>
+              <div className={isAr ? "text-right" : "text-left"}>
                 <h4 className="text-white font-bold mb-1 text-sm">
-                  ملف مشفر (التصنيف: سري للغاية)
+                  {isAr ? "ملف مشفر (التصنيف: سري للغاية)" : "Encrypted Archive (Classified: Top Secret)"}
                 </h4>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  يحتوي هذا الملف على حقائق قوية مخفية. لن يتم كشفها إلا بتعاون
-                  جميع الرواد!
+                  {isAr 
+                    ? "يحتوي هذا الملف على حقائق قوية مخفية. لن يتم كشفها إلا بتعاون جميع الرواد!"
+                    : "This entry contains deep classified cosmos wisdom. It will remain locked until collective goals are satisfied."}
                 </p>
               </div>
             </div>
@@ -325,18 +333,18 @@ export default function BlackHolesView({ user }: { user: UserData }) {
 
           <div className="p-6 bg-[#0f1123]/80 backdrop-blur-md rounded-3xl border border-white/5 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/50 to-transparent"></div>
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <h3 className={cn("text-lg font-bold text-white mb-4 flex items-center gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
               <Flame size={20} className="text-orange-400" />
-              أفضل المساهمين
+              <span>{isAr ? "أفضل المساهمين" : "Top Contributors"}</span>
             </h3>
             <div className="space-y-3">
               {topContributors.length > 0 ? (
                 topContributors.map((usr, i) => (
                   <div
                     key={usr.uid}
-                    className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors"
+                    className={cn("flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors", isAr ? "flex-row" : "flex-row-reverse")}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className={cn("flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
                       <div className="font-bold text-gray-500 w-4 text-center">
                         {i + 1}
                       </div>
@@ -350,17 +358,17 @@ export default function BlackHolesView({ user }: { user: UserData }) {
                         referrerPolicy="no-referrer"
                       />
                       <span className="text-sm text-gray-200 font-medium">
-                        {usr.displayName || "رائد مجهول"}
+                        {usr.displayName || (isAr ? "رائد مجهول" : "Anonymous Astronaut")}
                       </span>
                     </div>
                     <span className="text-xs text-orange-400 font-bold bg-orange-400/10 px-2 py-1 rounded-lg">
-                      {Math.round((usr.xp || 0) / 60)} س
+                      {Math.round((usr.xp || 0) / 60)} {isAr ? "س" : "h"}
                     </span>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-4 text-gray-400 text-sm">
-                  لا يوجد مساهمين بعد. كن أول من يساهم!
+                  {isAr ? "لا يوجد مساهمين بعد. كن أول من يساهم!" : "No contributors detected. Be the first to launch focus!"}
                 </div>
               )}
             </div>

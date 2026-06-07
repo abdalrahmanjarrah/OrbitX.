@@ -77,7 +77,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -127,60 +129,80 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import NotificationsDropdown from "./NotificationsDropdown";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import SuggestionsSection from "./SuggestionsSection";
+import QuranPlayer from "./QuranPlayer";
+import PersonalTasks from "./PersonalTasks";
+import StudyRoomView from "./StudyRoomView";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AwarenessView from "./AwarenessView";
+import AnalyticsView from "./AnalyticsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function FleetsView({ user }: { user: UserData }) {
+  const { isAr, t } = useLanguage();
   const [isConfirmingDisband, setIsConfirmingDisband] = useState(false);
   const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
 
@@ -228,7 +250,9 @@ export default function FleetsView({ user }: { user: UserData }) {
       }
     };
     fetchInvites();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [user.fleetInvites, user.fleetId]);
 
   const handleAcceptInvite = async (fleetId: string) => {
@@ -278,9 +302,12 @@ export default function FleetsView({ user }: { user: UserData }) {
         }
       });
     } else if (isMounted) {
-       setActiveFleet(null);
+      setActiveFleet(null);
     }
-    return () => { isMounted = false; unsub(); };
+    return () => {
+      isMounted = false;
+      unsub();
+    };
   }, [user.fleetId]);
 
   useEffect(() => {
@@ -303,7 +330,9 @@ export default function FleetsView({ user }: { user: UserData }) {
       }
     };
     fetchAllFleets();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [user.fleetId]);
 
   useEffect(() => {
@@ -455,7 +484,7 @@ export default function FleetsView({ user }: { user: UserData }) {
     return (
       <div
         className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
-        dir="rtl"
+        dir={isAr ? "rtl" : "ltr"}
       >
         {/* Style block for lightweight GPU-friendly CSS animations */}
         <style>{`
@@ -488,16 +517,31 @@ export default function FleetsView({ user }: { user: UserData }) {
             <div className="absolute w-[360px] h-[360px] border border-white/[0.025] rounded-full" />
             <div className="absolute w-[240px] h-[240px] border border-white/[0.035] rounded-full" />
             {/* Sweeper needle */}
-            <div className="absolute inset-0 rounded-full pointer-events-none" style={{ animation: 'radar-sweep 22s linear infinite' }}>
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ animation: "radar-sweep 22s linear infinite" }}
+            >
               <div className="absolute left-1/2 top-0 w-[1px] h-1/2 bg-gradient-to-b from-indigo-500/8 via-transparent to-transparent origin-bottom" />
             </div>
           </div>
 
           {/* Floating Drift Particles */}
-          <div className="absolute w-2 h-2 bg-indigo-400 rounded-full blur-[1px] opacity-10 animate-[particle-drift-1_15s_infinite_ease-in-out]" style={{ top: '25%', left: '15%' }} />
-          <div className="absolute w-1.5 h-1.5 bg-fuchsia-400 rounded-full blur-[1px] opacity-15 animate-[particle-drift-2_22s_infinite_ease-in-out]" style={{ bottom: '30%', left: '40%' }} />
-          <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-30" style={{ top: '15%', left: '75%', animationDuration: '3s' }} />
-          <div className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-20" style={{ bottom: '15%', left: '20%', animationDuration: '5s' }} />
+          <div
+            className="absolute w-2 h-2 bg-indigo-400 rounded-full blur-[1px] opacity-10 animate-[particle-drift-1_15s_infinite_ease-in-out]"
+            style={{ top: "25%", left: "15%" }}
+          />
+          <div
+            className="absolute w-1.5 h-1.5 bg-fuchsia-400 rounded-full blur-[1px] opacity-15 animate-[particle-drift-2_22s_infinite_ease-in-out]"
+            style={{ bottom: "30%", left: "40%" }}
+          />
+          <div
+            className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-30"
+            style={{ top: "15%", left: "75%", animationDuration: "3s" }}
+          />
+          <div
+            className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-20"
+            style={{ bottom: "15%", left: "20%", animationDuration: "5s" }}
+          />
 
           {/* Left Textual Info Module */}
           <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10 text-center lg:text-right w-full lg:w-auto">
@@ -509,7 +553,11 @@ export default function FleetsView({ user }: { user: UserData }) {
               {/* Centered Rocket with gentle hover drift */}
               <motion.div
                 animate={{ y: [0, -6, 0] }}
-                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 4.5,
+                  ease: "easeInOut",
+                }}
                 className="relative z-10"
               >
                 <Rocket className="w-14 h-14 text-indigo-400/90 filter drop-shadow-[0_0_15px_rgba(99,102,241,0.55)]" />
@@ -521,13 +569,24 @@ export default function FleetsView({ user }: { user: UserData }) {
                 الأساطيل الفضائية
               </h1>
               <p className="text-gray-300/95 max-w-xl text-sm md:text-base leading-relaxed font-sans">
-                أنت لست وحدك في هذا الكون المعرفي المهيب. تقدم وانضم إلى نخبة رواد الفضاء، أو أسس أسطولك الخاص لقيادة دفة التطوير، مشاركة التحديات، وتحقيق نقاط الخبرة كقوة موحدة!
+                أنت لست وحدك في هذا الكون المعرفي المهيب. تقدم وانضم إلى نخبة
+                رواد الفضاء، أو أسس أسطولك الخاص لقيادة دفة التطوير، مشاركة
+                التحديات، وتحقيق نقاط الخبرة كقوة موحدة!
               </p>
               {/* Features inline bento specifiers */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-5 text-xs text-gray-400 font-medium">
-                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><Users size={13} className="text-indigo-400" /> تحالف حتى 10 أعضاء</span>
-                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><MessageCircle size={13} className="text-fuchsia-400" /> غرف تواصل مدمجة</span>
-                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5"><Star size={13} className="text-yellow-400" /> منافسة XP جماعية</span>
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
+                  <Users size={13} className="text-indigo-400" /> تحالف حتى 10
+                  أعضاء
+                </span>
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
+                  <MessageCircle size={13} className="text-fuchsia-400" /> غرف
+                  تواصل مدمجة
+                </span>
+                <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
+                  <Star size={13} className="text-yellow-400" /> منافسة XP
+                  جماعية
+                </span>
               </div>
             </div>
           </div>
@@ -538,12 +597,14 @@ export default function FleetsView({ user }: { user: UserData }) {
               onClick={() => setIsCreating(true)}
               className={cn(
                 "w-full lg:w-auto font-black px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-3 text-base shadow-lg cursor-pointer",
-                "bg-gradient-to-l from-indigo-500 via-indigo-600 to-fuchsia-600 text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] border border-indigo-400/30"
+                "bg-gradient-to-l from-indigo-500 via-indigo-600 to-fuchsia-600 text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] border border-indigo-400/30",
               )}
             >
               <Plus size={22} className="animate-pulse" /> تأسيس أسطول جديد
             </button>
-            <span className="text-[10px] text-indigo-400/60 font-mono tracking-wider">المنصة متاحة لجميع رواد الفضاء</span>
+            <span className="text-[10px] text-indigo-400/60 font-mono tracking-wider">
+              المنصة متاحة لجميع رواد الفضاء
+            </span>
           </div>
         </div>
 
@@ -680,7 +741,9 @@ export default function FleetsView({ user }: { user: UserData }) {
                   <span className="text-yellow-400 font-black text-lg flex items-center gap-1">
                     <Star size={14} /> {fleet.xp}
                   </span>
-                  <span className="text-[10px] text-gray-500 font-medium">نقاط الخبرة</span>
+                  <span className="text-[10px] text-gray-500 font-medium">
+                    نقاط الخبرة
+                  </span>
                 </div>
                 <div className="flex flex-col items-center bg-white/[0.03] border border-white/5 rounded-xl py-2 px-1 hover:bg-white/[0.06] transition-colors">
                   <span className="text-sky-400 font-black text-lg flex items-center gap-1">
@@ -707,14 +770,17 @@ export default function FleetsView({ user }: { user: UserData }) {
               {/* Subtle background circles */}
               <div className="absolute w-72 h-72 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute w-[400px] h-[400px] border border-dashed border-white/[0.02] rounded-full pointer-events-none animate-[spin_60s_linear_infinite]" />
-              
+
               <div className="relative z-10 flex flex-col items-center max-w-md px-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/5 to-slate-800/10 rounded-full flex items-center justify-center mb-6 border border-white/5 shadow-inner">
                   <Rocket className="w-10 h-10 text-indigo-400/50 animate-bounce" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">المدار خالٍ بالكامل</h3>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  المدار خالٍ بالكامل
+                </h3>
                 <p className="text-gray-400/90 text-sm leading-relaxed mb-8">
-                  لا توجد أساطيل فضائية مسجلة في هذا القطاع حتى الآن. كن البادئ بالخطوة الأولى وأرسل رسالتك التاريخية لتأسيس أول حلف برّاق!
+                  لا توجد أساطيل فضائية مسجلة في هذا القطاع حتى الآن. كن البادئ
+                  بالخطوة الأولى وأرسل رسالتك التاريخية لتأسيس أول حلف برّاق!
                 </p>
                 <button
                   onClick={() => setIsCreating(true)}
@@ -733,7 +799,7 @@ export default function FleetsView({ user }: { user: UserData }) {
   return (
     <div
       className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
-      dir="rtl"
+      dir={isAr ? "rtl" : "ltr"}
     >
       <div className="bg-[#060713]/85 backdrop-blur-3xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
@@ -870,7 +936,10 @@ export default function FleetsView({ user }: { user: UserData }) {
                 className={`flex ${msg.userId === user.uid ? "justify-start md:flex-row" : "justify-end md:flex-row"} gap-3`}
               >
                 <img
-                  src={msg.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`}
+                  src={
+                    msg.userPhoto ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`
+                  }
                   alt=""
                   className="w-10 h-10 rounded-full border-2 border-white/10 shadow-sm"
                   referrerPolicy="no-referrer"
@@ -937,7 +1006,10 @@ export default function FleetsView({ user }: { user: UserData }) {
                 className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all group"
               >
                 <img
-                  src={m.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${m.uid}`}
+                  src={
+                    m.photoURL ||
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${m.uid}`
+                  }
                   alt=""
                   className="w-11 h-11 rounded-full border-2 border-white/10 group-hover:border-indigo-400 transition-colors shadow-sm"
                   referrerPolicy="no-referrer"

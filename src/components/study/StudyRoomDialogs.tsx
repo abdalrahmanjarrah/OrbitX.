@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { requestXpGrant } from "../../lib/xpSystem";
-import { serverTimestamp, deleteField, doc, deleteDoc } from "firebase/firestore";
+import { useLanguage } from "../../context/LanguageContext";
+import {
+  serverTimestamp,
+  deleteField,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "../../firebase";
 import { UserData, Room } from "../../shared";
 
@@ -120,6 +126,7 @@ function StudyRoomDialogsComponent({
   studyLinkRef,
 }: StudyRoomDialogsProps) {
   const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+  const { isAr, t } = useLanguage();
 
   React.useEffect(() => {
     if (!showDeleteDialog) {
@@ -127,7 +134,16 @@ function StudyRoomDialogsComponent({
     }
   }, [showDeleteDialog]);
 
-  useRenderLog("StudyRoomDialogs", { showBetModal, showAFKCheck, showFuelLeak, showAlert, showDeleteDialog, showExitDialog, showNextMissionModal, showStudyLinkModal });
+  useRenderLog("StudyRoomDialogs", {
+    showBetModal,
+    showAFKCheck,
+    showFuelLeak,
+    showAlert,
+    showDeleteDialog,
+    showExitDialog,
+    showNextMissionModal,
+    showStudyLinkModal,
+  });
   return (
     <>
       {/* Cosmic Loss Aversion Bet Modal */}
@@ -151,9 +167,9 @@ function StudyRoomDialogsComponent({
                 <br />
                 <br />
                 ضع <span className="text-orange-400 font-bold">رهاناً</span> من
-                نقاط الـ XP لبناء (درع السفينة). الخوف من خسارة الرتبة سيجبرك على
-                البقاء مركزاً! إذا تشتت أو فتحت نافذة أخرى سيبدأ الدرع بالتضرر
-                وتخسر نقاطك للأبد!
+                نقاط الـ XP لبناء (درع السفينة). الخوف من خسارة الرتبة سيجبرك
+                على البقاء مركزاً! إذا تشتت أو فتحت نافذة أخرى سيبدأ الدرع
+                بالتضرر وتخسر نقاطك للأبد!
               </p>
 
               {betError && (
@@ -175,7 +191,15 @@ function StudyRoomDialogsComponent({
                       }
 
                       try {
-                        requestXpGrant(user.uid, user.fleetId, null, false, -amount, "shield_bet_deduction", true);
+                        requestXpGrant(
+                          user.uid,
+                          user.fleetId,
+                          null,
+                          false,
+                          -amount,
+                          "shield_bet_deduction",
+                          true,
+                        );
                         currentBetRef.current = amount;
                         remainingShieldRef.current = amount;
                         setShieldPercent(100);
@@ -243,7 +267,15 @@ function StudyRoomDialogsComponent({
                 <button
                   onClick={() => {
                     setShowAFKCheck(false);
-                    requestXpGrant(user.uid, user.fleetId, null, false, 5, "afk_check", true);
+                    requestXpGrant(
+                      user.uid,
+                      user.fleetId,
+                      null,
+                      false,
+                      5,
+                      "afk_check",
+                      true,
+                    );
                   }}
                   className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-500 hover:from-indigo-500 hover:to-fuchsia-400 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 text-lg"
                 >
@@ -382,23 +414,36 @@ function StudyRoomDialogsComponent({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
           >
-            <div className="bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20 text-right" dir="rtl">
+            <div
+              className={cn("bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
+            >
               <h2 className="text-xl font-black mb-4 text-center text-red-500">
-                ⚠️ تدمير المحطة المدارية
+                {isAr ? "⚠️ تدمير المحطة المدارية" : "⚠️ Destruct Orbit Station"}
               </h2>
               <p className="text-gray-300 text-center text-xs mb-4 leading-relaxed">
-                هل أنت متأكد من تدمير وحذف هذه المحطة نهائياً؟ هذا الإجراء فوري وسيطرد كافة الرواد المتواجدين ولا يمكن التراجع عنه.
+                {isAr
+                  ? "هل أنت متأكد من تدمير وحذف هذه المحطة نهائياً؟ هذا الإجراء فوري وسيطرد كافة الرواد المتواجدين ولا يمكن التراجع عنه."
+                  : "Are you sure you want to completely destroy and delete this station? This action is immediate, will evict all active personnel, and cannot be undone."}
               </p>
-              
+
               <div className="mb-5">
                 <label className="block text-[11px] text-gray-400 font-bold mb-1">
-                  اكتب <span className="text-red-500 font-bold">"تدمير"</span> لتأكيد تدمير المحطة:
+                  {isAr ? (
+                    <>
+                      اكتب <span className="text-red-500 font-bold">"تدمير"</span> لتأكيد تدمير المحطة:
+                    </>
+                  ) : (
+                    <>
+                      Type <span className="text-red-500 font-bold">"destruct"</span> to confirm destruction:
+                    </>
+                  )}
                 </label>
                 <input
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  placeholder="اكتب لتأكيد الإجراء"
+                  placeholder={isAr ? "اكتب لتأكيد الإجراء" : "Type to confirm action"}
                   className="w-full px-3 py-2 bg-slate-950 border border-red-500/25 rounded-xl text-center text-xs font-bold text-red-400 placeholder-gray-700 focus:outline-none focus:border-red-500 transition-all font-mono"
                 />
               </div>
@@ -408,19 +453,20 @@ function StudyRoomDialogsComponent({
                   onClick={() => setShowDeleteDialog(false)}
                   className="flex-1 px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 rounded-xl text-white font-bold transition-all text-sm border border-white/5"
                 >
-                  إلغاء
+                  {isAr ? "إلغاء" : "Cancel"}
                 </button>
                 <button
                   onClick={async () => {
-                    if (deleteConfirmText !== "تدمير") return;
+                    const match = isAr ? "تدمير" : "destruct";
+                    if (deleteConfirmText.trim().toLowerCase() !== match) return;
                     setShowDeleteDialog(false);
                     await deleteDoc(doc(db, "rooms", stationId));
                     performSafeExit({ skipFirebaseUpdate: true });
                   }}
-                  disabled={deleteConfirmText !== "تدمير"}
+                  disabled={isAr ? deleteConfirmText !== "تدمير" : deleteConfirmText.trim().toLowerCase() !== "destruct"}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-30 disabled:hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-sm shadow-red-600/30 text-sm disabled:cursor-not-allowed"
                 >
-                  تأكيد الحذف
+                  {isAr ? "تأكيد الحذف" : "Confirm Delete"}
                 </button>
               </div>
             </div>
@@ -442,15 +488,17 @@ function StudyRoomDialogsComponent({
                 <Rocket size={24} className="text-indigo-400" />
                 مغادرة المحطة المدارية
               </h2>
-              
+
               <div className="text-center mb-6">
                 {room?.timerStatus === "focus" ? (
                   <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-2xl text-red-300 text-xs leading-relaxed font-semibold">
-                    ⚠️ تنبيه كوني: التايمر يعمل بوضع الدراسة حالياً. المغادرة الآن ستكلفك خصم 10 XP من رصيدك كعقوبة انسحاب!
+                    ⚠️ تنبيه كوني: التايمر يعمل بوضع الدراسة حالياً. المغادرة
+                    الآن ستكلفك خصم 10 XP من رصيدك كعقوبة انسحاب!
                   </div>
                 ) : (
                   <div className="p-3 bg-green-500/15 border border-green-500/30 rounded-2xl text-green-300 text-xs leading-relaxed font-semibold">
-                    ✨ يمكنك المغادرة بسلام ومشاركتها مع رفاقك الآن دون أي خصم لنقاط الخبرة (XP).
+                    ✨ يمكنك المغادرة بسلام ومشاركتها مع رفاقك الآن دون أي خصم
+                    لنقاط الخبرة (XP).
                   </div>
                 )}
               </div>
@@ -535,19 +583,21 @@ function StudyRoomDialogsComponent({
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <div
-              className="bg-[#0a0b16] border border-indigo-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 text-right"
-              dir="rtl"
+              className={cn("bg-[#0a0b16] border border-indigo-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
             >
               <h2 className="text-2xl font-black mb-4 text-indigo-400">
-                الدراسة خارج المنصة 🌍
+                {isAr ? "الدراسة خارج المنصة 🌍" : "Study Outside Platform 🌍"}
               </h2>
               <p className="text-gray-300 text-sm mb-2">
-                لأن المتصفحات الحديثة تحمي خصوصيتك، لا يمكننا تتبع المنصات
-                الأخرى التي تدرس عليها.
+                {isAr
+                  ? "لأن المتصفحات الحديثة تحمي خصوصيتك، لا يمكننا تتبع المنصات الأخرى التي تدرس عليها."
+                  : "Because modern browsers protect your privacy, we cannot track what external websites you are studying on."}
               </p>
               <p className="text-gray-400 text-xs mb-6">
-                لكن إذا أضفت رابط المنصة هنا، سنقوم بتعطيل نظام الإنذار الصارم
-                (تسرب الوقود) لكي تتمكن من الدراسة خارج علامة التبويب براحة.
+                {isAr
+                  ? "لكن إذا أضفت رابط المنصة هنا، سنقوم بتعطيل نظام الإنذار الصارم (تسرب الوقود) لكي تتمكن من الدراسة خارج علامة التبويب براحة."
+                  : "However, if you paste the platform link here, we will temporarily disable the strict alarm system (Fuel Leak tracker) so you can study outside this active tab peacefully."}
               </p>
 
               <input
@@ -567,7 +617,7 @@ function StudyRoomDialogsComponent({
                   }}
                   className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white font-bold transition-all text-sm shadow-sm shadow-indigo-600/30"
                 >
-                  حفظ الرابط
+                  {isAr ? "حفظ الرابط" : "Save Link"}
                 </button>
                 <button
                   onClick={() => {
@@ -577,7 +627,7 @@ function StudyRoomDialogsComponent({
                   }}
                   className="px-6 py-3 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"
                 >
-                  إلغاء
+                  {isAr ? "إلغاء" : "Cancel"}
                 </button>
               </div>
             </div>

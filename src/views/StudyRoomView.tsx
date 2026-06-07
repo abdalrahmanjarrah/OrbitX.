@@ -79,7 +79,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -129,7 +131,7 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 import StudyRoomHeader from "../components/study/StudyRoomHeader";
 import StudyRoomParticipants from "../components/study/StudyRoomParticipants";
@@ -138,37 +140,52 @@ import StudyRoomDialogs from "../components/study/StudyRoomDialogs";
 import { useSessionCompletion } from "../hooks/useSessionCompletion";
 import { SessionCompletionModal } from "../components/sessionCompletion/SessionCompletionModal";
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import NotificationsDropdown from "./NotificationsDropdown";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import SuggestionsSection from "./SuggestionsSection";
+import QuranPlayer from "./QuranPlayer";
+import PersonalTasks from "./PersonalTasks";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AwarenessView from "./AwarenessView";
+import AnalyticsView from "./AnalyticsView";
+import FleetsView from "./FleetsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function StudyRoomView(props: {
   user: UserData;
@@ -176,8 +193,11 @@ export default function StudyRoomView(props: {
   onExit: () => void;
   onSelectUser: (id: string) => void;
 }) {
+  const { isAr, t } = useLanguage();
   useRenderLog("StudyRoomView", props);
-  const [authStatus, setAuthStatus] = useState<"loading" | "authorized" | "spectator" | "rejected">("loading");
+  const [authStatus, setAuthStatus] = useState<
+    "loading" | "authorized" | "spectator" | "rejected"
+  >("loading");
 
   useEffect(() => {
     let active = true;
@@ -193,10 +213,12 @@ export default function StudyRoomView(props: {
         const data = snap.data() as Room;
         let allowed = true;
         let spectator = false;
-        
+
         // 1. Participant Eligibility (Private Challenge)
         if (data.isChallenge) {
-          allowed = (props.user.uid === data.creatorId) || (data.participants && data.participants.includes(props.user.uid));
+          allowed =
+            props.user.uid === data.creatorId ||
+            (data.participants && data.participants.includes(props.user.uid));
         }
 
         if (!allowed) {
@@ -212,9 +234,17 @@ export default function StudyRoomView(props: {
         }
 
         // 2. Capacity Validation
-        if (allowed && !spectator && data.maxParticipants && data.maxParticipants > 0) {
+        if (
+          allowed &&
+          !spectator &&
+          data.maxParticipants &&
+          data.maxParticipants > 0
+        ) {
           const currentCount = data.participants ? data.participants.length : 0;
-          if (currentCount >= data.maxParticipants && (!data.participants || !data.participants.includes(props.user.uid))) {
+          if (
+            currentCount >= data.maxParticipants &&
+            (!data.participants || !data.participants.includes(props.user.uid))
+          ) {
             if (props.user.role === "admin") {
               spectator = true;
             } else {
@@ -235,7 +265,9 @@ export default function StudyRoomView(props: {
       }
     };
     checkAuth();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [props.stationId, props.user.uid, props.user.role, props.onExit]);
 
   if (authStatus === "loading") {
@@ -248,10 +280,12 @@ export default function StudyRoomView(props: {
       </div>
     );
   }
-  
+
   if (authStatus === "rejected") return null;
 
-  return <StudyRoomContent {...props} isSpectator={authStatus === "spectator"} />;
+  return (
+    <StudyRoomContent {...props} isSpectator={authStatus === "spectator"} />
+  );
 }
 
 function StudyRoomContent({
@@ -267,6 +301,7 @@ function StudyRoomContent({
   onSelectUser: (id: string) => void;
   isSpectator: boolean;
 }) {
+  const { isAr, t } = useLanguage();
   const {
     room,
     timeLeft,
@@ -329,7 +364,7 @@ function StudyRoomContent({
   const {
     isOpen: isCompletionOpen,
     completionData,
-    closeCompletion
+    closeCompletion,
   } = useSessionCompletion(stationId, room, user, isJoined);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -351,7 +386,10 @@ function StudyRoomContent({
   if (!room) return null;
 
   return (
-    <div className="min-h-screen relative flex flex-col overflow-x-hidden" dir="rtl">
+    <div
+      className="min-h-screen relative flex flex-col overflow-x-hidden"
+      dir={isAr ? "rtl" : "ltr"}
+    >
       <StarBackground />
       <div className="atmosphere-bg" />
 
@@ -428,88 +466,112 @@ function StudyRoomContent({
       />
 
       {/* Challenge UI Panel */}
-      {room?.isChallenge && challengeData && (() => {
-        const start = challengeData.startTime || challengeData.createdAt || Date.now();
-        const totalMs = (challengeData.durationMinutes || 60) * 60000;
-        const elapsedMs = Date.now() - start;
-        const remainingMs = Math.max(0, totalMs - elapsedMs);
-        const totalSecs = Math.floor(remainingMs / 1000);
-        const hrs = Math.floor(totalSecs / 3600);
-        const mins = Math.floor((totalSecs % 3600) / 60);
-        const secs = totalSecs % 60;
-        const countdownStr = remainingMs <= 0 
-          ? "انتهت مدة النزال" 
-          : hrs > 0 
-            ? `${hrs}س و ${mins}د و ${secs}ث`
-            : `${mins}د و ${secs}ث`;
+      {room?.isChallenge &&
+        challengeData &&
+        (() => {
+          const start =
+            challengeData.startTime || challengeData.createdAt || Date.now();
+          const totalMs = (challengeData.durationMinutes || 60) * 60000;
+          const elapsedMs = Date.now() - start;
+          const remainingMs = Math.max(0, totalMs - elapsedMs);
+          const totalSecs = Math.floor(remainingMs / 1000);
+          const hrs = Math.floor(totalSecs / 3600);
+          const mins = Math.floor((totalSecs % 3600) / 60);
+          const secs = totalSecs % 60;
+          const countdownStr =
+            remainingMs <= 0
+              ? "انتهت مدة النزال"
+              : hrs > 0
+                ? `${hrs}س و ${mins}د و ${secs}ث`
+                : `${mins}د و ${secs}ث`;
 
-        const p1 = challengeData.progressPlayer1 || 0;
-        const p2 = challengeData.progressPlayer2 || 0;
-        const sum = (p1 + p2) || 1;
-        const p1Pct = Math.round((p1 / sum) * 100);
-        const p2Pct = 100 - p1Pct;
+          const p1 = challengeData.progressPlayer1 || 0;
+          const p2 = challengeData.progressPlayer2 || 0;
+          const sum = p1 + p2 || 1;
+          const p1Pct = Math.round((p1 / sum) * 100);
+          const p2Pct = 100 - p1Pct;
 
-        return (
-          <div className="z-20 px-8 pt-4 w-full max-w-5xl mx-auto">
-             <div className="bg-[#131526]/90 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-2xl flex flex-col gap-4">
-                 <div className="flex items-center justify-between">
-                    <div>
-                       <h3 className="font-bold text-fuchsia-400 flex items-center gap-2 text-sm mb-1">
-                          <Swords size={16} className="animate-pulse" /> نزاع المدار المشترك
-                       </h3>
-                       <p className="text-xs text-gray-400">
-                         {challengeData.status === "completed" 
-                           ? `مكتمل (${challengeData.durationMinutes} دقيقة)` 
-                           : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
-                       </p>
+          return (
+            <div className="z-20 px-8 pt-4 w-full max-w-5xl mx-auto">
+              <div className="bg-[#131526]/90 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-2xl flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-fuchsia-400 flex items-center gap-2 text-sm mb-1">
+                      <Swords size={16} className="animate-pulse" /> نزاع المدار
+                      المشترك
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      {challengeData.status === "completed"
+                        ? `مكتمل (${challengeData.durationMinutes} دقيقة)`
+                        : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
+                    </p>
+                  </div>
+                  {challengeData.status === "completed" ? (
+                    <div className="text-sm font-bold text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 flex items-center gap-1.5">
+                      🏆 انتهى النزال! البطل الفائز:{" "}
+                      {challengeData.winnerId === challengeData.challengerId
+                        ? challengeData.challengerName
+                        : challengeData.winnerId === challengeData.challengedId
+                          ? challengeData.challengedName
+                          : "تعادل"}
                     </div>
-                    {challengeData.status === "completed" ? (
-                       <div className="text-sm font-bold text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 flex items-center gap-1.5">
-                         🏆 انتهى النزال! البطل الفائز: {challengeData.winnerId === challengeData.challengerId ? challengeData.challengerName : (challengeData.winnerId === challengeData.challengedId ? challengeData.challengedName : 'تعادل')}
-                       </div>
-                    ) : (
-                       <div className="flex gap-8">
-                          <div className="flex flex-col items-center">
-                             <span className="text-[10px] text-indigo-300 font-bold mb-1">{challengeData.challengerName}</span>
-                             <span className="font-black text-xl text-white font-mono">{p1} د</span>
-                          </div>
-                          <div className="flex items-center justify-center text-rose-500 font-mono font-bold text-xs px-2">VS</div>
-                          <div className="flex flex-col items-center">
-                             <span className="text-[10px] text-fuchsia-300 font-bold mb-1">{challengeData.challengedName}</span>
-                             <span className="font-black text-xl text-white font-mono">{p2} د</span>
-                          </div>
-                       </div>
-                    )}
-                 </div>
+                  ) : (
+                    <div className="flex gap-8">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] text-indigo-300 font-bold mb-1">
+                          {challengeData.challengerName}
+                        </span>
+                        <span className="font-black text-xl text-white font-mono">
+                          {p1} د
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center text-rose-500 font-mono font-bold text-xs px-2">
+                        VS
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] text-fuchsia-300 font-bold mb-1">
+                          {challengeData.challengedName}
+                        </span>
+                        <span className="font-black text-xl text-white font-mono">
+                          {p2} د
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                 {challengeData.status !== "completed" && (
-                   <div className="space-y-1.5">
-                     <div className="h-2 rounded-full bg-white/5 flex overflow-hidden border border-white/5">
-                       <div
-                         style={{ width: `${p1Pct}%` }}
-                         className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-500"
-                       />
-                       <div
-                         style={{ width: `${p2Pct}%` }}
-                         className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 h-full transition-all duration-500"
-                       />
-                     </div>
-                     <div className="flex justify-between text-[10px] font-mono font-bold text-gray-500">
-                       <span>قوة {challengeData.challengerName}: {p1Pct}%</span>
-                       <span>قوة {challengeData.challengedName}: {p2Pct}%</span>
-                     </div>
-                   </div>
-                 )}
-             </div>
-          </div>
-        );
-      })()}
+                {challengeData.status !== "completed" && (
+                  <div className="space-y-1.5">
+                    <div className="h-2 rounded-full bg-white/5 flex overflow-hidden border border-white/5">
+                      <div
+                        style={{ width: `${p1Pct}%` }}
+                        className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-500"
+                      />
+                      <div
+                        style={{ width: `${p2Pct}%` }}
+                        className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 h-full transition-all duration-500"
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-mono font-bold text-gray-500">
+                      <span>
+                        قوة {challengeData.challengerName}: {p1Pct}%
+                      </span>
+                      <span>
+                        قوة {challengeData.challengedName}: {p2Pct}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Active Alerts Banner */}
       <AnimatePresence>
         {activeAlerts.length > 0 && (
           <div className="z-20 px-8 py-2 max-w-5xl mx-auto space-y-2 w-full mt-2">
-            {activeAlerts.map(alert => (
+            {activeAlerts.map((alert) => (
               <motion.div
                 key={alert.id}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -517,24 +579,36 @@ function StudyRoomContent({
                 exit={{ opacity: 0, scale: 0.95 }}
                 className={cn(
                   "w-full backdrop-blur-xl border rounded-full px-6 py-3 flex items-center justify-between shadow-lg",
-                  alert.type === 'distraction' 
+                  alert.type === "distraction"
                     ? "bg-red-500/20 border-red-500/40 text-red-200"
-                    : "bg-indigo-500/20 border-indigo-500/40 text-indigo-200"
+                    : "bg-indigo-500/20 border-indigo-500/40 text-indigo-200",
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "p-2 rounded-full",
-                    alert.type === 'distraction' ? "bg-red-500/20" : "bg-indigo-500/20"
-                  )}>
-                    {alert.type === 'distraction' ? <AlertTriangle size={18} className="text-red-400" /> : <Info size={18} className="text-indigo-400" />}
+                  <div
+                    className={cn(
+                      "p-2 rounded-full",
+                      alert.type === "distraction"
+                        ? "bg-red-500/20"
+                        : "bg-indigo-500/20",
+                    )}
+                  >
+                    {alert.type === "distraction" ? (
+                      <AlertTriangle size={18} className="text-red-400" />
+                    ) : (
+                      <Info size={18} className="text-indigo-400" />
+                    )}
                   </div>
                   <span className="text-sm font-bold tracking-wide">
                     {alert.text}
                   </span>
                 </div>
                 <button
-                  onClick={() => setActiveAlerts(prev => prev.filter(a => a.id !== alert.id))}
+                  onClick={() =>
+                    setActiveAlerts((prev) =>
+                      prev.filter((a) => a.id !== alert.id),
+                    )
+                  }
                   className="p-1 hover:bg-white/10 rounded-full transition-colors"
                 >
                   <X size={16} />
@@ -596,7 +670,6 @@ function StudyRoomContent({
           )}
         >
           <div className="relative w-full max-w-[600px] aspect-square flex items-center justify-center">
-            
             <StudyRoomParticipants
               participantsData={participantsData}
               user={user}

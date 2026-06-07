@@ -179,6 +179,7 @@ import BlackHolesView from './BlackHolesView';
 import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+import { useLanguage } from "../context/LanguageContext";
 
 const bentoContainer: any = {
   hidden: { opacity: 0 },
@@ -209,6 +210,7 @@ export default function HomeView({
   onEnterStation: (id: string) => void;
   onSelectUser: (id: string) => void;
 }) {
+  const { isAr, t, lang } = useLanguage();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [advice, setAdvice] = useState<string>("");
   const [activeUsers, setActiveUsers] = useState<UserData[]>([]);
@@ -223,8 +225,8 @@ export default function HomeView({
   });
 
   useEffect(() => {
-    setGreeting(getGreetingForTime());
-  }, []);
+    setGreeting(getGreetingForTime(undefined, lang));
+  }, [lang]);
 
   useEffect(() => {
     let unsubscribeUsers: () => void;
@@ -361,7 +363,7 @@ export default function HomeView({
         <motion.div variants={bentoItem} className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6">
           <div className="flex-1 space-y-4">
             <h1 className="text-4xl md:text-5xl font-black font-display text-transparent bg-clip-text bg-gradient-to-l from-white via-indigo-100 to-indigo-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-              {greeting.text} يا {user.displayName}
+              {greeting.text}{isAr ? " يا " : ", "}{user.displayName}
             </h1>
             <p className="text-lg text-indigo-200/80 max-w-lg shadow-sm">
               {greeting.subtext}
@@ -375,7 +377,7 @@ export default function HomeView({
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/50 to-cyan-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative flex items-center justify-center gap-3 text-white font-bold">
                   <Plus size={18} className="text-cyan-400 group-hover:rotate-90 transition-transform duration-500" />
-                  <span>برمجة محطة جديدة</span>
+                  <span>{t("home.create_station", "برمجة محطة جديدة")}</span>
                 </div>
               </button>
             </div>
@@ -385,17 +387,17 @@ export default function HomeView({
              <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <Timer size={12} className="text-cyan-400" /> ساعات التركيز
+                  <Timer size={12} className="text-cyan-400" /> {t("home.focus_hours", "ساعات التركيز")}
                 </span>
-                <div className="text-3xl font-black text-white">{Math.round((user.xp / 60) * 10) / 10} <span className="text-sm font-medium text-gray-500">ساعة</span></div>
+                <div className="text-3xl font-black text-white">{Math.round((user.xp / 60) * 10) / 10} <span className="text-xs font-semibold text-gray-500">{isAr ? "ساعة" : "hrs"}</span></div>
              </div>
              
              <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <Star size={12} className="text-fuchsia-400" /> رتبة الفضاء
+                  <Star size={12} className="text-fuchsia-400" /> {t("home.space_rank", "رتبة الفضاء")}
                 </span>
-                <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-sm font-medium text-gray-500">{getAstronautRank(user.xp).title}</span></div>
+                <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-xs font-semibold text-gray-500">{getAstronautRank(user.xp, undefined, lang).title}</span></div>
              </div>
           </div>
         </motion.div>
@@ -408,7 +410,7 @@ export default function HomeView({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
                  </div>
-                 المحطات المدارية النشطة
+                 {t("home.active_stations", "المحطات المدارية النشطة")}
               </h2>
            </div>
 
@@ -419,8 +421,8 @@ export default function HomeView({
                      <div className="absolute inset-2 rounded-full border-r-2 border-cyan-400 animate-spin opacity-30" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
                      <Rocket size={40} className="absolute inset-0 m-auto text-indigo-400 opacity-40" />
                  </div>
-                 <h3 className="text-xl font-bold text-white mb-2">المدار هادئ تماماً</h3>
-                 <p className="text-indigo-200/50 max-w-sm">لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.</p>
+                 <h3 className="text-xl font-bold text-white mb-2">{t("home.silent_orbit", "المدار هادئ تماماً")}</h3>
+                 <p className="text-indigo-200/50 max-w-sm">{t("home.silent_orbit_desc", "لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.")}</p>
              </motion.div>
            ) : (
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -440,14 +442,14 @@ export default function HomeView({
         {/* Secondary Content: Mission Tracker */}
         <div className="grid grid-cols-1 gap-6 mt-4 max-w-xl">
            {/* Daily Missions */}
-           <motion.div variants={bentoItem} className="flex flex-col bg-[#0b0c1b]/80 backdrop-blur-xl border border-indigo-500/10 rounded-3xl p-6 relative overflow-hidden group">
+           <motion.div variants={bentoItem} className={cn("flex flex-col bg-[#0b0c1b]/80 backdrop-blur-xl border border-indigo-500/10 rounded-3xl p-6 relative overflow-hidden group", isAr ? "text-right" : "text-left")}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/10 transition-colors duration-700" />
               <div className="flex items-center gap-3 mb-6 relative z-10">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                   <Target size={18} className="text-indigo-400" />
+                    <Target size={18} className="text-indigo-400" />
                 </div>
                 <div>
-                   <h3 className="text-lg font-bold text-white">مهام النظام</h3>
+                   <h3 className="text-lg font-bold text-white">{isAr ? "مهام النظام" : "System Tasks"}</h3>
                    <p className="text-xs text-indigo-200/60 uppercase tracking-widest font-bold">Daily Objectives</p>
                 </div>
               </div>
@@ -455,13 +457,13 @@ export default function HomeView({
               <div className="space-y-4 relative z-10">
                  <div className="p-4 rounded-2xl bg-[#131526]/80 border border-white/5 shadow-inner">
                     <div className="flex justify-between items-center mb-3">
-                       <span className="text-sm font-bold text-white">التركيز المفرط</span>
+                       <span className="text-sm font-bold text-white">{isAr ? "التركيز المفرط" : "Ultimate Hyperfocus"}</span>
                        <span className="text-[10px] font-bold px-2 py-1 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 text-orange-400 rounded-lg flex items-center gap-1 border border-orange-500/20">
                           <Zap size={10} /> +50 XP
                        </span>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 font-medium mb-1.5 px-1">
-                       <span>التقدم الحالي</span>
+                       <span>{isAr ? "التقدم الحالي" : "Current Progress"}</span>
                        <span>{(user.totalFocusSessions || 0) % 3} / 3</span>
                     </div>
                     <div className="w-full h-2 bg-[#0a0b16] rounded-full overflow-hidden shadow-inner">
@@ -487,10 +489,13 @@ export default function HomeView({
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="w-full max-w-md p-8 rounded-[2rem] bg-[#0c0d1e] border border-indigo-500/30 shadow-[0_0_80px_rgba(99,102,241,0.2)] relative z-10"
+              className={cn("w-full max-w-md p-8 rounded-[2rem] bg-[#0c0d1e] border border-indigo-500/30 shadow-[0_0_80px_rgba(99,102,241,0.2)] relative z-10", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400">تأسيس محطة</h3>
+                <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400">
+                  {isAr ? "تأسيس محطة تركيز جديدة" : "Deploy New Focus Station"}
+                </h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
@@ -501,18 +506,22 @@ export default function HomeView({
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-400 px-1">اسم المحطة الخاصة بك</label>
+                  <label className="text-sm font-bold text-gray-400 px-1">
+                    {isAr ? "اسم المحطة الخاصة بك" : "Station Identifier Name"}
+                  </label>
                   <input
                     type="text"
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
-                    placeholder="مثال: مدار التركيز العميق..."
+                    placeholder={isAr ? "مثال: مدار التركيز العميق..." : "e.g. Deep Coding Chambers, Science Lab..."}
                     className="w-full p-4 rounded-2xl bg-[#060711] border border-white/10 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all text-white text-lg placeholder-gray-700"
                   />
                 </div>
                 
                 <div className="space-y-3">
-                  <label className="text-sm font-bold text-gray-400 px-1">خلفية المحطة المدارية (اختياري)</label>
+                  <label className="text-sm font-bold text-gray-400 px-1">
+                    {isAr ? "خلفية المحطة المدارية (اختياري)" : "Station Background Wall (Optional)"}
+                  </label>
                   <div className="grid grid-cols-3 gap-3">
                     {PREDEFINED_IMAGES.map((url, i) => (
                       <button
@@ -544,7 +553,7 @@ export default function HomeView({
                       onClick={() => setNewRoomImageUrl("")}
                       className="text-xs font-bold text-gray-500 hover:text-red-400 transition-colors w-full text-center mt-2"
                     >
-                      بدون خلفية مخصصة
+                      {isAr ? "بدون خلفية مخصصة" : "No Custom Image Background"}
                     </button>
                   )}
                 </div>
@@ -555,8 +564,8 @@ export default function HomeView({
                 disabled={isCreating || !newRoomName}
                 className="w-full mt-8 p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:from-[#131526] disabled:to-[#131526] disabled:text-gray-500 disabled:border disabled:border-white/5 transition-all font-bold text-lg shadow-[0_0_20px_rgba(99,102,241,0.2)] disabled:shadow-none text-white flex justify-center items-center gap-2 group"
               >
-                {isCreating ? "جاري الإطلاق الكوني..." : (
-                  <> إطلاق المحطة <Rocket size={20} className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" /> </> 
+                {isCreating ? (isAr ? "جاري الإطلاق الكوني..." : "Launching Cockpit Space...") : (
+                  <> {isAr ? "إطلاق المحطة الفضائية" : "Deploy Cosmic Station"} <Rocket size={20} className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" /> </> 
                 )}
               </button>
             </motion.div>

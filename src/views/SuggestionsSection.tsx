@@ -77,7 +77,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -126,60 +128,80 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import NotificationsDropdown from "./NotificationsDropdown";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import QuranPlayer from "./QuranPlayer";
+import PersonalTasks from "./PersonalTasks";
+import StudyRoomView from "./StudyRoomView";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AwarenessView from "./AwarenessView";
+import AnalyticsView from "./AnalyticsView";
+import FleetsView from "./FleetsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function SuggestionsSection({ user }: { user: UserData }) {
+  const { isAr, t } = useLanguage();
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [newSuggestion, setNewSuggestion] = useState("");
   const [deletingSuggestionId, setDeletingSuggestionId] = useState<
@@ -210,7 +232,9 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
       }
     };
     fetchSuggestions();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSubmit = async () => {
@@ -254,15 +278,15 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
         <textarea
           value={newSuggestion}
           onChange={(e) => setNewSuggestion(e.target.value)}
-          placeholder="لديك فكرة؟ شاركنا بها..."
-          className="w-full bg-white/5/80 shadow-inner border border-white/10 rounded-2xl px-6 py-4 text-right focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all min-h-[100px]"
-          dir="rtl"
+          placeholder={isAr ? "لديك فكرة؟ شاركنا بها..." : "Have an idea? Share it with us..."}
+          className={cn("w-full bg-white/5/80 shadow-inner border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all min-h-[100px]", isAr ? "text-right" : "text-left")}
+          dir={isAr ? "rtl" : "ltr"}
         />
         <button
           onClick={handleSubmit}
-          className="absolute left-4 bottom-4 px-6 py-2 bg-blue-600 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+          className={cn("absolute bottom-4 px-6 py-2 bg-blue-600 rounded-xl font-bold hover:bg-blue-700 transition-colors", isAr ? "left-4" : "right-4")}
         >
-          إرسال الاقتراح
+          {isAr ? "إرسال الاقتراح" : "Send Suggestion"}
         </button>
       </div>
 
@@ -270,7 +294,7 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
         {suggestions.map((s) => (
           <div
             key={s.id}
-            className="p-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 text-right"
+            className={cn("p-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10", isAr ? "text-right" : "text-left")}
           >
             <div className="flex flex-col mb-2 gap-2">
               <div className="flex items-center justify-between">
@@ -322,15 +346,15 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
                     type="text"
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="اكتب ردك هنا..."
-                    className="flex-1 bg-transparent text-xs text-blue-100 placeholder-blue-300/50 outline-none"
-                    dir="rtl"
+                    placeholder={isAr ? "اكتب ردك هنا..." : "Write your reply here..."}
+                    className={cn("flex-1 bg-transparent text-xs text-blue-100 placeholder-blue-300/50 outline-none", isAr ? "text-right" : "text-left")}
+                    dir={isAr ? "rtl" : "ltr"}
                   />
                   <button
                     onClick={() => handleReply(s.id)}
                     className="text-[10px] bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold"
                   >
-                    حفظ
+                    {isAr ? "حفظ" : "Save"}
                   </button>
                   <button
                     onClick={() => {

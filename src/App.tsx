@@ -78,7 +78,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -127,68 +129,94 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "./components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+  ErrorBoundary,
+} from "./shared";
+import LandingPage from "./components/LandingPage";
+import NotificationsDropdown from "./views/NotificationsDropdown";
+import Dashboard from "./views/Dashboard";
+import NavPill from "./views/NavPill";
+import MobileNavPill from "./views/MobileNavPill";
+import DockButton from "./views/DockButton";
+import ChallengeModal from "./views/ChallengeModal";
+import ArticleModal from "./views/ArticleModal";
+import HomeView from "./views/HomeView";
+import StationCard from "./views/StationCard";
+import ExhibitionGallery from "./views/ExhibitionGallery";
+import SuggestionsSection from "./views/SuggestionsSection";
+import QuranPlayer from "./views/QuranPlayer";
+import PersonalTasks from "./views/PersonalTasks";
+import StudyRoomView from "./views/StudyRoomView";
+import LeaderboardView from "./views/LeaderboardView";
+import ChatView from "./views/ChatView";
+import FocusHeatmap from "./views/FocusHeatmap";
+import ProfileView from "./views/ProfileView";
+import DiscussionsView from "./views/DiscussionsView";
+import ScheduleView from "./views/ScheduleView";
+import AdminView from "./views/AdminView";
+import BadgeCard from "./views/BadgeCard";
+import CosmicDiary from "./views/CosmicDiary";
+import FarmDisplay from "./views/FarmDisplay";
+import UserModal from "./views/UserModal";
+import NavLink from "./views/NavLink";
+import BlackHolesView from "./views/BlackHolesView";
+import AwarenessView from "./views/AwarenessView";
+import AnalyticsView from "./views/AnalyticsView";
+import FleetsView from "./views/FleetsView";
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message, ErrorBoundary } from './shared';
-import LandingPage from './components/LandingPage';
-import NotificationsDropdown from './views/NotificationsDropdown';
-import Dashboard from './views/Dashboard';
-import NavPill from './views/NavPill';
-import MobileNavPill from './views/MobileNavPill';
-import DockButton from './views/DockButton';
-import ChallengeModal from './views/ChallengeModal';
-import ArticleModal from './views/ArticleModal';
-import HomeView from './views/HomeView';
-import StationCard from './views/StationCard';
-import ExhibitionGallery from './views/ExhibitionGallery';
-import SuggestionsSection from './views/SuggestionsSection';
-import QuranPlayer from './views/QuranPlayer';
-import PersonalTasks from './views/PersonalTasks';
-import StudyRoomView from './views/StudyRoomView';
-import LeaderboardView from './views/LeaderboardView';
-import ChatView from './views/ChatView';
-import FocusHeatmap from './views/FocusHeatmap';
-import ProfileView from './views/ProfileView';
-import DiscussionsView from './views/DiscussionsView';
-import ScheduleView from './views/ScheduleView';
-import AdminView from './views/AdminView';
-import BadgeCard from './views/BadgeCard';
-import CosmicDiary from './views/CosmicDiary';
-import FarmDisplay from './views/FarmDisplay';
-import UserModal from './views/UserModal';
-import NavLink from './views/NavLink';
-import BlackHolesView from './views/BlackHolesView';
-import AwarenessView from './views/AwarenessView';
-import AnalyticsView from './views/AnalyticsView';
-import FleetsView from './views/FleetsView';
+import { useLanguage } from "./context/LanguageContext";
 
 function App() {
   useRenderLog("App");
+  const { lang, isAr, t } = useLanguage();
   const [user, loading] = useAuthState(auth);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
-  const [loginError, setLoginError] = useState<{ code: string; message: string; fullError?: string } | null>(null);
+  const [loginError, setLoginError] = useState<{
+    code: string;
+    message: string;
+    fullError?: string;
+  } | null>(null);
   const lastSyncedProfileRef = useRef<string>("");
   const previousLevelRef = useRef<number | null>(null);
   const previousUserUidRef = useRef<string | null>(null);
@@ -201,16 +229,19 @@ function App() {
       console.error("Login attempt error:", err);
       const errorCode = err?.code || "";
       const errorMessage = err?.message || String(err);
-      
-      if (errorCode === "auth/popup-closed-by-user" || errorCode === "auth/cancelled-popup-request") {
+
+      if (
+        errorCode === "auth/popup-closed-by-user" ||
+        errorCode === "auth/cancelled-popup-request"
+      ) {
         console.log("User closed popup, ignoring.");
         return;
       }
-      
+
       setLoginError({
         code: errorCode,
         message: errorMessage,
-        fullError: `${errorCode} | ${errorMessage}`
+        fullError: `${errorCode} | ${errorMessage}`,
       });
     }
   };
@@ -227,7 +258,7 @@ function App() {
   }, [user, userData]);
 
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(
-    typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded
+    typeof window !== "undefined" && !!(window as any).__firestoreQuotaExceeded,
   );
 
   useEffect(() => {
@@ -245,7 +276,10 @@ function App() {
       // Activity tracking
       let lastActivityUpdate = 0;
       const updateActivity = () => {
-        if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+        if (
+          typeof window !== "undefined" &&
+          (window as any).__firestoreQuotaExceeded
+        ) {
           return; // Guard against further quota errors when resource is exhausted
         }
         const now = Date.now();
@@ -310,12 +344,18 @@ function App() {
             };
 
             const initUser = async () => {
-                await setDoc(userRef, newUserData).catch((e) =>
-                  handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`),
-                );
+              await setDoc(userRef, newUserData).catch((e) =>
+                handleFirestoreError(
+                  e,
+                  OperationType.WRITE,
+                  `users/${user.uid}`,
+                ),
+              );
 
-                const profileRef = doc(db, "profiles", user.uid);
-                await setDoc(profileRef, {
+              const profileRef = doc(db, "profiles", user.uid);
+              await setDoc(
+                profileRef,
+                {
                   uid: user.uid,
                   displayName: user.displayName || "رائد فضاء",
                   photoURL: user.photoURL || "",
@@ -329,9 +369,15 @@ function App() {
                   currentActivity: "في لوحة التحكم",
                   streak: 1,
                   lastActiveDate: new Date().toISOString().split("T")[0],
-                }, { merge: true }).catch((e) =>
-                  handleFirestoreError(e, OperationType.WRITE, `profiles/${user.uid}`)
-                );
+                },
+                { merge: true },
+              ).catch((e) =>
+                handleFirestoreError(
+                  e,
+                  OperationType.WRITE,
+                  `profiles/${user.uid}`,
+                ),
+              );
             };
             initUser();
           }
@@ -373,7 +419,10 @@ function App() {
       let changed = false;
 
       // Check if challenge_champ badge expired
-      if (newBadges.includes("challenge_champ") && userData.challengeChampExpiry) {
+      if (
+        newBadges.includes("challenge_champ") &&
+        userData.challengeChampExpiry
+      ) {
         if (Date.now() > userData.challengeChampExpiry) {
           const idx = newBadges.indexOf("challenge_champ");
           if (idx !== -1) {
@@ -384,26 +433,17 @@ function App() {
       }
 
       // Starter Badge (awarded on having at least 25 XP)
-      if (
-        userData.xp >= 25 &&
-        !newBadges.includes("starter")
-      ) {
+      if (userData.xp >= 25 && !newBadges.includes("starter")) {
         newBadges.push("starter");
         changed = true;
       }
       // Focus 10 Badge (awarded on having at least 250 XP)
-      if (
-        userData.xp >= 250 &&
-        !newBadges.includes("focus_10")
-      ) {
+      if (userData.xp >= 250 && !newBadges.includes("focus_10")) {
         newBadges.push("focus_10");
         changed = true;
       }
       // Master Focus Badge (previously streak_7, awarded on 1000 XP)
-      if (
-        userData.xp >= 1000 &&
-        !newBadges.includes("streak_7")
-      ) {
+      if (userData.xp >= 1000 && !newBadges.includes("streak_7")) {
         newBadges.push("streak_7");
         changed = true;
       }
@@ -432,17 +472,25 @@ function App() {
     if (userData) {
       const calculatedLevel = Math.floor(userData.xp / 1000) + 1;
       const sessionKey = `lastCelebratedLevel_${userData.uid}`;
-      
+
       // Initial load or user change: silently initialize without triggering the toast
-      if (previousUserUidRef.current !== userData.uid || previousLevelRef.current === null) {
+      if (
+        previousUserUidRef.current !== userData.uid ||
+        previousLevelRef.current === null
+      ) {
         previousUserUidRef.current = userData.uid;
-        
+
         const celebratedLevelStr = sessionStorage.getItem(sessionKey);
-        const celebratedLevel = celebratedLevelStr ? parseInt(celebratedLevelStr, 10) : null;
-        
+        const celebratedLevel = celebratedLevelStr
+          ? parseInt(celebratedLevelStr, 10)
+          : null;
+
         // Make sure previousLevelRef is initialized to the highest verified level
-        previousLevelRef.current = Math.max(calculatedLevel, celebratedLevel !== null ? celebratedLevel : calculatedLevel);
-        
+        previousLevelRef.current = Math.max(
+          calculatedLevel,
+          celebratedLevel !== null ? celebratedLevel : calculatedLevel,
+        );
+
         if (celebratedLevel === null) {
           sessionStorage.setItem(sessionKey, String(calculatedLevel));
         }
@@ -450,16 +498,21 @@ function App() {
       }
 
       const celebratedLevelStr = sessionStorage.getItem(sessionKey);
-      const celebratedLevel = celebratedLevelStr ? parseInt(celebratedLevelStr, 10) : null;
+      const celebratedLevel = celebratedLevelStr
+        ? parseInt(celebratedLevelStr, 10)
+        : null;
 
       // Genuine promotion transition where the calculated level exceeds what was previously seen and celebrated
-      if (calculatedLevel > previousLevelRef.current && (celebratedLevel === null || calculatedLevel > celebratedLevel)) {
+      if (
+        calculatedLevel > previousLevelRef.current &&
+        (celebratedLevel === null || calculatedLevel > celebratedLevel)
+      ) {
         setShowLevelUp(true);
         playSound("levelup");
         sessionStorage.setItem(sessionKey, String(calculatedLevel));
         setTimeout(() => setShowLevelUp(false), 5000);
       }
-      
+
       // Always keep the persistent ref updated with the latest state
       previousLevelRef.current = calculatedLevel;
     }
@@ -480,12 +533,15 @@ function App() {
         banned: userData.banned || false,
         currentActivity: userData.currentActivity || "في المدار",
       };
-      
+
       const serialized = JSON.stringify(publicData);
       if (lastSyncedProfileRef.current === serialized) {
         return;
       }
-      if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+      if (
+        typeof window !== "undefined" &&
+        (window as any).__firestoreQuotaExceeded
+      ) {
         return; // Guard profile updates
       }
       lastSyncedProfileRef.current = serialized;
@@ -510,11 +566,17 @@ function App() {
       <>
         <LandingPage onLogin={handleLogin} />
         {loginError && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]" id="auth-error-overlay">
-            <div className="bg-[#0a0f25]/95 border border-red-500/20 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl shadow-indigo-950/40 relative overflow-hidden text-right" dir="rtl">
+          <div
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]"
+            id="auth-error-overlay"
+          >
+            <div
+              className={cn("bg-[#0a0f25]/95 border border-red-500/20 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl shadow-indigo-950/40 relative overflow-hidden", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
+            >
               {/* Absolute floating cosmic decoration */}
               <div className="absolute top-[-50px] left-[-30px] w-32 h-32 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-              
+
               {/* Header */}
               <div className="flex items-start justify-between mb-6">
                 <button
@@ -523,10 +585,14 @@ function App() {
                 >
                   <X className="w-5 h-5" />
                 </button>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <h2 className="text-xl font-black text-white font-sans">عقبة في المدار الفضائي</h2>
-                    <p className="text-xs text-red-400/80 mt-0.5">فشل الاتصال بمزود Google Auth</p>
+                <div className={cn("flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
+                  <div className={isAr ? "text-right" : "text-left"}>
+                    <h2 className="text-xl font-black text-white font-sans">
+                      {isAr ? "عقبة في المدار الفضائي" : "Orbital Space Hindrance"}
+                    </h2>
+                    <p className="text-xs text-red-400/80 mt-0.5">
+                      {isAr ? "فشل الاتصال بمزود Google Auth" : "Failed to connect to Google Auth provider"}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-red-400/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-400 font-bold shrink-0">
                     <AlertTriangle className="w-6 h-6 animate-pulse" />
@@ -537,45 +603,61 @@ function App() {
               {/* Main info */}
               <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-sans">
                 <p className="font-semibold text-gray-200">
-                  تلقينا خطأ شبكة من ميزة الحماية بالمتصفح أثناء محاولة فتح نافذة تسجيل الدخول.
+                  {isAr
+                    ? "تلقينا خطأ شبكة من ميزة الحماية بالمتصفح أثناء محاولة فتح نافذة تسجيل الدخول."
+                    : "We encountered a network or security error from the browser while attempting to open the authentication window."}
                 </p>
-                
+
                 <div className="bg-black/40 border border-white/5 rounded-2xl p-4 text-xs font-mono text-gray-400 text-left overflow-x-auto">
                   {loginError.fullError || loginError.message}
                 </div>
 
                 <p className="text-gray-400">
-                  تمنع المتصفحات الحديثة أحياناً إطارات المعاينة (iFrames) من الوصول إلى ملفات تعريف الارتباط المخصصة للتحقق من الهوية. يرجى تجربة الحلول التالية:
+                  {isAr
+                    ? "تمنع المتصفحات الحديثة أحياناً إطارات المعاينة (iFrames) من الوصول إلى ملفات تعريف الارتباط المخصصة للتحقق من الهوية. يرجى تجربة الحلول التالية:"
+                    : "Modern browsers sometimes prevent iframes from accessing authentication or session cookies. Please try the following suggestions:"}
                 </p>
 
                 {/* List of solutions */}
                 <div className="space-y-3 pt-2 font-sans">
                   <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                     <span className="text-lg mt-0.5">🌐</span>
-                    <div className="text-right">
-                      <h4 className="font-bold text-indigo-300 text-xs">العرض في علامة تبويب جديدة (الحل الأسرع والأنسب)</h4>
+                    <div className={isAr ? "text-right" : "text-left"}>
+                      <h4 className="font-bold text-indigo-300 text-xs">
+                        {isAr ? "العرض في علامة تبويب جديدة (الحل الأسرع والأنسب)" : "Open in new window (most reliable)"}
+                      </h4>
                       <p className="text-xs text-gray-400 mt-1">
-                        افتح التطبيق في صفحة مستقلة كاملة بدلاً من إطار المعاينة داخل المنصة. اضغط على زر المعاينة الخارجي (Open in new tab) أعلى يمين نافذة AI Studio.
+                        {isAr
+                          ? "افتح التطبيق في صفحة مستقلة كاملة بدلاً من إطار المعاينة داخل المنصة. اضغط على زر المعاينة الخارجي (Open in new tab) أعلى يمين نافذة AI Studio."
+                          : "Open the app in an independent browser tab instead of the inline preview iframe. Click the 'Open in new tab' / external pop-out icon at the top right of the AI Studio window."}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                     <span className="text-lg mt-0.5">🛡️</span>
-                    <div className="text-right">
-                      <h4 className="font-bold text-amber-300 text-xs">إيقاف مانع الإعلانات أو دروع الحماية</h4>
+                    <div className={isAr ? "text-right" : "text-left"}>
+                      <h4 className="font-bold text-amber-300 text-xs">
+                        {isAr ? "إيقاف مانع الإعلانات أو دروع الحماية" : "Disable Content Blockers / Shields"}
+                      </h4>
                       <p className="text-xs text-gray-400 mt-1">
-                        إذا كنت تستخدم uBlock Origin أو AdBlock أو Brave Shields، قم بإيقافها مؤقتاً للنطاق الحالي للسماح باتصال تسجيل الدخول الآمن.
+                        {isAr
+                          ? "إذا كنت تستخدم uBlock Origin أو AdBlock أو Brave Shields، قم بإيقافها مؤقتاً للنطاق الحالي للسماح باتصال تسجيل الدخول الآمن."
+                          : "If you are running uBlock Origin, AdBlock, or Brave Shields, temporarily whitelist or disable them to permit secure popup authentication windows."}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
                     <span className="text-lg mt-0.5">🍪</span>
-                    <div className="text-right">
-                      <h4 className="font-bold text-cyan-300 text-xs">سماح بملفات تعريف ارتباط الطرف الثالث</h4>
+                    <div className={isAr ? "text-right" : "text-left"}>
+                      <h4 className="font-bold text-cyan-300 text-xs">
+                        {isAr ? "سماح بملفات تعريف ارتباط الطرف الثالث" : "Allow Third-Party Cookies"}
+                      </h4>
                       <p className="text-xs text-gray-400 mt-1">
-                        تأكد من سماح المتصفح بملفات تعريف الارتباط للطرف الثالث (Third-Party Cookies) للسماح للإطار بالتحقق من جلستك الفضائية.
+                        {isAr
+                          ? "تأكت من سماح المتصفح بملفات تعريف الارتباط للطرف الثالث (Third-Party Cookies) للسماح للإطار بالتحقق من جلستك الفضائية."
+                          : "Enable third-party cookies or cross-site tracking flags inside your browser settings temporarily so the preview iframe can authenticate secure cosmic missions."}
                       </p>
                     </div>
                   </div>
@@ -583,12 +665,12 @@ function App() {
               </div>
 
               {/* Footer controls */}
-              <div className="flex items-center gap-3 justify-end mt-6 pt-6 border-t border-white/5 font-sans">
+              <div className={cn("flex items-center gap-3 mt-6 pt-6 border-t border-white/5 font-sans", isAr ? "justify-end" : "justify-start")}>
                 <button
                   onClick={() => setLoginError(null)}
                   className="px-5 py-2.5 bg-white/5 rounded-xl text-xs font-bold text-gray-300 hover:bg-white/10 transition-all border border-white/5"
                 >
-                  إلغاء
+                  {isAr ? "إلغاء" : "Cancel"}
                 </button>
                 <button
                   onClick={() => {
@@ -597,7 +679,7 @@ function App() {
                   }}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-indigo-900/30"
                 >
-                  إعادة المحاولة
+                  {isAr ? "إعادة المحاولة" : "Retry"}
                 </button>
               </div>
             </div>
@@ -609,18 +691,25 @@ function App() {
 
   if (userData?.banned) {
     return (
-      <div className="min-h-screen bg-space-dark flex flex-col items-center justify-center p-4 text-center">
+      <div
+        className="min-h-screen bg-space-dark flex flex-col items-center justify-center p-4 text-center"
+        dir={isAr ? "rtl" : "ltr"}
+      >
         <ShieldAlert className="w-24 h-24 text-red-500 mb-6" />
-        <h1 className="text-4xl font-bold text-white mb-4">تم حظر حسابك</h1>
+        <h1 className="text-4xl font-bold text-white mb-4">
+          {t("common.banned", "تم حظر حسابك")}
+        </h1>
         <p className="text-gray-400 max-w-md">
-          لقد تم حظر وصولك إلى المنصة بسبب مخالفة القوانين. إذا كنت تعتقد أن هذا
-          خطأ، يرجى التواصل مع الإدارة.
+          {t(
+            "common.banned_desc",
+            "لقد تم حظر وصولك إلى المنصة بسبب مخالفة القوانين. إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع الإدارة.",
+          )}
         </p>
         <button
           onClick={logout}
-          className="mt-8 px-8 py-3 bg-white/5 rounded-xl hover:bg-[#0a0b16]/20 transition-all"
+          className="mt-8 px-8 py-3 bg-white/5 rounded-xl hover:bg-[#0a0b16]/20 transition-all font-sans text-xs"
         >
-          تسجيل الخروج
+          {t("common.logout", "تسجيل الخروج")}
         </button>
       </div>
     );
@@ -629,9 +718,22 @@ function App() {
   return (
     <>
       {isQuotaExceeded && (
-        <div className="bg-gradient-to-r from-amber-600/90 to-red-600/90 text-white text-xs md:text-sm py-2.5 px-4 text-center font-semibold relative z-[300] shadow-md flex items-center justify-center gap-2 select-none">
-          <span>🛡️ نظام الفضاء الرديف: ميزانية قاعدة البيانات المجانية لـ Firebase تجاوزت الحد المسموح به اليوم. نحن نوجه جميع عملياتك بنجاح محلياً لضمان تركيزك التام ومواصلة إنتاجيتك دون انقطاع.</span>
-          <button onClick={() => setIsQuotaExceeded(false)} className="underline hover:text-white/80 transition ml-2 text-[10px] md:text-sm font-bold bg-white/10 px-2 py-0.5 rounded">إخفاء</button>
+        <div
+          className="bg-gradient-to-r from-amber-600/90 to-red-600/90 text-white text-xs md:text-sm py-2.5 px-4 text-center font-semibold relative z-[300] shadow-md flex items-center justify-center gap-2 select-none"
+          dir={isAr ? "rtl" : "ltr"}
+        >
+          <span>
+            {t(
+              "common.quota",
+              "🛡️ نظام الفضاء الرديف: ميزانية قاعدة البيانات المجانية لـ Firebase تجاوزت الحد المسموح به اليوم. نحن نوجه جميع عملياتك بنجاح محلياً لضمان تركيزك التام ومواصلة إنتاجيتك دون انقطاع.",
+            )}
+          </span>
+          <button
+            onClick={() => setIsQuotaExceeded(false)}
+            className="underline hover:text-white/80 transition ml-2 text-[10px] md:text-sm font-bold bg-white/10 px-2 py-0.5 rounded"
+          >
+            {t("common.hide", "إخفاء")}
+          </button>
         </div>
       )}
       <AnimatePresence>
@@ -642,14 +744,21 @@ function App() {
             exit={{ y: -100, opacity: 0 }}
             className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-gradient-to-r from-yellow-400 to-orange-500 p-1 rounded-2xl shadow-2xl shadow-indigo-900/20 shadow-orange-500/40"
           >
-            <div className="bg-[#0a0b16] px-8 py-4 rounded-[calc(1rem-1px)] flex items-center gap-4">
+            <div
+              className="bg-[#0a0b16] px-8 py-4 rounded-[calc(1rem-1px)] flex items-center gap-4"
+              dir={isAr ? "rtl" : "ltr"}
+            >
               <div className="w-12 h-12 bg-yellow-400/20 rounded-full flex items-center justify-center text-2xl">
                 🎊
               </div>
               <div className="text-right">
-                <h3 className="text-lg font-black text-white">ترقية جديدة!</h3>
+                <h3 className="text-lg font-black text-white">
+                  {t("level_up.title", "ترقية جديدة!")}
+                </h3>
                 <p className="text-gray-400 text-xs">
-                  لقد وصلت للمستوى {userData?.level}
+                  {lang === "ar"
+                    ? `لقد وصلت للمستوى ${userData?.level}`
+                    : `You reached Level ${userData?.level}`}
                 </p>
               </div>
             </div>

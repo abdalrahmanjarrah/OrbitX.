@@ -4,8 +4,10 @@ import { db } from "../firebase";
 import { AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { playSound } from "../lib/sound";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function GlobalAdminAlert() {
+  const { isAr, t } = useLanguage();
   const [alert, setAlert] = useState<any | null>(null);
   const shownAlertsRef = useRef<Set<string>>(new Set());
 
@@ -49,19 +51,19 @@ export default function GlobalAdminAlert() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -100, opacity: 0 }}
         className="fixed top-10 left-1/2 -translate-x-1/2 w-full max-w-lg z-[99999] px-4"
-        dir="rtl"
+        dir={isAr ? "rtl" : "ltr"}
       >
         <div className="bg-red-600/95 backdrop-blur-xl border-2 border-red-400 p-4 rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.5)] flex items-start gap-4">
           <div className="p-3 bg-red-900/50 rounded-xl text-red-200 shrink-0 mt-1">
             <AlertTriangle size={24} className="animate-pulse" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 text-right ltr:text-left">
             <h3 className="text-white font-black text-xl mb-1 flex items-center justify-between">
-              رسالة إدارية هامة
+              {isAr ? "رسالة إدارية هامة" : "Important Admin Message"}
               <button 
                 onClick={() => setAlert(null)}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-                title="إغلاق التنبيه"
+                title={isAr ? "إغلاق التنبيه" : "Close Alert"}
               >
                 <X size={20} className="text-red-200" />
               </button>

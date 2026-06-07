@@ -218,8 +218,12 @@ import('firebase/firestore').then((firestore) => {
 }).catch(() => {});
 // -------------------------------------------------------------
 
+import { LanguageProvider } from "./context/LanguageContext.tsx";
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </StrictMode>,
 );

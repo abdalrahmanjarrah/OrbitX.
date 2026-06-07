@@ -10,6 +10,8 @@ import { ChallengeHistory } from "../components/challenges/ChallengeHistory";
 import { ChallengeLeaderboard } from "../components/challenges/ChallengeLeaderboard";
 import { HowChallengesWork } from "../components/challenges/HowChallengesWork";
 import { motion, AnimatePresence } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
+import { cn } from "../lib/utils";
 
 interface ChallengesHubViewProps {
   user: UserData;
@@ -22,6 +24,7 @@ export default function ChallengesHubView({
   onEnterStation,
   onSelectUser,
 }: ChallengesHubViewProps) {
+  const { isAr, t } = useLanguage();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"active" | "invites" | "history" | "leaderboard">("active");
@@ -67,7 +70,7 @@ export default function ChallengesHubView({
   const completedChallenges = challenges.filter(c => c.status === "completed" || c.status === "declined" || c.status === "cancelled");
 
   return (
-    <div className="space-y-8 pb-32">
+    <div className={cn("space-y-8 pb-32", isAr ? "text-right" : "text-left")} dir={isAr ? "rtl" : "ltr"}>
       {/* 1. HERO / INTRO SECTION */}
       <ChallengesHero
         onStartChallengeClick={() => {
@@ -85,14 +88,18 @@ export default function ChallengesHubView({
             element.click();
           } else {
             // General support guidance
-            alert("يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!");
+            alert(
+              isAr
+                ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
+                : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!"
+            );
           }
         }}
         friendsCount={user.friendsCount || 0}
       />
 
       {/* Control center sub-navigation */}
-      <div id="challenges-interactive-hub" className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div id="challenges-interactive-hub" className={cn("flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-white/5 pb-4", isAr ? "md:flex-row" : "md:flex-row-reverse")}>
         {/* Dynamic Nav buttons */}
         <div className="flex flex-wrap gap-2">
           <button
@@ -104,7 +111,9 @@ export default function ChallengesHubView({
             }`}
           >
             <Swords size={14} />
-            <span>المعارك النشطة ({activeChallenges.length})</span>
+            <span>
+              {isAr ? `المعارك النشطة (${activeChallenges.length})` : `Active Battles (${activeChallenges.length})`}
+            </span>
           </button>
 
           <button
@@ -116,7 +125,11 @@ export default function ChallengesHubView({
             }`}
           >
             <Zap size={14} />
-            <span>الدعوات والطلبات ({incomingInvites.length + outgoingInvites.length})</span>
+            <span>
+              {isAr 
+                ? `الدعوات والطلبات (${incomingInvites.length + outgoingInvites.length})` 
+                : `Invites & Requests (${incomingInvites.length + outgoingInvites.length})`}
+            </span>
           </button>
 
           <button
@@ -128,7 +141,7 @@ export default function ChallengesHubView({
             }`}
           >
             <Trophy size={14} />
-            <span>أرشيف المعارك</span>
+            <span>{isAr ? "أرشيف المعارك" : "Battle Log"}</span>
           </button>
 
           <button
@@ -140,7 +153,7 @@ export default function ChallengesHubView({
             }`}
           >
             <Sparkles size={14} />
-            <span>صرح المصارعين الـ 10</span>
+            <span>{isAr ? "صرح المصارعين الـ 10" : "Top 10 Gladiators"}</span>
           </button>
         </div>
 
@@ -155,7 +168,7 @@ export default function ChallengesHubView({
           ) : (
             <RefreshCw size={13} className="hover:rotate-180 transition-transform duration-500" />
           )}
-          <span>مسح راداري جديد</span>
+          <span>{isAr ? "مسح راداري جديد" : "New Radar Sweep"}</span>
         </button>
       </div>
 
@@ -164,7 +177,9 @@ export default function ChallengesHubView({
         {loading && challenges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 size={36} className="text-indigo-500 animate-spin mb-4" />
-            <span className="text-xs text-gray-500 font-mono">تحديث رادار الفضاء...</span>
+            <span className="text-xs text-gray-500 font-mono">
+              {isAr ? "تحديث رادار الفضاء..." : "Scanning deep space radar..."}
+            </span>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -193,7 +208,11 @@ export default function ChallengesHubView({
                     if (element) {
                       element.click();
                     } else {
-                      alert("يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!");
+                      alert(
+                        isAr 
+                          ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
+                          : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!"
+                      );
                     }
                   }}
                 />

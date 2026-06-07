@@ -179,8 +179,11 @@ import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 
+import { useLanguage } from '../context/LanguageContext';
+
 export default function ExhibitionGallery() {
   const [exhibitions, setExhibitions] = useState<any[]>([]);
+  const { isAr } = useLanguage();
 
   useEffect(() => {
     let isMounted = true;
@@ -231,7 +234,7 @@ export default function ExhibitionGallery() {
       ))}
       {exhibitions.length === 0 && (
         <p className="col-span-full text-gray-500 text-sm italic py-10 text-center">
-          المعرض فارغ حالياً
+          {isAr ? "المعرض فارغ حالياً" : "The exhibition is currently empty"}
         </p>
       )}
     </>

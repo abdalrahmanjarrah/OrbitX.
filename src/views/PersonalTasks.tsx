@@ -77,7 +77,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -126,60 +128,80 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import NotificationsDropdown from "./NotificationsDropdown";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import SuggestionsSection from "./SuggestionsSection";
+import QuranPlayer from "./QuranPlayer";
+import StudyRoomView from "./StudyRoomView";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AwarenessView from "./AwarenessView";
+import AnalyticsView from "./AnalyticsView";
+import FleetsView from "./FleetsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function PersonalTasks() {
+  const { isAr, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<
     { id: string; text: string; done: boolean }[]
@@ -226,7 +248,7 @@ export default function PersonalTasks() {
             ? "bg-green-600 text-white shadow-green-900/50"
             : "bg-[#0a0b16] border border-white/10 hover:bg-white/5 shadow-black/50",
         )}
-        title="المهام الجانبية"
+        title={isAr ? "المهام الجانبية" : "Side Quests"}
       >
         <CheckSquare
           size={20}
@@ -249,16 +271,17 @@ export default function PersonalTasks() {
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, x: -20 }}
             className="fixed bottom-[88px] left-6 z-50 w-96 bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-green-900/20 max-h-[500px] flex flex-col"
+            dir={isAr ? "rtl" : "ltr"}
           >
             {/* Header */}
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-space-dark/80 shrink-0">
-              <div className="flex items-center gap-2">
+            <div className={cn("p-4 border-b border-white/5 flex items-center justify-between bg-space-dark/80 shrink-0", isAr ? "" : "flex-row-reverse")}>
+              <div className={cn("flex items-center gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
                 <CheckSquare
                   size={18}
                   className="text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]"
                 />
                 <h3 className="font-bold text-sm tracking-wide text-white">
-                  المهام الجانبية
+                  {isAr ? "المهام الجانبية" : "Side Quests"}
                 </h3>
               </div>
               <button
@@ -274,7 +297,7 @@ export default function PersonalTasks() {
                 {tasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-3 group p-3 shadow-sm hover:bg-white/5 rounded-xl transition-colors border border-transparent hover:border-white/5 bg-white/[0.01]"
+                    className={cn("flex items-center gap-3 group p-3 shadow-sm hover:bg-white/5 rounded-xl transition-colors border border-transparent hover:border-white/5 bg-white/[0.01]", isAr ? "flex-row" : "flex-row-reverse")}
                   >
                     <button
                       onClick={() => toggleTask(task.id)}
@@ -291,11 +314,11 @@ export default function PersonalTasks() {
                       )}
                     </button>
                     <span
-                      className={
-                        task.done
-                          ? "line-through text-gray-500 text-sm flex-1 text-right break-words"
-                          : "text-gray-300 text-sm flex-1 text-right break-words cursor-pointer hover:text-white transition-colors"
-                      }
+                      className={cn(
+                        "flex-1 break-words cursor-pointer transition-colors text-sm",
+                        task.done ? "line-through text-gray-500" : "text-gray-300 hover:text-white",
+                        isAr ? "text-right" : "text-left"
+                      )}
                       onClick={() => toggleTask(task.id)}
                     >
                       {task.text}
@@ -315,24 +338,24 @@ export default function PersonalTasks() {
                       className="mx-auto mb-3 opacity-30 text-green-400"
                     />
                     <p className="text-sm font-medium">
-                      لا توجد مهام حالياً...
+                      {isAr ? "لا توجد مهام حالياً..." : "No active quests..."}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      أضف مهمتك الأولى وباشر العمل
+                      {isAr ? "أضف مهمتك الأولى وباشر العمل" : "Add your first task and start the countdown"}
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2 mt-auto shrink-0">
+              <div className={cn("flex gap-2 mt-auto shrink-0", isAr ? "flex-row" : "flex-row-reverse")}>
                 <input
                   type="text"
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addTask()}
-                  placeholder="مهمة جديدة للتدمير..."
-                  className="flex-1 bg-[#050510] shadow-inner border border-white/5 rounded-xl px-4 py-3 text-sm text-right focus:outline-none focus:border-green-500/50 focus:bg-[#0a0b16] text-white transition-colors placeholder:text-gray-600"
-                  dir="rtl"
+                  placeholder={isAr ? "مهمة جديدة لغزوها..." : "New quest to conquer..."}
+                  className={cn("flex-1 bg-[#050510] shadow-inner border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500/50 focus:bg-[#0a0b16] text-white transition-colors placeholder:text-gray-600", isAr ? "text-right" : "text-left")}
+                  dir={isAr ? "rtl" : "ltr"}
                 />
                 <button
                   onClick={addTask}

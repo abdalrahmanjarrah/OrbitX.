@@ -3,6 +3,7 @@ import { useRenderLog } from "../../firebaseDebug";
 import { AnimatePresence, motion } from "motion/react";
 import { MessageCircle, Send, Trash2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useLanguage } from "../../context/LanguageContext";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../firebase";
 import { Room, Message, UserData } from "../../shared";
@@ -35,8 +36,13 @@ function StudyRoomChatComponent({
   setIsChatDrawerOpen,
   safeUpdateRoom,
 }: StudyRoomChatProps) {
-  useRenderLog("StudyRoomChat", { messagesCount: messages.length, typingNames, isChatDrawerOpen });
+  useRenderLog("StudyRoomChat", {
+    messagesCount: messages.length,
+    typingNames,
+    isChatDrawerOpen,
+  });
   const [localNewMessage, setLocalNewMessage] = useState("");
+  const { isAr, t } = useLanguage();
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -82,7 +88,9 @@ function StudyRoomChatComponent({
         if (isMountedRef.current) {
           setLocalNewMessage("");
         }
-        deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+        deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(
+          () => {},
+        );
       }
     } catch (e) {
       console.error("[StudyRoomChat] Send failed:", e);
@@ -101,7 +109,8 @@ function StudyRoomChatComponent({
 
     // Check if user is near the bottom of the chat container (allow 120 pixels buffer)
     const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      120;
 
     if (isMyMsg || isNearBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -119,7 +128,9 @@ function StudyRoomChatComponent({
         typingTimeoutRef.current = null;
       }
       if (capturedUid && capturedStationId) {
-        deleteDoc(doc(db, "rooms", capturedStationId, "typing", capturedUid)).catch(() => {});
+        deleteDoc(
+          doc(db, "rooms", capturedStationId, "typing", capturedUid),
+        ).catch(() => {});
       }
     };
   }, [user?.uid, stationId]);
@@ -148,13 +159,15 @@ function StudyRoomChatComponent({
                 {isHost && (
                   <button
                     onClick={async () => {
-                      await safeUpdateRoom({ isChatLocked: !room?.isChatLocked });
+                      await safeUpdateRoom({
+                        isChatLocked: !room?.isChatLocked,
+                      });
                     }}
                     className={cn(
                       "text-[10px] px-2 py-1 rounded-full font-bold transition-all",
                       room?.isChatLocked
                         ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
-                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30"
+                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30",
                     )}
                   >
                     {room?.isChatLocked ? "دردشة مغلقة 🔒" : "دردشة مفتوحة 🔓"}
@@ -169,23 +182,29 @@ function StudyRoomChatComponent({
               </button>
             </div>
 
-            <div ref={chatContainerRef} className="flex-1 p-3 overflow-y-auto space-y-3 relative custom-scrollbar">
+            <div
+              ref={chatContainerRef}
+              className="flex-1 p-3 overflow-y-auto space-y-3 relative custom-scrollbar"
+            >
               {chatError && (
-                <div className="sticky top-0 z-25 text-[11px] text-red-300 font-bold bg-red-950/80 border border-red-500/20 p-2.5 rounded-xl backdrop-blur-sm mb-2 text-center shadow-lg animate-bounce" dir="rtl">
+                <div
+                  className="sticky top-0 z-25 text-[11px] text-red-300 font-bold bg-red-950/80 border border-red-500/20 p-2.5 rounded-xl backdrop-blur-sm mb-2 text-center shadow-lg animate-bounce"
+                  dir={isAr ? "rtl" : "ltr"}
+                >
                   {chatError}
                 </div>
               )}
               {typingNames.length > 0 && (
                 <div
-                  className="sticky top-0 z-10 text-[10px] text-indigo-400 italic mb-2 animate-pulse text-right bg-[#0a0b16]/80 p-1.5 rounded-lg backdrop-blur-sm self-start inline-block"
-                  dir="rtl"
+                  className={cn("sticky top-0 z-10 text-[10px] text-indigo-400 italic mb-2 animate-pulse bg-[#0a0b16]/80 p-1.5 rounded-lg backdrop-blur-sm self-start inline-block", isAr ? "text-right" : "text-left")}
+                  dir={isAr ? "rtl" : "ltr"}
                 >
-                  {typingNames.slice(0, 3).join(" و ")}{" "}
+                  {typingNames.slice(0, 3).join(isAr ? " و " : ", ")}{" "}
                   {typingNames.length > 3
-                    ? "وآخرون يكتبون..."
+                    ? (isAr ? "وآخرون يكتبون..." : "and others are typing...")
                     : typingNames.length > 1
-                      ? "يكتبون الآن..."
-                      : "يكتب الآن..."}
+                      ? (isAr ? "يكتبون الآن..." : "are typing...")
+                      : (isAr ? "يكتب الآن..." : "is typing...")}
                 </div>
               )}
               {messages.map((msg) => (
@@ -219,7 +238,9 @@ function StudyRoomChatComponent({
                                   OperationType.DELETE,
                                   `rooms/${stationId}/messages/${msg.id}`,
                                 );
-                                setChatError("⚠️ عذراً، فشل تدمير الرسالة! تحقق من الاتصال بالشبكة.");
+                                setChatError(
+                                  "⚠️ عذراً، فشل تدمير الرسالة! تحقق من الاتصال بالشبكة.",
+                                );
                                 setDeletingMsgId(null);
                               }
                             }}
@@ -244,8 +265,7 @@ function StudyRoomChatComponent({
                       ))}
                     <button
                       onClick={() =>
-                        msg.userId !== "system" &&
-                        onSelectUser(msg.userId)
+                        msg.userId !== "system" && onSelectUser(msg.userId)
                       }
                       className={cn(
                         "flex items-center gap-1.5",
@@ -295,7 +315,10 @@ function StudyRoomChatComponent({
                         onChange={(e) => {
                           setLocalNewMessage(e.target.value);
                           const now = Date.now();
-                          if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+                          if (
+                            typeof window !== "undefined" &&
+                            (window as any).__firestoreQuotaExceeded
+                          ) {
                             return; // Guard typing indicator when Firestore quota has run out
                           }
                           if (now - lastTypingUpdate.current > 10000) {
@@ -311,7 +334,9 @@ function StudyRoomChatComponent({
                           }
                           typingTimeoutRef.current = setTimeout(() => {
                             if (isMountedRef.current && user?.uid) {
-                              deleteDoc(doc(db, "rooms", stationId, "typing", user.uid)).catch(() => {});
+                              deleteDoc(
+                                doc(db, "rooms", stationId, "typing", user.uid),
+                              ).catch(() => {});
                             }
                             if (isMountedRef.current) {
                               typingTimeoutRef.current = null;
@@ -323,23 +348,29 @@ function StudyRoomChatComponent({
                             onSend();
                           }
                         }}
-                        placeholder={isLockedForMe ? "الدردشة مغلقة حالياً من قبل المشرف 🔒" : "اكتب رسالة..."}
+                        placeholder={
+                          isLockedForMe
+                            ? (isAr ? "الدردشة مغلقة حالياً من قبل المشرف 🔒" : "Chat is currently locked by the host 🔒")
+                            : (isAr ? "اكتب رسالة..." : "Type a message...")
+                        }
                         className={cn(
-                          "w-full bg-[#050510] shadow-inner border rounded-xl px-4 py-3 pl-14 text-right text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
+                          "w-full bg-[#050510] shadow-inner border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
+                          isAr ? "pl-14 text-right" : "pr-14 text-left",
                           isLockedForMe
                             ? "border-red-500/30 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-red-400/60"
-                            : "border-white/5"
+                            : "border-white/5",
                         )}
-                        dir="rtl"
+                        dir={isAr ? "rtl" : "ltr"}
                       />
                       <button
                         onClick={onSend}
                         disabled={isLockedForMe}
                         className={cn(
-                          "absolute left-1.5 top-1.5 bottom-1.5 px-3 rounded-lg transition-colors flex items-center justify-center",
+                          "absolute top-1.5 bottom-1.5 px-3 rounded-lg transition-colors flex items-center justify-center",
+                          isAr ? "left-1.5" : "right-1.5",
                           isLockedForMe
                             ? "bg-red-500/10 text-red-400/50 cursor-not-allowed"
-                            : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                            : "bg-indigo-500 hover:bg-indigo-600 text-white",
                         )}
                       >
                         <Send size={16} />
@@ -365,8 +396,7 @@ function StudyRoomChatComponent({
         <MessageCircle
           size={20}
           className={cn(
-            !isChatDrawerOpen &&
-              "drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]",
+            !isChatDrawerOpen && "drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]",
           )}
         />
       </button>

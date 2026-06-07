@@ -181,6 +181,7 @@ import AwarenessView from './AwarenessView';
 import ChallengesHubView from './ChallengesHubView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+import { useLanguage } from "../context/LanguageContext";
 
 export default function Dashboard({
   user,
@@ -189,6 +190,7 @@ export default function Dashboard({
   user: UserData | null;
   onLogout: () => void;
 }) {
+  const { lang, isAr, t, toggleLanguage } = useLanguage();
   useRenderLog("Dashboard", { userEmail: user?.email });
   const [activeTab, setActiveTab] = useState<
     | "home"
@@ -349,7 +351,7 @@ export default function Dashboard({
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col font-sans overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200" dir="rtl">
+    <div className="min-h-screen relative flex flex-col font-sans overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200" dir={isAr ? "rtl" : "ltr"}>
       {/* Background Ambience */}
       <div className="fixed inset-0 bg-[#03040B] z-[-2]" />
       <StarBackground />
@@ -390,7 +392,7 @@ export default function Dashboard({
               </div>
 
               {/* Progress Bar inside Wizard */}
-              <div className="relative z-10 flex items-center justify-center gap-2 mb-8" dir="rtl">
+              <div className="relative z-10 flex items-center justify-center gap-2 mb-8" dir={isAr ? "rtl" : "ltr"}>
                 {[0, 1, 2].map((s) => (
                   <div
                     key={s}
@@ -408,14 +410,14 @@ export default function Dashboard({
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="relative z-10 text-right"
-                  dir="rtl"
+                  className="relative z-10 rtl:text-right ltr:text-left"
+                  dir={isAr ? "rtl" : "ltr"}
                 >
                   <h2 className="text-2xl md:text-3xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-l from-indigo-300 via-cyan-300 to-white leading-tight">
-                    أهلاً بك على متن المدار، يا قائد 🚀
+                    {t("onboarding.welcome", "أهلاً بك على متن المدار، يا قائد 🚀")}
                   </h2>
                   <p className="text-sm text-indigo-200/60 mb-6 leading-relaxed">
-                    تم رصد تفويضك بنجاح. يستعد البروتوكول المداري لإعداد وحدة التحكم الخاصة بك وعزل المؤثرات الحركية المحيطة لضمان أقصى مستويات التركيز البشري.
+                    {t("onboarding.desc", "تم رصد تفويضك بنجاح. يستعد البروتوكول المداري لإعداد وحدة التحكم الخاصة بك وعزل المؤثرات الحركية المحيطة لضمان أقصى مستويات التركيز البشري.")}
                   </p>
 
                   <div className="bg-[#060711] border border-white/5 rounded-2.5xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden">
@@ -424,10 +426,12 @@ export default function Dashboard({
                       className="w-16 h-16 rounded-2xl border border-indigo-500/30 object-cover shadow-[0_0_15px_rgba(99,102,241,0.2)]"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="flex-1">
-                      <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1">ASTRONAUT REGISTRY ID</div>
-                      <div className="text-base font-bold text-white mb-0.5">{user.displayName || "رائد مستكشف"}</div>
-                      <div className="text-xs text-indigo-300/60 leading-relaxed font-sans mt-0.5">تبدأ رحلتك الآن بمستوى 1 ومخزون 0 XP. استعد للارتقاء بالرتب والمجموعات المجرية!</div>
+                    <div className="flex-1 text-right ltr:text-left">
+                      <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1">{t("onboarding.identity_id", "ASTRONAUT REGISTRY ID")}</div>
+                      <div className="text-base font-bold text-white mb-0.5">{user.displayName || (isAr ? "رائد مستكشف" : "Explorer Scientist")}</div>
+                      <div className="text-xs text-indigo-300/60 leading-relaxed font-sans mt-0.5">
+                        {t("onboarding.identity_sub", "تبدأ رحلتك الآن بمستوى 1 ومخزون 0 XP. استعد للارتقاء بالرتب والمجموعات المجرية!")}
+                      </div>
                     </div>
                   </div>
 
@@ -438,8 +442,8 @@ export default function Dashboard({
                     }}
                     className="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 rounded-2xl font-black text-sm text-white shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all flex items-center justify-center gap-3 group"
                   >
-                    <span>لوحة الهوية والبدء بيولوجياً</span>
-                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    <span>{t("onboarding.identity_btn", "لوحة الهوية والبدء بيولوجياً")}</span>
+                    <ChevronLeft className={cn("w-4 h-4 transition-transform", isAr ? "group-hover:-translate-x-1" : "group-hover:translate-x-1 rotate-180")} />
                   </button>
                 </motion.div>
               )}
@@ -449,32 +453,32 @@ export default function Dashboard({
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="relative z-10 text-right"
-                  dir="rtl"
+                  className="relative z-10 rtl:text-right ltr:text-left"
+                  dir={isAr ? "rtl" : "ltr"}
                 >
                   <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
-                    تحديد التخصص والوظيفة المدارية 🔬
+                    {t("onboarding.specialty_title", "تحديد التخصص والوظيفة المدارية 🔬")}
                   </h2>
                   <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
-                    اختر هويتك العلمية أو الأكاديمية. ستعرض هذه الهوية في الملف التعريفي وقائمة تصنيفات المدار العامة.
+                    {t("onboarding.specialty_sub", "اختر هويتك العلمية أو الأكاديمية. ستعرض هذه الهوية في الملف التعريفي وقائمة تصنيفات المدار العامة.")}
                   </p>
 
                   {/* Predefined Beautiful Sector Badges */}
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     {[
-                      { label: "🔬 باحث ومحلل بيانات", icon: "🔬" },
-                      { label: "💻 مهندس برمجيات مداري", icon: "💻" },
-                      { label: "📚 طالب علم ومعرفة", icon: "📚" },
-                      { label: "✍️ منشئ عوالم وصانع محتوى", icon: "✍️" },
+                      { label: isAr ? "🔬 باحث ومحلل بيانات" : "🔬 Data Analyst & Researcher", icon: "🔬", value: "🔬 باحث ومحلل بيانات" },
+                      { label: isAr ? "💻 مهندس برمجيات مداري" : "💻 Orbital Software Engineer", icon: "💻", value: "💻 مهندس برمجيات مداري" },
+                      { label: isAr ? "📚 طالب علم ومعرفة" : "📚 Knowledge Student", icon: "📚", value: "📚 طالب علم ومعرفة" },
+                      { label: isAr ? "✍️ منشئ عوالم وصانع محتوى" : "✍️ Content Creator & Designer", icon: "✍️", value: "✍️ منشئ عوالم وصانع محتوى" },
                     ].map((badge) => (
                       <button
-                        key={badge.label}
+                        key={badge.value}
                         onClick={() => {
                           setCustomRole(badge.label);
                           playSound("message");
                         }}
                         className={cn(
-                          "p-4 rounded-2xl border text-right transition-all duration-300 flex flex-col justify-between gap-3 relative overflow-hidden",
+                          "p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-3 relative overflow-hidden rtl:text-right ltr:text-left",
                           customRole === badge.label
                             ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
                             : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200 hover:border-white/10"
@@ -492,8 +496,8 @@ export default function Dashboard({
                       type="text"
                       value={customRole}
                       onChange={(e) => setCustomRole(e.target.value)}
-                      placeholder="أو اكتب تخصصاً مخصصاً بنفسك..."
-                      className="flex-1 bg-[#060711] border border-white/10 rounded-2xl px-5 py-4 text-right focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
+                      placeholder={t("onboarding.custom_placeholder", "أو اكتب تخصصاً مخصصاً بنفسك...")}
+                      className="flex-1 bg-[#060711] border border-white/10 rounded-2xl px-5 py-4 text-right ltr:text-left focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
                     />
                   </div>
 
@@ -502,7 +506,7 @@ export default function Dashboard({
                       onClick={() => setOnboardingStep(0)}
                       className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
                     >
-                      السابق
+                      {t("onboarding.prev", "السابق")}
                     </button>
                     <button
                       onClick={() => {
@@ -512,7 +516,7 @@ export default function Dashboard({
                       disabled={!customRole.trim()}
                       className="flex-1 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-[#131526] disabled:text-gray-500 transition-colors rounded-2xl font-black text-xs text-white shadow-[0_0_20px_rgba(99,102,241,0.15)] disabled:shadow-none"
                     >
-                      وقود والالتزام المداري
+                      {isAr ? "وقود والالتزام المداري" : "Fuel & Orbit Commitment"}
                     </button>
                   </div>
                 </motion.div>
@@ -523,21 +527,30 @@ export default function Dashboard({
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="relative z-10 text-right"
-                  dir="rtl"
+                  className="relative z-10 rtl:text-right ltr:text-left"
+                  dir={isAr ? "rtl" : "ltr"}
                 >
                   <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
-                    كمية شحن مولد الوقود اليومي 🔋
+                    {t("onboarding.fuel", "كمية شحن مولد الوقود اليومي 🔋")}
                   </h2>
                   <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
-                    اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت وحصاد المحاصيل.
+                    {t("onboarding.commit_sub", "اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت وحصاد المحاصيل.")}
                   </p>
 
                   <div className="space-y-3 mb-8">
                     {[
-                      { title: "⏱️ 1 ساعة: حارس المدار الهادئ (المرحلة الأساسية)", rate: "1 ساعة" },
-                      { title: "🚀 2 ساعتان: كابتن الأنظمة وداعم الطاقة", rate: "2 ساعتان" },
-                      { title: "🌌 4 ساعات: بطل المجرة السحيقة والجاذبية المطلقة", rate: "4 ساعات" },
+                      { 
+                        title: isAr ? "⏱️ 1 ساعة: حارس المدار الهادئ (المرحلة الأساسية)" : "⏱️ 1 Hour: Peaceful Orbital Guardian", 
+                        rate: "1 ساعة" 
+                      },
+                      { 
+                        title: isAr ? "🚀 2 ساعتان: كابتن الأنظمة وداعم الطاقة" : "🚀 2 Hours: Systems Captain & Energy Booster", 
+                        rate: "2 ساعتان" 
+                      },
+                      { 
+                        title: isAr ? "🌌 4 ساعات: بطل المجرة السحيقة والجاذبية المطلقة" : "🌌 4 Hours: Deep Galaxy Hero & Absolute Gravity", 
+                        rate: "4 ساعات" 
+                      },
                     ].map((target) => (
                       <button
                         key={target.rate}
@@ -546,7 +559,7 @@ export default function Dashboard({
                           playSound("message");
                         }}
                         className={cn(
-                          "w-full p-4 rounded-2.5xl border text-right transition-all flex items-center justify-between text-xs font-bold font-sans",
+                          "w-full p-4 rounded-2.5xl border transition-all flex items-center justify-between text-xs font-bold font-sans rtl:text-right ltr:text-left",
                           dailyFocusTarget === target.rate
                             ? "bg-indigo-500/10 border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]"
                             : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200"
@@ -565,7 +578,7 @@ export default function Dashboard({
                       onClick={() => setOnboardingStep(1)}
                       className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
                     >
-                      السابق
+                      {t("onboarding.prev", "السابق")}
                     </button>
                     <button
                       onClick={() => {
@@ -574,7 +587,7 @@ export default function Dashboard({
                       }}
                       className="flex-1 py-4 bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all rounded-2xl font-black text-xs text-white"
                     >
-                      تفعيل بروتوكول الإقلاع وعزل التشتت 👨‍🚀
+                      {t("onboarding.launch", "تفعيل بروتوكول الإقلاع وعزل التشتت 👨‍🚀")}
                     </button>
                   </div>
                 </motion.div>
@@ -620,29 +633,29 @@ export default function Dashboard({
             <div className="hidden md:flex items-center bg-black/40 p-1 rounded-full border border-white/5">
               {currentCategory === "focus" && (
                 <>
-                  <NavPill icon={<LayoutDashboard size={14} />} label="المحطات" active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
-                  <NavPill icon={<Calendar size={14} />} label="الجدول" active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
-                  <NavPill icon={<Swords size={14} />} label="النزالات ⚔️" active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
-                  <NavPill icon={<Bird size={14} />} label="المزرعة" active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
-                  <NavPill icon={<Target size={14} />} label="الثقوب السوداء" active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
+                  <NavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
+                  <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
+                  <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات ⚔️")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
+                  <NavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
+                  <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
               )}
               {currentCategory === "community" && (
                 <>
-                  <NavPill icon={<MessageSquare size={14} />} label="الشات" active={activeTab === "chat"} onClick={() => handleTabChange("chat")} className="tour-step-chat" />
-                  <NavPill icon={<Search size={14} />} label="البث" active={activeTab === "search"} onClick={() => handleTabChange("search")} />
-                  <NavPill icon={<MessageCircle size={14} />} label="النقاشات" active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
-                  <NavPill icon={<Users size={14} />} label="الأساطيل" active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
-                  <NavPill icon={<Trophy size={14} />} label="التصنيف" active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
-                  <NavPill icon={<Radio size={14} />} label="الوعي" active={activeTab === "awareness"} onClick={() => handleTabChange("awareness")} className="tour-step-awareness" />
+                  <NavPill icon={<MessageSquare size={14} />} label={t("nav.chat", "الشات")} active={activeTab === "chat"} onClick={() => handleTabChange("chat")} className="tour-step-chat" />
+                  <NavPill icon={<Search size={14} />} label={t("nav.search", "البث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
+                  <NavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "النقاشات")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
+                  <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
+                  <NavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "التصنيف")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
+                  <NavPill icon={<Radio size={14} />} label={t("nav.awareness", "الوعي")} active={activeTab === "awareness"} onClick={() => handleTabChange("awareness")} className="tour-step-awareness" />
                 </>
               )}
               {currentCategory === "profile" && (
                 <>
-                  <NavPill icon={<UserIcon size={14} />} label="الملف" active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
-                  <NavPill icon={<Info size={14} />} label="الدعم والاقتراحات" active={activeTab === "support"} onClick={() => handleTabChange("support")} />
+                  <NavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
+                  <NavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />
                   {user.role === "admin" && (
-                    <NavPill icon={<Shield size={14} />} label="الإدارة" active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
+                    <NavPill icon={<Shield size={14} />} label={t("nav.admin", "الإدارة")} active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
                   )}
                 </>
               )}
@@ -663,6 +676,21 @@ export default function Dashboard({
         </div>
 
         <div className="flex items-center justify-end gap-3 pl-1">
+          {/* Language Toggle */}
+          <button
+            onClick={() => {
+              toggleLanguage();
+              playSound("timer");
+            }}
+            className="p-2 hover:bg-white/10 text-gray-400 hover:text-indigo-400 rounded-full transition-colors flex items-center justify-center relative group"
+            title={lang === "ar" ? "Switch to English" : "العربية"}
+          >
+            <Globe2 size={18} className={cn(lang === "en" ? "text-indigo-400 animate-pulse" : "text-gray-400")} />
+            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2 py-0.5 rounded whitespace-nowrap shadow-xl">
+              {lang === "ar" ? "English" : "العربية"}
+            </span>
+          </button>
+
           {/* Manual Tour Trigger (Lightweight guidance) */}
           <button
             onClick={() => {
@@ -670,10 +698,10 @@ export default function Dashboard({
               playSound("timer");
             }}
             className="p-2 hover:bg-white/10 text-gray-400 hover:text-indigo-400 rounded-full transition-colors flex items-center justify-center relative group"
-            title="بدء الجولة الإرشادية"
+            title={t("top.tour", "بدء الجولة الإرشادية")}
           >
             <Info size={18} />
-            <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2 py-0.5 rounded whitespace-nowrap">🧭 جولة سريعة</span>
+            <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2 py-0.5 rounded whitespace-nowrap">{t("top.tour_sub", "🧭 جولة سريعة")}</span>
           </button>
 
           <div className="md:border-l md:border-white/10 md:pl-2">
@@ -696,10 +724,10 @@ export default function Dashboard({
           >
             <div className="hidden md:flex flex-col text-left mr-2">
               <div className="text-xs font-bold text-white flex items-center justify-end gap-1 group-hover:text-indigo-300 transition-colors">
-                {user.displayName} {getAstronautRank(user.xp).icon}
+                {user.displayName} {getAstronautRank(user.xp, undefined, lang).icon}
               </div>
-              <div className={cn("text-[10px] font-black uppercase tracking-wider", getAstronautRank(user.xp).color)}>
-                {getAstronautRank(user.xp).title}
+              <div className={cn("text-[10px] font-black uppercase tracking-wider", getAstronautRank(user.xp, undefined, lang).color)}>
+                {getAstronautRank(user.xp, undefined, lang).title}
               </div>
             </div>
             
@@ -761,29 +789,29 @@ export default function Dashboard({
           <div className="pointer-events-auto flex gap-2 overflow-x-auto px-4 hide-scrollbar">
             {currentCategory === "focus" && (
                 <>
-                  <MobileNavPill icon={<LayoutDashboard size={14} />} label="المحطات" active={activeTab === "home"} onClick={() => handleTabChange("home")} />
-                  <MobileNavPill icon={<Calendar size={14} />} label="الجدول" active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
-                  <MobileNavPill icon={<Swords size={14} />} label="النزالات ⚔️" active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
-                  <MobileNavPill icon={<Bird size={14} />} label="المزرعة" active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
-                  <MobileNavPill icon={<Target size={14} />} label="الثقوب السوداء" active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
+                  <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
+                  <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
+                  <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات ⚔️")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
+                  <MobileNavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
+                  <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
             )}
             {/* ... Mobile Sub-nav for others ... */}
             {currentCategory === "community" && (
                 <>
-                  <MobileNavPill icon={<MessageSquare size={14} />} label="الشات" active={activeTab === "chat"} onClick={() => handleTabChange("chat")} />
-                  <MobileNavPill icon={<Search size={14} />} label="الاستكشاف" active={activeTab === "search"} onClick={() => handleTabChange("search")} />
-                  <MobileNavPill icon={<MessageCircle size={14} />} label="مجلس الحكماء" active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} />
-                  <MobileNavPill icon={<Users size={14} />} label="الأساطيل" active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
-                  <MobileNavPill icon={<Trophy size={14} />} label="المتصدرين" active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} />
+                  <MobileNavPill icon={<MessageSquare size={14} />} label={t("nav.chat", "الشات")} active={activeTab === "chat"} onClick={() => handleTabChange("chat")} />
+                  <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "الاستكشاف")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
+                  <MobileNavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "مجلس الحكماء")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} />
+                  <MobileNavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
+                  <MobileNavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "المتصدرين")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} />
                 </>
             )}
             {currentCategory === "profile" && (
                 <>
-                  <MobileNavPill icon={<UserIcon size={14} />} label="الملف" active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
-                  <MobileNavPill icon={<Info size={14} />} label="الدعم والاقتراحات" active={activeTab === "support"} onClick={() => handleTabChange("support")} />
+                  <MobileNavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
+                  <MobileNavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />
                   {user.role === "admin" && (
-                    <MobileNavPill icon={<Shield size={14} />} label="الإدارة" active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
+                    <MobileNavPill icon={<Shield size={14} />} label={t("nav.admin", "الإدارة")} active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
                   )}
                 </>
             )}
@@ -795,7 +823,7 @@ export default function Dashboard({
         <div className="flex items-center gap-2 bg-[#060713]/80 backdrop-blur-3xl p-2 rounded-full border border-white/12 shadow-[0_25px_65px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.06)] hover:border-white/20 transition-all duration-300 relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-gradient-to-t before:from-white/[0.04] before:to-transparent before:shadow-[inset_y_1px_rgba(255,255,255,0.15)]">
           <DockButton
             icon={<Rocket size={20} />}
-            label="التركيز"
+            label={t("cat.focus", "التركيز")}
             active={currentCategory === "focus"}
             onClick={() => setCategory("focus")}
             colorClass="from-indigo-600 to-indigo-400"
@@ -803,7 +831,7 @@ export default function Dashboard({
           />
           <DockButton
             icon={<Globe2 size={20} />}
-            label="المجرة"
+            label={t("cat.community", "المجرة")}
             active={currentCategory === "community"}
             onClick={() => setCategory("community")}
             colorClass="from-fuchsia-600 to-pink-500"
@@ -811,7 +839,7 @@ export default function Dashboard({
           />
           <DockButton
             icon={<UserCircle size={20} />}
-            label="الهوية"
+            label={t("cat.profile", "الهوية")}
             active={currentCategory === "profile"}
             onClick={() => setCategory("profile")}
             colorClass="from-cyan-600 to-emerald-400"

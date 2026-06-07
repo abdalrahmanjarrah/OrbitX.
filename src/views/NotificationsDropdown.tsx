@@ -77,7 +77,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -126,64 +128,84 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
-
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import SuggestionsSection from "./SuggestionsSection";
+import QuranPlayer from "./QuranPlayer";
+import PersonalTasks from "./PersonalTasks";
+import StudyRoomView from "./StudyRoomView";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AwarenessView from "./AwarenessView";
+import AnalyticsView from "./AnalyticsView";
+import FleetsView from "./FleetsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function NotificationsDropdown({ userId }: { userId: string }) {
+  const { isAr, t } = useLanguage();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [globalNotifs, setGlobalNotifs] = useState<any[]>([]);
   const [readGlobal, setReadGlobal] = useState<string[]>(
-    JSON.parse(localStorage.getItem('readGlobalNotifs') || '[]')
+    JSON.parse(localStorage.getItem("readGlobalNotifs") || "[]"),
   );
   const [isOpen, setIsOpen] = useState(false);
   const prevUnreadCountRef = useRef(0);
@@ -201,15 +223,24 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
       setNotifications(notifs);
     });
 
-    const qGlobal = query(collection(db, "global_notifications"), orderBy("timestamp", "desc"), limit(10));
+    const qGlobal = query(
+      collection(db, "global_notifications"),
+      orderBy("timestamp", "desc"),
+      limit(10),
+    );
     const unsubGlobal = onSnapshot(qGlobal, (snap) => {
-      setGlobalNotifs(snap.docs.map(d => ({id: d.id, ...d.data()})));
+      setGlobalNotifs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsub(); unsubGlobal(); };
+    return () => {
+      unsub();
+      unsubGlobal();
+    };
   }, [userId]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length + globalNotifs.filter(n => !readGlobal.includes(n.id)).length;
+  const unreadCount =
+    notifications.filter((n) => !n.read).length +
+    globalNotifs.filter((n) => !readGlobal.includes(n.id)).length;
 
   const markAllRead = () => {
     notifications.forEach((n) => {
@@ -218,10 +249,12 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
           read: true,
         });
     });
-    
-    const newReadGlobal = Array.from(new Set([...readGlobal, ...globalNotifs.map(n => n.id)]));
+
+    const newReadGlobal = Array.from(
+      new Set([...readGlobal, ...globalNotifs.map((n) => n.id)]),
+    );
     setReadGlobal(newReadGlobal);
-    localStorage.setItem('readGlobalNotifs', JSON.stringify(newReadGlobal));
+    localStorage.setItem("readGlobalNotifs", JSON.stringify(newReadGlobal));
   };
 
   const handleAcceptFriendRequest = async (notif: any) => {
@@ -281,19 +314,26 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             className="absolute left-0 mt-2 w-72 bg-[#0b0c16] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
-            dir="rtl"
+            dir={isAr ? "rtl" : "ltr"}
           >
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
-              <span className="font-bold text-sm">الإشعارات</span>
+              <span className="font-bold text-sm">{isAr ? "الإشعارات" : "Notifications"}</span>
             </div>
             <div className="max-h-80 overflow-y-auto custom-scrollbar">
-              {globalNotifs.map(n => (
-                <div key={n.id} className="p-3 border-b border-indigo-500/30 text-sm bg-indigo-900/20">
+              {globalNotifs.map((n) => (
+                <div
+                  key={n.id}
+                  className="p-3 border-b border-indigo-500/30 text-sm bg-indigo-900/20"
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <ShieldAlert size={14} className="text-fuchsia-400" />
-                    <span className="font-bold text-fuchsia-400">إعلان إداري</span>
+                    <span className="font-bold text-fuchsia-400">
+                      إعلان إداري
+                    </span>
                   </div>
-                  <p className="text-xs text-white leading-relaxed whitespace-pre-wrap">{n.text}</p>
+                  <p className="text-xs text-white leading-relaxed whitespace-pre-wrap">
+                    {n.text}
+                  </p>
                 </div>
               ))}
               {notifications.length === 0 && globalNotifs.length === 0 ? (
@@ -310,7 +350,10 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <img
-                            src={n.senderPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${n.senderName || n.id}`}
+                            src={
+                              n.senderPhoto ||
+                              `https://api.dicebear.com/7.x/bottts/svg?seed=${n.senderName || n.id}`
+                            }
                             className="w-6 h-6 rounded-full"
                           />
                           <span className="font-bold text-indigo-400">

@@ -77,7 +77,9 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
+  Globe2,
+  UserCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -126,61 +128,81 @@ import {
 } from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
 
-import { FirestoreError } from 'firebase/firestore';
+import { FirestoreError } from "firebase/firestore";
 
 function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
+  // We try to catch uncaught snapshot errors
+  if (args.length === 2 && typeof args[1] === "function") {
+    return originalOnSnapshot(args[0], args[1], (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      handleFirestoreError(e, OperationType.GET, "snapshot_unknown");
+    });
+  }
+  if (
+    args.length === 3 &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const originalError = args[2];
+    args[2] = (e: any) => {
+      console.error("Intercepted onSnapshot error", e, args[0]);
+      originalError(e);
+    };
+    return originalOnSnapshot(args[0], args[1], args[2]);
+  }
+  return (originalOnSnapshot as any)(...args);
 }
 
-
-import { DEFAULT_SIGNALS, DEFAULT_COORDS } from '../data/AwarenessDefaults';
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
-import NotificationsDropdown from './NotificationsDropdown';
-import Dashboard from './Dashboard';
-import NavPill from './NavPill';
-import MobileNavPill from './MobileNavPill';
-import DockButton from './DockButton';
-import ChallengeModal from './ChallengeModal';
-import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
-import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
-import UserModal from './UserModal';
-import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
+import { DEFAULT_SIGNALS, DEFAULT_COORDS } from "../data/AwarenessDefaults";
+import {
+  SURAHS,
+  getAstronautRank,
+  BADGES,
+  MeteorEffect,
+  RECITERS,
+  UserData,
+  Fleet,
+  Discussion,
+  Reply,
+  ScheduleItem,
+  Room,
+  Challenge,
+  AwarenessSignal,
+  Message,
+} from "../shared";
+import NotificationsDropdown from "./NotificationsDropdown";
+import Dashboard from "./Dashboard";
+import NavPill from "./NavPill";
+import MobileNavPill from "./MobileNavPill";
+import DockButton from "./DockButton";
+import ChallengeModal from "./ChallengeModal";
+import ArticleModal from "./ArticleModal";
+import HomeView from "./HomeView";
+import StationCard from "./StationCard";
+import ExhibitionGallery from "./ExhibitionGallery";
+import SuggestionsSection from "./SuggestionsSection";
+import QuranPlayer from "./QuranPlayer";
+import PersonalTasks from "./PersonalTasks";
+import StudyRoomView from "./StudyRoomView";
+import LeaderboardView from "./LeaderboardView";
+import ChatView from "./ChatView";
+import FocusHeatmap from "./FocusHeatmap";
+import ProfileView from "./ProfileView";
+import DiscussionsView from "./DiscussionsView";
+import ScheduleView from "./ScheduleView";
+import AdminView from "./AdminView";
+import BadgeCard from "./BadgeCard";
+import CosmicDiary from "./CosmicDiary";
+import FarmDisplay from "./FarmDisplay";
+import UserModal from "./UserModal";
+import NavLink from "./NavLink";
+import BlackHolesView from "./BlackHolesView";
+import AnalyticsView from "./AnalyticsView";
+import FleetsView from "./FleetsView";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function AwarenessView({ user }: { user: UserData }) {
+  const { isAr, t } = useLanguage();
   const [signals, setSignals] = useState<AwarenessSignal[]>([]);
   const [showHudTitle, setShowHudTitle] = useState(true);
   const [selectedSignal, setSelectedSignal] = useState<AwarenessSignal | null>(
@@ -212,7 +234,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
       const q = query(
         collection(db, "awareness_signals"),
         orderBy("timestamp", "desc"),
-        limit(20)
+        limit(20),
       );
       try {
         const snapshot = await getDocs(q);
@@ -427,42 +449,42 @@ export default function AwarenessView({ user }: { user: UserData }) {
             id="admin-signal-form"
             className="hidden mt-4 bg-[#05050a]/90 backdrop-blur-xl border border-cyan-500/50 p-6 rounded-2xl w-full max-w-md pointer-events-auto shadow-2xl ml-auto self-end"
           >
-            <h3 className="text-cyan-400 font-bold mb-4 flex items-center gap-2">
-              <ShieldAlert size={18} /> بث إشارة جديدة
+            <h3 className={cn("text-cyan-400 font-bold mb-4 flex items-center gap-2", isAr ? "flex-row-reverse" : "flex-row")}>
+              <ShieldAlert size={18} /> {isAr ? "بث إشارة جديدة" : "Broadcast New Signal"}
             </h3>
             <input
               type="text"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="عنوان الإشارة..."
-              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3"
-              dir="rtl"
+              placeholder={isAr ? "عنوان الإشارة..." : "Signal Title..."}
+              className={cn("w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
             />
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3"
-              dir="rtl"
+              className={cn("w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm mb-3", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
             >
-              <option>الإعلام الموجه</option>
-              <option>النظام الاقتصادي</option>
-              <option>الدين العالمي الجديد</option>
-              <option>الحرب النفسية</option>
-              <option>تصنيف شديد السرية</option>
+              <option value="الإعلام الموجه">{isAr ? "الإعلام الموجه" : "Targeted Media"}</option>
+              <option value="النظام الاقتصادي">{isAr ? "النظام الاقتصادي" : "Economic System"}</option>
+              <option value="الدين العالمي الجديد">{isAr ? "الدين العالمي الجديد" : "New World Religion"}</option>
+              <option value="الحرب النفسية">{isAr ? "الحرب النفسية" : "Psychological Warfare"}</option>
+              <option value="تصنيف شديد السرية">{isAr ? "تصنيف شديد السرية" : "Classified Secret"}</option>
             </select>
             <textarea
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
-              placeholder="محتوى الإشارة..."
-              className="w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm min-h-[100px] mb-3"
-              dir="rtl"
+              placeholder={isAr ? "محتوى الإشارة..." : "Signal Content..."}
+              className={cn("w-full bg-[#000108] border border-cyan-500/30 rounded-lg px-3 py-2 text-cyan-100 focus:outline-none focus:border-cyan-400 text-sm min-h-[100px] mb-3", isAr ? "text-right" : "text-left")}
+              dir={isAr ? "rtl" : "ltr"}
             />
             <button
               onClick={handleCreate}
               disabled={!newTitle || !newContent || isCreating}
               className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-all"
             >
-              {isCreating ? "جاري البث..." : "إطلاق الإشارة"}
+              {isCreating ? (isAr ? "جاري البث..." : "Broadcasting...") : (isAr ? "إطلاق الإشارة" : "Launch Signal")}
             </button>
           </div>
         )}
