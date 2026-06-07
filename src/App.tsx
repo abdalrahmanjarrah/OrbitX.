@@ -372,6 +372,17 @@ function App() {
       const newBadges: string[] = [...(userData.badges || [])];
       let changed = false;
 
+      // Check if challenge_champ badge expired
+      if (newBadges.includes("challenge_champ") && userData.challengeChampExpiry) {
+        if (Date.now() > userData.challengeChampExpiry) {
+          const idx = newBadges.indexOf("challenge_champ");
+          if (idx !== -1) {
+            newBadges.splice(idx, 1);
+            changed = true;
+          }
+        }
+      }
+
       // Starter Badge (awarded on having at least 25 XP)
       if (
         userData.xp >= 25 &&
@@ -405,12 +416,16 @@ function App() {
         updateDoc(doc(db, "users", userData.uid), {
           badges: newBadges,
         }).catch((e) => console.error("Badge update failed", e));
+        updateDoc(doc(db, "profiles", userData.uid), {
+          badges: newBadges,
+        }).catch((e) => console.error("Profile badge update failed", e));
       }
     }
   }, [
     userData?.xp,
     userData?.level,
     userData?.uid,
+    userData?.challengeChampExpiry,
   ]);
 
   useEffect(() => {

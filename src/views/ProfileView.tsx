@@ -365,7 +365,7 @@ export default function ProfileView({
 
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 relative z-10">
                 {BADGES.map((badge, i) => {
-                  const unlocked = user.xp >= badge.minXp;
+                  const unlocked = user.xp >= badge.minXp || (user.badges && user.badges.includes(badge.id));
                   // Rarity logic mock for visuals
                   const rarity = badge.minXp > 50000 ? "Legendary" : badge.minXp > 10000 ? "Epic" : badge.minXp > 1000 ? "Rare" : "Common";
                   const rarityColors = {

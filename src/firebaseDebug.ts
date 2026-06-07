@@ -239,7 +239,24 @@ function triggerUIRefresh() {
   }
 }
 
+export function shouldAllowNewListener(path: string): boolean {
+  const existing = listenerTracker[path];
+  if (existing && existing.count >= 1) {
+    existing.dupesDetected++;
+    pushTrace({
+      category: "io",
+      severity: "warning",
+      message: `🔴 Duplicate listener BLOCKED: ${path} (already has ${existing.count} instance)`
+    });
+    return false;
+  }
+  return true;
+}
+
 export const Debugger = {
+  shouldAllowNewListener: (path: string): boolean => {
+    return shouldAllowNewListener(path);
+  },
   // Renders tracking
   trackRender: (componentName: string, reason?: string) => {
     if (!isAuthorizedUser) return;

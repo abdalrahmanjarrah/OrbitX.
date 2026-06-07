@@ -428,34 +428,82 @@ function StudyRoomContent({
       />
 
       {/* Challenge UI Panel */}
-      {room?.isChallenge && challengeData && (
-         <div className="z-20 px-8 pt-4 w-full max-w-5xl mx-auto flex flex-col md:flex-row gap-4">
-            <div className="flex-1 bg-[#131526]/80 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-2xl flex items-center justify-between">
-                <div>
-                   <h3 className="font-bold text-fuchsia-400 flex items-center gap-2 text-sm mb-1">
-                      <Swords size={16} /> تحدي خاص
-                   </h3>
-                   <p className="text-xs text-gray-400">الهدف: {challengeData.durationMinutes} دقيقة تركيز</p>
-                </div>
-                {challengeData.status === "completed" ? (
-                   <div className="text-sm font-bold text-green-400">
-                     انتهى التحدي 🏆 الفائز: {challengeData.winnerId === challengeData.challengerId ? challengeData.challengerName : (challengeData.winnerId === challengeData.challengedId ? challengeData.challengedName : 'تعادل')}
+      {room?.isChallenge && challengeData && (() => {
+        const start = challengeData.startTime || challengeData.createdAt || Date.now();
+        const totalMs = (challengeData.durationMinutes || 60) * 60000;
+        const elapsedMs = Date.now() - start;
+        const remainingMs = Math.max(0, totalMs - elapsedMs);
+        const totalSecs = Math.floor(remainingMs / 1000);
+        const hrs = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+        const countdownStr = remainingMs <= 0 
+          ? "انتهت مدة النزال" 
+          : hrs > 0 
+            ? `${hrs}س و ${mins}د و ${secs}ث`
+            : `${mins}د و ${secs}ث`;
+
+        const p1 = challengeData.progressPlayer1 || 0;
+        const p2 = challengeData.progressPlayer2 || 0;
+        const sum = (p1 + p2) || 1;
+        const p1Pct = Math.round((p1 / sum) * 100);
+        const p2Pct = 100 - p1Pct;
+
+        return (
+          <div className="z-20 px-8 pt-4 w-full max-w-5xl mx-auto">
+             <div className="bg-[#131526]/90 backdrop-blur-md rounded-3xl p-6 border border-fuchsia-500/20 shadow-2xl flex flex-col gap-4">
+                 <div className="flex items-center justify-between">
+                    <div>
+                       <h3 className="font-bold text-fuchsia-400 flex items-center gap-2 text-sm mb-1">
+                          <Swords size={16} className="animate-pulse" /> نزاع المدار المشترك
+                       </h3>
+                       <p className="text-xs text-gray-400">
+                         {challengeData.status === "completed" 
+                           ? `مكتمل (${challengeData.durationMinutes} دقيقة)` 
+                           : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
+                       </p>
+                    </div>
+                    {challengeData.status === "completed" ? (
+                       <div className="text-sm font-bold text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 flex items-center gap-1.5">
+                         🏆 انتهى النزال! البطل الفائز: {challengeData.winnerId === challengeData.challengerId ? challengeData.challengerName : (challengeData.winnerId === challengeData.challengedId ? challengeData.challengedName : 'تعادل')}
+                       </div>
+                    ) : (
+                       <div className="flex gap-8">
+                          <div className="flex flex-col items-center">
+                             <span className="text-[10px] text-indigo-300 font-bold mb-1">{challengeData.challengerName}</span>
+                             <span className="font-black text-xl text-white font-mono">{p1} د</span>
+                          </div>
+                          <div className="flex items-center justify-center text-rose-500 font-mono font-bold text-xs px-2">VS</div>
+                          <div className="flex flex-col items-center">
+                             <span className="text-[10px] text-fuchsia-300 font-bold mb-1">{challengeData.challengedName}</span>
+                             <span className="font-black text-xl text-white font-mono">{p2} د</span>
+                          </div>
+                       </div>
+                    )}
+                 </div>
+
+                 {challengeData.status !== "completed" && (
+                   <div className="space-y-1.5">
+                     <div className="h-2 rounded-full bg-white/5 flex overflow-hidden border border-white/5">
+                       <div
+                         style={{ width: `${p1Pct}%` }}
+                         className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-500"
+                       />
+                       <div
+                         style={{ width: `${p2Pct}%` }}
+                         className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 h-full transition-all duration-500"
+                       />
+                     </div>
+                     <div className="flex justify-between text-[10px] font-mono font-bold text-gray-500">
+                       <span>قوة {challengeData.challengerName}: {p1Pct}%</span>
+                       <span>قوة {challengeData.challengedName}: {p2Pct}%</span>
+                     </div>
                    </div>
-                ) : (
-                   <div className="flex gap-8">
-                      <div className="flex flex-col items-center">
-                         <span className="text-[10px] text-gray-400 mb-1">{challengeData.challengerName}</span>
-                         <span className="font-black text-xl text-white">{challengeData.progressPlayer1 || 0}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                         <span className="text-[10px] text-gray-400 mb-1">{challengeData.challengedName}</span>
-                         <span className="font-black text-xl text-white">{challengeData.progressPlayer2 || 0}</span>
-                      </div>
-                   </div>
-                )}
-            </div>
-         </div>
-      )}
+                 )}
+             </div>
+          </div>
+        );
+      })()}
 
       {/* Active Alerts Banner */}
       <AnimatePresence>

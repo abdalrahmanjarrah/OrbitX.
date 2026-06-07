@@ -575,7 +575,7 @@ export default function UserModal({
                 icon={badge.icon}
                 title={badge.title}
                 xp={badge.minXp + " XP"}
-                active={userData.xp >= badge.minXp}
+                active={userData.xp >= badge.minXp || (userData.badges && userData.badges.includes(badge.id))}
               />
             ))}
           </div>

@@ -43,6 +43,9 @@ function safeOnSnapshot(
   }
   let isFirstLoad = true;
   const timerStart = performance.now();
+  if (Debugger && Debugger.shouldAllowNewListener && !Debugger.shouldAllowNewListener(pathLabel)) {
+    return () => {};
+  }
   Debugger.trackListenerStart(pathLabel);
   
   const unsub = onSnapshot(
@@ -224,6 +227,10 @@ export function useSessionEngine(
   // References
   const roomRef = doc(db, "rooms", stationId);
   const lastXpGrantTimestampRef = useRef<number | null>(null);
+  const unsubRoomRef = useRef<(() => void) | null>(null);
+  const unsubTypingRef = useRef<(() => void) | null>(null);
+  const unsubMessagesRef = useRef<(() => void) | null>(null);
+  const unsubChallengeRef = useRef<(() => void) | null>(null);
   const fuelLeakIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const localLeakedRef = useRef<number>(0);
   const afkCheckedForThisCycleRef = useRef<number | null>(null);
@@ -601,7 +608,11 @@ export function useSessionEngine(
     if (!auth.currentUser) return;
 
     // Room subscription
-    const unsubscribeRoom = safeOnSnapshot(
+    if (unsubRoomRef.current) {
+      unsubRoomRef.current();
+      unsubRoomRef.current = null;
+    }
+    unsubRoomRef.current = safeOnSnapshot(
       roomRef,
       (docSnap) => {
         if (!docSnap.exists()) {
@@ -639,7 +650,11 @@ export function useSessionEngine(
     );
 
     // Live Typing subscription
-    const unsubTyping = safeOnSnapshot(
+    if (unsubTypingRef.current) {
+      unsubTypingRef.current();
+      unsubTypingRef.current = null;
+    }
+    unsubTypingRef.current = safeOnSnapshot(
       collection(db, "rooms", stationId, "typing"),
       (snap) => {
         const newMap: Record<string, { name: string; time: number }> = {};
@@ -676,7 +691,11 @@ export function useSessionEngine(
       limit(50)
     );
     let initialLoadMsgs = true;
-    const unsubscribeMessages = safeOnSnapshot(
+    if (unsubMessagesRef.current) {
+      unsubMessagesRef.current();
+      unsubMessagesRef.current = null;
+    }
+    unsubMessagesRef.current = safeOnSnapshot(
       messagesQuery,
       (snapshot) => {
         let msgs = snapshot.docs.map(
@@ -710,9 +729,18 @@ export function useSessionEngine(
     window.addEventListener("focus", handleVisibilityChangeVal);
 
     return () => {
-      unsubscribeRoom();
-      unsubTyping();
-      unsubscribeMessages();
+      if (unsubRoomRef.current) {
+        unsubRoomRef.current();
+        unsubRoomRef.current = null;
+      }
+      if (unsubTypingRef.current) {
+        unsubTypingRef.current();
+        unsubTypingRef.current = null;
+      }
+      if (unsubMessagesRef.current) {
+        unsubMessagesRef.current();
+        unsubMessagesRef.current = null;
+      }
       clearInterval(typingInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChangeVal);
       window.removeEventListener("blur", handleVisibilityChangeVal);
@@ -749,15 +777,23 @@ export function useSessionEngine(
 
   // Challenge live subscription
   useEffect(() => {
-    let unsubChallenge: () => void = () => {};
     if (room?.isChallenge && room?.challengeId && auth.currentUser) {
-      unsubChallenge = safeOnSnapshot(doc(db, "challenges", room.challengeId), (docSnap) => {
+      if (unsubChallengeRef.current) {
+        unsubChallengeRef.current();
+        unsubChallengeRef.current = null;
+      }
+      unsubChallengeRef.current = safeOnSnapshot(doc(db, "challenges", room.challengeId), (docSnap) => {
         if (docSnap.exists()) {
           setChallengeData({ id: docSnap.id, ...docSnap.data() } as Challenge);
         }
       }, undefined, `challenges/${room.challengeId}`);
     }
-    return () => unsubChallenge();
+    return () => {
+      if (unsubChallengeRef.current) {
+        unsubChallengeRef.current();
+        unsubChallengeRef.current = null;
+      }
+    };
   }, [room?.isChallenge, room?.challengeId]);
 
   // Local optimized key tracking to prevent array comparison identity re-run storms
@@ -947,6 +983,7 @@ export function useSessionEngine(
         // HARD MATHEMATICAL BOUNDARY: Reject anomalies that exceed realistic parameters
         // A single tick of our 1s loop should grant at most 5 minutes of accrued XP (safety catch-up)
         const boundedMinutes = Math.min(elapsedMinutes, 5);
+        const prevLastXpUpdateTime = lastXpUpdateTimeRef.current;
         lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
 
         let globalLastGrant = (userRef.current as any).lastFocusXpUpdate !== undefined 
@@ -969,10 +1006,9 @@ export function useSessionEngine(
 
         const currentRoom = roomSnapshotRef.current;
         if (xpToGrant > 0 && currentRoom) {
-          lastXpGrantTimestampRef.current = now;
           sessionXpCountRef.current += xpToGrant;
 
-          await requestXpGrant(
+          const result = await requestXpGrant(
             userRef.current.uid,
             userRef.current.fleetId,
             currentRoom.isChallenge ? currentRoom.challengeId : null,
@@ -982,8 +1018,68 @@ export function useSessionEngine(
             false // Enforce Transaction lock!
           );
 
-          if (currentRoom.isChallenge && currentRoom.challengeId) {
-            checkChallengeCompletion(currentRoom.challengeId).catch(() => {});
+          if (result === -1) {
+            // Blocked by cooldown. Rollback state so we retry on subsequent ticks
+            lastXpUpdateTimeRef.current = prevLastXpUpdateTime;
+            sessionXpCountRef.current -= xpToGrant;
+          } else {
+            lastXpGrantTimestampRef.current = now;
+            if (currentRoom.isChallenge && currentRoom.challengeId) {
+              checkChallengeCompletion(currentRoom.challengeId).catch(() => {});
+
+              // Challenge tracking milestones
+              if (challengeDataRef.current) {
+                const c = challengeDataRef.current;
+                const isMeP1 = userRef.current.uid === c.challengerId;
+
+                const oldMyProgress = isMeP1 ? (c.progressPlayer1 || 0) : (c.progressPlayer2 || 0);
+                const oppProgress = isMeP1 ? (c.progressPlayer2 || 0) : (c.progressPlayer1 || 0);
+
+                const myNewProgress = oldMyProgress + xpToGrant;
+                const oppName = isMeP1 ? c.challengedName : c.challengerName;
+                const myName = isMeP1 ? c.challengerName : c.challengedName;
+
+                // 1. Check if we reached a multiple of 10 minutes
+                if (Math.floor(myNewProgress / 10) > Math.floor(oldMyProgress / 10) && myNewProgress >= 10) {
+                  addDoc(collection(db, "rooms", stationId, "messages"), {
+                    text: `⚔️ الخصم ${myName} يتقدّم بثبات! لقد حقق الآن ${myNewProgress} دقائق تركيز فعلي متراكم!`,
+                    userId: "system",
+                    userName: "نظام التحديات",
+                    userPhoto: "",
+                    timestamp: serverTimestamp(),
+                    type: "text",
+                  }).catch((e) => console.error("Failed to add milestone msg:", e));
+
+                  const oppId = isMeP1 ? c.challengedId : c.challengerId;
+                  addDoc(collection(db, "users", oppId, "notifications"), {
+                    type: "challenge_push",
+                    content: `⚔️ خصمك ${myName} يتقدّم بثبات! لقد حقق ${myNewProgress} دقيقة تركيز فعلي في النزال!`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                  }).catch(() => {});
+                }
+
+                // 2. Check if we just took the lead
+                if (oldMyProgress <= oppProgress && myNewProgress > oppProgress && oppProgress > 0) {
+                  addDoc(collection(db, "rooms", stationId, "messages"), {
+                    text: `🔥 الصدارة تتغير! لقد انتزع ${myName} القيادة في نزال التركيز بـ ${myNewProgress} دقيقة مقابل ${oppProgress} دقيقة لـ ${oppName}!`,
+                    userId: "system",
+                    userName: "نظام التحديات",
+                    userPhoto: "",
+                    timestamp: serverTimestamp(),
+                    type: "text",
+                  }).catch((e) => console.error("Failed to add lead change msg:", e));
+
+                  const oppId = isMeP1 ? c.challengedId : c.challengerId;
+                  addDoc(collection(db, "users", oppId, "notifications"), {
+                    type: "challenge_push",
+                    content: `🔥 لقد انتزع ${myName} الصدارة في نزال التركيز بـ ${myNewProgress} دقيقة محققة!`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                  }).catch(() => {});
+                }
+              }
+            }
           }
         }
       }
@@ -1202,7 +1298,7 @@ export function useSessionEngine(
     }
   }, [timeLeft, room?.timerStatus, stationId, isSpectator]);
 
-  const checkChallengeCompletion = async (cId: string) => {
+  const checkChallengeCompletion = async (cId: string, forceCompleteEarly = false) => {
     const startMs = performance.now();
     try {
       const cRef = doc(db, "challenges", cId);
@@ -1212,32 +1308,41 @@ export function useSessionEngine(
       let challengedId = "";
       let challengerName = "";
       let challengedName = "";
+      let p1 = 0;
+      let p2 = 0;
 
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(cRef);
         if (!snap.exists()) return;
         const cData = snap.data() as Challenge;
-        if (cData.status !== "active") return;
+        if (cData.status !== "active" && cData.status !== "accepted") return;
 
-        const target = cData.durationMinutes;
-        const p1 = cData.progressPlayer1 || 0;
-        const p2 = cData.progressPlayer2 || 0;
+        challengerId = cData.challengerId;
+        challengedId = cData.challengedId;
+        challengerName = cData.challengerName;
+        challengedName = cData.challengedName;
+        p1 = cData.progressPlayer1 || 0;
+        p2 = cData.progressPlayer2 || 0;
 
-        if (p1 >= target || p2 >= target) {
-          challengerId = cData.challengerId;
-          challengedId = cData.challengedId;
-          challengerName = cData.challengerName;
-          challengedName = cData.challengedName;
+        const startTime = cData.startTime || cData.createdAt || Date.now();
+        const isExpired = (Date.now() - startTime) >= (cData.durationMinutes || 60) * 60000;
 
-          if (p1 >= target && p2 >= target) {
-            winnerId = p1 > p2 ? cData.challengerId : (p2 > p1 ? cData.challengedId : "tie");
-          } else if (p1 >= target) {
-            winnerId = cData.challengerId;
+        if (isExpired || forceCompleteEarly) {
+          if (p1 > p2) {
+            winnerId = challengerId;
+          } else if (p2 > p1) {
+            winnerId = challengedId;
+          } else if (p1 > 0 || p2 > 0) {
+            winnerId = "draw";
           } else {
-            winnerId = cData.challengedId;
+            winnerId = "tie";
           }
 
-          transaction.update(cRef, { status: "completed", winnerId });
+          transaction.update(cRef, { 
+            status: "completed", 
+            winnerId,
+            completedAt: Date.now()
+          });
           rewardedUser = true;
         }
       });
@@ -1245,20 +1350,59 @@ export function useSessionEngine(
       Debugger.logLatency(`challenge_completion_tx[${cId}]`, startMs, true);
 
       if (rewardedUser && winnerId) {
-        if (winnerId !== "tie" && winnerId === userRef.current.uid) {
-          const uRef = doc(db, "users", userRef.current.uid);
-          await updateDoc(uRef, { coins: increment(50) });
-          await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, 50, "challenge_win", true);
-          await addDoc(collection(db, "users", userRef.current.uid, "notifications"), {
+        if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
+          const uRef = doc(db, "users", winnerId);
+          const pRef = doc(db, "profiles", winnerId);
+          const { arrayUnion } = await import("firebase/firestore");
+
+          await updateDoc(uRef, {
+            coins: increment(50),
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          }).catch(() => {});
+
+          await updateDoc(pRef, {
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          }).catch(() => {});
+
+          await addDoc(collection(db, "users", winnerId, "notifications"), {
             type: "challenge_win",
-            content: `مبروك! لقد فزت بتحدي التركيز. تم إضافة 50 XP لعملك الرائع!`,
+            content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challengerId ? challengedName : challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
             read: false,
             timestamp: serverTimestamp(),
-          });
+          }).catch(() => {});
+
+          const loserId = winnerId === challengerId ? challengedId : challengerId;
+          addDoc(collection(db, "users", loserId, "notifications"), {
+            type: "challenge_completed",
+            content: `⚔️ انتهى النزال! فاز ${winnerId === challengerId ? challengerName : challengedName} بـ ${Math.max(p1, p2)} دقيقة مقابل ${Math.min(p1, p2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
+            read: false,
+            timestamp: serverTimestamp(),
+          }).catch(() => {});
+        } else {
+          // Tie or Draw
+          const msg = `🤝 انتهى النزال بالتعادل بين ${challengerName} و ${challengedName} بـ ${p1} دقيقة تركيز لكل منهما!`;
+          addDoc(collection(db, "users", challengerId, "notifications"), {
+            type: "challenge_completed",
+            content: msg,
+            read: false,
+            timestamp: serverTimestamp(),
+          }).catch(() => {});
+          addDoc(collection(db, "users", challengedId, "notifications"), {
+            type: "challenge_completed",
+            content: msg,
+            read: false,
+            timestamp: serverTimestamp(),
+          }).catch(() => {});
         }
 
         await addDoc(collection(db, "rooms", stationId, "messages"), {
-          text: winnerId === "tie" ? "انتهى التحدي بالتعادل!" : `🏆 انتهى التحدي! الفائز هو ${winnerId === challengerId ? challengerName : challengedName}`,
+          text: winnerId === "draw" || winnerId === "tie"
+            ? `🤝 انتهى التحدي بالتعادل! كلا البطلين بذل روحه التركيزية بـ ${p1} دقيقة!` 
+            : `🏆 انتهى التحدي رسميًا! الفائز بلقب الصدارة هو ${winnerId === challengerId ? challengerName : challengedName} بـ ${Math.max(p1, p2)} دقيقة تركيز!`,
           userId: "system",
           userName: "نظام التحديات",
           userPhoto: "",

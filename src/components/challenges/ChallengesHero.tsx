@@ -1,5 +1,5 @@
 import React from "react";
-import { Swords, Users } from "lucide-react";
+import { Swords, Users, Rocket } from "lucide-react";
 import { motion } from "motion/react";
 
 interface ChallengesHeroProps {
@@ -14,36 +14,58 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
   friendsCount,
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-[#0e0f1e] to-[#070812] p-6 md:p-8 shadow-xl">
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-300 text-xs font-semibold mb-3 border border-indigo-500/20"
-          >
-            <Swords size={12} />
-            <span>نزالات الرواد ⚔️</span>
-          </motion.div>
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0b16] p-8 shadow-xl">
+      {/* نجوم الخلفية */}
+      {Array.from({ length: 40 }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-indigo-400 opacity-30 animate-pulse"
+          style={{
+            width: `${Math.random() * 2 + 1}px`,
+            height: `${Math.random() * 2 + 1}px`,
+            top: `${Math.random() * 100}%`,
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 4}s`,
+            animationDuration: `${2 + Math.random() * 4}s`,
+          }}
+        />
+      ))}
 
-          <motion.h1 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-2xl md:text-3xl font-black text-white tracking-tight"
-          >
-            مبارزات الإنتاجية الجماعية
-          </motion.h1>
+      {/* توهجات الخلفية */}
+      <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 left-5 w-48 h-48 rounded-full bg-purple-500/8 blur-3xl pointer-events-none" />
 
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-2 text-gray-400 text-xs md:text-sm max-w-xl leading-relaxed"
-          >
-            تحدَّ رفاقك في جلسات تركيز مشتركة لتبادل التحفيز ومضاعفة نقاط الخبرة (XP).
-          </motion.p>
-        </div>
+      <div className="relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/12 text-indigo-400 text-xs font-medium mb-4 border border-indigo-500/25 tracking-wide"
+        >
+          <Swords size={12} />
+          نزالات الرواد · OrbitX
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-3xl font-black text-white tracking-tight mb-2"
+        >
+          ساحة{" "}
+          <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            المعارك الفضائية
+          </span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-gray-400 text-sm leading-relaxed max-w-lg mb-6"
+        >
+          تحدَّ رفاقك في جلسات تركيز حقيقية. الدقائق تتراكم فقط لما تكون داخل
+          محطة وتايمرك شغال — مين يدرس أكثر بالوقت المحدد يفوز.
+        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -53,22 +75,20 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
         >
           <button
             onClick={onStartChallengeClick}
-            className="px-5 py-3 bg-gradient-to-l from-indigo-500 to-fuchsia-600 hover:from-indigo-600 hover:to-fuchsia-700 text-white rounded-xl font-bold text-xs transition-all flex items-center gap-2 transform active:scale-95 shadow-md"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/35 text-indigo-400 text-sm font-medium hover:bg-indigo-500/25 hover:border-indigo-500/55 transition-all active:scale-95 cursor-pointer"
           >
-            <Swords size={14} />
-            <span>تحدي رائد فضاء</span>
+            <Rocket size={14} />
+            إطلاق نزال جديد
           </button>
-
           <button
             onClick={onInviteFriendClick}
-            className="px-5 py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-200 rounded-xl font-bold text-xs transition-all flex items-center gap-2 transform active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition-all active:scale-95 cursor-pointer"
           >
             <Users size={14} />
-            <span>البحث عن زملاء ({friendsCount})</span>
+            البحث عن زملاء ({friendsCount})
           </button>
         </motion.div>
       </div>
     </div>
   );
 };
-

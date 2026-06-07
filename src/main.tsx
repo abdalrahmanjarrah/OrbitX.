@@ -133,6 +133,9 @@ import('firebase/firestore').then((firestore) => {
         let isFirst = true;
         
         const d = (window as any).__realtimeDiagnostics;
+        if (d && d.shouldAllowNewListener && !d.shouldAllowNewListener(key)) {
+          return () => {};
+        }
         if (d) d.trackListenerStart(key);
         
         const originalUnsub = originalOnSnapshot(queryRef, (snap) => {

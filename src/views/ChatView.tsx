@@ -160,10 +160,10 @@ export default function ChatView({
         const img = new Image();
         img.src = dataUrl;
         img.onload = () => {
-          // Dynamic compression with canvas (downscale to max 800px width/height and quality 0.5)
+          // Dynamic compression with canvas (downscale to max 500px width/height and quality 0.3)
           const canvas = document.createElement('canvas');
-          const max_width = 800;
-          const max_height = 800;
+          const max_width = 500;
+          const max_height = 500;
           let width = img.width;
           let height = img.height;
           
@@ -184,22 +184,25 @@ export default function ChatView({
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
-          
-          // Verify final base64 is within standard document limits
-          const approxSizeBytes = Math.round((compressedDataUrl.length * 3) / 4);
-          if (approxSizeBytes > 1048576) {
-            alert("الصورة كبيرة جداً حتى بعد الضغط! يرجى اختيار صورة بدقة أو تفاصيل أقل.");
-            setIsUploading(false);
-            return;
-          }
-
-          setAttachment({
-            name: file.name,
-            type: 'image',
-            dataUrl: compressedDataUrl
-          });
-          setIsUploading(false);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              alert("فشل معالجة الصورة.");
+              setIsUploading(false);
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const compressed = e.target?.result as string;
+              if (compressed.length > 700000) {
+                alert("الصورة كبيرة جداً حتى بعد الضغط. جرب صورة أصغر.");
+                setIsUploading(false);
+                return;
+              }
+              setAttachment({ name: file.name, type: 'image', dataUrl: compressed });
+              setIsUploading(false);
+            };
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', 0.3);
         };
         img.onerror = () => {
           if (file.size > 1024 * 1024) {
@@ -375,6 +378,19 @@ export default function ChatView({
       await addDoc(collection(db, "global_chat"), messageData);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "global_chat");
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      await deleteDoc(doc(db, "global_chat", msgId));
+    } catch (e: any) {
+      if (e?.code === "permission-denied") {
+        alert("انتهت صلاحية الجلسة. أعد تسجيل الدخول.");
+      } else {
+        alert("فشل الحذف. حاول مرة ثانية.");
+      }
+      handleFirestoreError(e, OperationType.DELETE, `global_chat/${msgId}`);
     }
   };
 
@@ -589,13 +605,7 @@ export default function ChatView({
                                           <button 
                                             onClick={async () => {
                                                 if(confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
-                                                    try {
-                                                        await deleteDoc(doc(db, "global_chat", msg.id));
-                                                    } catch(e) {
-                                                        console.error("Delete failed:", e);
-                                                        handleFirestoreError(e, OperationType.DELETE, `global_chat/${msg.id}`);
-                                                        alert("عذراً، فشلت عملية الحذف. ربما لا تملك الصلاحية الكافية لك على الخادم.");
-                                                    }
+                                                    await handleDeleteMessage(msg.id);
                                                 }
                                             }}
                                             className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors backdrop-blur-md border border-red-500/10"

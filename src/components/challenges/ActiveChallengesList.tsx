@@ -2,7 +2,7 @@ import React from "react";
 import { Swords, Timer, Trophy, Zap, PlayCircle, Loader2 } from "lucide-react";
 import { Challenge, UserData } from "../../shared";
 import { db } from "../../firebase";
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, writeBatch, increment } from "firebase/firestore";
 import { motion } from "motion/react";
 
 interface ActiveChallengesListProps {
@@ -78,8 +78,10 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
       winnerId = challenge.challengerId;
     } else if (score2 > score1) {
       winnerId = challenge.challengedId;
-    } else {
+    } else if (score1 > 0 || score2 > 0) {
       winnerId = "draw"; // It's a draw
+    } else {
+      winnerId = "tie";
     }
 
     try {
@@ -88,6 +90,58 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
         winnerId,
         completedAt: Date.now()
       });
+
+      // Award the winner!
+      if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
+        const uRef = doc(db, "users", winnerId);
+        const pRef = doc(db, "profiles", winnerId);
+        const { arrayUnion } = await import("firebase/firestore");
+
+        await updateDoc(uRef, {
+          coins: increment(50),
+          badges: arrayUnion("challenge_champ"),
+          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+          xp: increment(100)
+        });
+
+        await updateDoc(pRef, {
+          badges: arrayUnion("challenge_champ"),
+          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+          xp: increment(100)
+        });
+
+        // Push notifications
+        await addDoc(collection(db, "users", winnerId, "notifications"), {
+          type: "challenge_win",
+          content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challenge.challengerId ? challenge.challengedName : challenge.challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
+          read: false,
+          timestamp: serverTimestamp(),
+        });
+
+        const loserId = winnerId === challenge.challengerId ? challenge.challengedId : challenge.challengerId;
+        await addDoc(collection(db, "users", loserId, "notifications"), {
+          type: "challenge_completed",
+          content: `⚔️ انتهى النزال! فاز ${winnerId === challenge.challengerId ? challenge.challengerName : challenge.challengedName} بـ ${Math.max(score1, score2)} دقيقة مقابل ${Math.min(score1, score2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
+          read: false,
+          timestamp: serverTimestamp(),
+        });
+      } else {
+        // Tie
+        const msg = `🤝 انتهى النزال بالتعادل بين ${challenge.challengerName} و ${challenge.challengedName} بـ ${score1} دقيقة تركيز لكل منهما!`;
+        await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
+          type: "challenge_completed",
+          content: msg,
+          read: false,
+          timestamp: serverTimestamp(),
+        });
+        await addDoc(collection(db, "users", challenge.challengedId, "notifications"), {
+          type: "challenge_completed",
+          content: msg,
+          read: false,
+          timestamp: serverTimestamp(),
+        });
+      }
+
       onRefresh();
     } catch (err) {
       console.error("Failed to finish challenge", err);
@@ -139,91 +193,132 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
         const oppPercent = 100 - myPercent;
 
         // Time calculations
-        const elapsedMinutes = Math.floor((Date.now() - (challenge.createdAt || Date.now())) / 60000);
+        const start = challenge.startTime || challenge.createdAt || Date.now();
+        const elapsedMinutes = Math.floor((Date.now() - start) / 60000);
         const minutesLeft = Math.max(0, (challenge.durationMinutes || 60) - elapsedMinutes);
         const isExpired = minutesLeft <= 0;
+
+        const isBehind = oppXp > myXp;
+        const behindDiff = oppXp - myXp;
+
+        const myLead = myXp > oppXp;
+        const oppLead = oppXp > myXp;
 
         return (
           <div
             key={challenge.id}
-            className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-[#111329] to-[#0d0e1b] p-6 shadow-xl transition-all hover:border-indigo-500/30 hover:shadow-[0_8px_32px_rgba(99,102,241,0.1)]"
+            className="group relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-[#0e0f1e] to-[#070812] p-6 shadow-2xl transition-all duration-300 hover:border-indigo-500/30 hover:shadow-[0_12px_40px_rgba(99,102,241,0.15)] flex flex-col gap-5"
           >
-            {/* Header telemetry info */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+            {/* Ambient slight glow */}
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-indigo-500/8 blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-fuchsia-500/4 blur-2xl pointer-events-none" />
+
+            {/* Header: Status Pills */}
+            <div className="flex items-center justify-between z-10 relative">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[ping_2s_infinite]" />
-                <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                  نزال نشط الآن
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isExpired ? "bg-amber-400" : "bg-emerald-400"}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isExpired ? "bg-amber-500" : "bg-emerald-500"}`}></span>
+                </span>
+                <span className={`text-[11px] font-bold ${isExpired ? "text-amber-400" : "text-emerald-400"} tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-white/[0.03] border border-white/5`}>
+                  {isExpired ? "بانتظار الحساب" : "نزال نشط"}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-gray-400 font-mono">
-                <Timer size={13} className="text-indigo-400" />
-                <span>المتبقي: {isExpired ? "الانتهاء بانتظار الاحتساب" : `${minutesLeft} دقيقة`}</span>
+
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-gray-300 text-xs font-mono">
+                <Timer size={12} className="text-indigo-400" />
+                <span>{isExpired ? "مكتمل المدة" : `المتبقي: ${minutesLeft} د`}</span>
               </div>
             </div>
 
-            {/* Combatants Comparison VS Display */}
-            <div className="grid grid-cols-7 gap-2 items-center text-center my-6">
+            {/* Behind warning alert */}
+            {isBehind && (
+              <div className="relative z-10 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400 text-xs">
+                <Zap size={14} className="animate-pulse shrink-0" />
+                <span>خصمك يتقدم عليك بـ <strong className="font-bold font-mono">{behindDiff}</strong> دقيقة! شدّ الهمّة البطل 🚀</span>
+              </div>
+            )}
+
+            {/* Combatants VS Side metrics */}
+            <div className="grid grid-cols-7 gap-2 items-center text-center my-2 relative z-10">
               {/* My Side */}
-              <div className="col-span-3">
-                <div className="text-xs text-indigo-400 font-semibold truncate">أنت (البطل)</div>
-                <div className="text-2xl font-black text-white mt-1">{myXp} XP</div>
-                <div className="text-[10px] text-gray-500 font-mono">الإنتاجية الخاصة بك</div>
+              <div className="col-span-3 flex flex-col justify-center">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="text-[10px] text-indigo-300 font-semibold tracking-wide uppercase">أنت (البطل)</div>
+                  <div className="text-3xl font-black text-white mt-1.5 tracking-tight font-mono">{myXp} د</div>
+                  {myLead && (
+                    <span className="mt-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      متقدم ↑
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* VS Sword Icon Badge */}
+              {/* VS Icon */}
               <div className="col-span-1 flex justify-center">
-                <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.15)] group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-full bg-[#131526] border border-white/10 flex items-center justify-center text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.15)] group-hover:scale-110 transition-transform">
                   <Swords size={16} />
                 </div>
               </div>
 
               {/* Opponent Side */}
-              <div className="col-span-3">
-                <div className="text-xs text-fuchsia-400 font-semibold truncate">{opponentName}</div>
-                <div className="text-2xl font-black text-white mt-1">{oppXp} XP</div>
-                <div className="text-[10px] text-gray-500 font-mono">الإنتاجية المحققة لها</div>
+              <div className="col-span-3 flex flex-col justify-center">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="text-[10px] text-fuchsia-300 font-semibold tracking-wide uppercase truncate max-w-full">{opponentName}</div>
+                  <div className="text-3xl font-black text-white mt-1.5 tracking-tight font-mono">{oppXp} د</div>
+                  {oppLead && (
+                    <span className="mt-1 text-[10px] font-bold text-fuchsia-400 bg-fuchsia-500/10 px-2.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      متقدم ↑
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Custom Battle Progress Bar Indicator */}
-            <div className="space-y-2 mb-6">
-              <div className="h-2 rounded-full bg-white/5 flex overflow-hidden">
+            <div className="space-y-2 relative z-10">
+              <div className="h-2 rounded-full bg-white/[0.04] flex overflow-hidden border border-white/5">
                 <div
                   style={{ width: `${myPercent}%` }}
-                  className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-500"
+                  className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-700 ease-out"
                 />
                 <div
                   style={{ width: `${oppPercent}%` }}
-                  className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 h-full transition-all duration-500"
+                  className="bg-gradient-to-r from-purple-400 to-fuchsia-400 h-full transition-all duration-700 ease-out"
                 />
               </div>
-              <div className="flex justify-between text-[11px] font-mono font-bold text-gray-400">
-                <span>توزيع القوة: {myPercent}%</span>
+              <div className="flex justify-between text-[10px] font-mono font-bold text-gray-500">
+                <span>قوة البطل: {myPercent}%</span>
                 <span>المنافس: {oppPercent}%</span>
               </div>
             </div>
 
             {/* Quick Actions Footer */}
-            <div className="flex items-center gap-3">
-              <button
-                disabled={loadingChallengeId === challenge.id}
-                onClick={() => handleJoinOrCreateChallengeRoom(challenge)}
-                className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 disabled:bg-[#15172b] text-white rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-              >
-                {loadingChallengeId === challenge.id ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <PlayCircle size={14} />
-                )}
-                <span>دخول قمرة المعركة</span>
-              </button>
+            <div className="flex items-center gap-3 relative z-10 mt-auto">
+              {!isExpired ? (
+                <button
+                  disabled={loadingChallengeId === challenge.id}
+                  onClick={() => handleJoinOrCreateChallengeRoom(challenge)}
+                  className="flex-1 py-[11px] bg-indigo-500/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  {loadingChallengeId === challenge.id ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <PlayCircle size={14} />
+                  )}
+                  <span>دخول قمرة المعركة</span>
+                </button>
+              ) : null}
 
               <button
                 onClick={() => handleFinishChallengeEarly(challenge)}
-                className="py-2.5 px-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl font-bold text-xs transition-colors border border-white/5"
+                className={`py-[11px] px-4 font-bold text-xs transition-all border rounded-xl cursor-pointer ${
+                  isExpired 
+                    ? "flex-1 bg-gradient-to-l from-amber-500 to-orange-600 border-amber-500/30 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-[pulse_2s_infinite] hover:brightness-110 active:scale-95" 
+                    : "bg-white/5 hover:bg-white/10 border-white/5 text-gray-300 active:scale-95"
+                }`}
               >
-                إنهاء واحتساب
+                {isExpired ? "🏆 احتساب النتائج وحصد الجوائز" : "إنهاء واحتساب"}
               </button>
             </div>
           </div>

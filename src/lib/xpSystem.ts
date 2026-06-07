@@ -80,6 +80,7 @@ export const requestXpGrant = async (
     const skew = (Debugger as any).getClockOffset ? (Debugger as any).getClockOffset() : 0;
     const now = Date.now() + skew;
     let updatedXp = false;
+    let blocked = false;
     let oldXp = 0;
     let newXp = 0;
     
@@ -97,6 +98,7 @@ export const requestXpGrant = async (
            if (uTimeSinceLastFocusGrant < 45000) {
              Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastFocusGrant/1000)}s passed. (${userId})`);
              Debugger.logXPBlocked(amount, source, "Cooldown lock applied due to focus interval check");
+             blocked = true;
              return;
            }
          } else {
@@ -105,6 +107,7 @@ export const requestXpGrant = async (
            if (uTimeSinceLastGrant < 45000) {
              Debugger.logSuspicious(`Transaction Blocked XP grant of ${amount} from ${source}. Only ${Math.round(uTimeSinceLastGrant/1000)}s passed. (${userId})`);
              Debugger.logXPBlocked(amount, source, "Cooldown lock applied due to general interval check");
+             blocked = true;
              return;
            }
          }
@@ -132,6 +135,7 @@ export const requestXpGrant = async (
        updatedXp = true;
     });
     
+    if (blocked) return -1;
     if (!updatedXp) return 0;
 
     Debugger.logXP(amount, source, oldXp, newXp);

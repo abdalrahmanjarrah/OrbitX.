@@ -66,6 +66,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
     try {
       await updateDoc(doc(db, "challenges", challenge.id), {
         status: "active",
+        startTime: Date.now(),
         createdAt: Date.now()
       });
       onRefresh();
@@ -182,20 +183,20 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                 className="space-y-3 pt-2"
               >
                 <div>
-                  <label className="text-xs text-gray-300 font-semibold block mb-2">مدة التحدي (بالدقائق)</label>
+                  <label className="text-xs text-gray-300 font-semibold block mb-2">المدة الكلية للنزال</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {[15, 30, 45, 60].map((mins) => (
+                    {[60, 120, 180, 300].map((mins) => (
                       <button
                         key={mins}
                         type="button"
                         onClick={() => setDuration(mins)}
-                        className={`py-1.5 px-2 rounded-lg border font-mono text-xs font-bold transition-all ${
+                        className={`py-1.5 px-1 rounded-lg border font-mono text-[11px] font-bold transition-all ${
                           duration === mins
                             ? "bg-fuchsia-500/10 border-fuchsia-500 text-fuchsia-400"
                             : "bg-white/[0.01] border-white/5 text-gray-400 hover:border-white/10"
                         }`}
                       >
-                        {mins} د
+                        {mins >= 60 ? `${mins / 60} ساعات` : `${mins} د`}
                       </button>
                     ))}
                   </div>

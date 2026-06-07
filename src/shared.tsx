@@ -414,6 +414,13 @@ export const BADGES = [
     description: "وصلت للمستوى 50",
     minXp: 50000,
   },
+  {
+    id: "challenge_champ",
+    title: "بطل المعركة 🏆",
+    icon: "👑",
+    description: "شارة التحديات الفاخرة - حصل عليها لانتصاره في معركة التركيز وسحق خصومه!",
+    minXp: 999999,
+  },
 ];
 
 export const MeteorEffect = ({ trigger }: { trigger: any }) => {
@@ -541,6 +548,7 @@ export interface UserData {
   fleetId?: string;
   fleetInvites?: string[];
   challengeWins?: number;
+  challengeChampExpiry?: number;
 }
 
 export interface Fleet {
@@ -621,6 +629,7 @@ export interface Challenge {
   challengedName: string;
   status: "pending" | "accepted" | "active" | "completed" | "cancelled" | "expired" | "declined";
   createdAt: number;
+  startTime?: number;
   durationMinutes: number;
   progressPlayer1: number;
   progressPlayer2: number;
