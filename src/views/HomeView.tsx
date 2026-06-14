@@ -290,7 +290,7 @@ export default function HomeView({
         };
 
         await fetchActiveUsers();
-        const intervalId = setInterval(fetchActiveUsers, 60000);
+        const intervalId = setInterval(fetchActiveUsers, 180000); // 3-minute interval to optimize Firestore read consumption
         unsubscribeUsers = () => clearInterval(intervalId);
 
       } catch (e) {
@@ -415,72 +415,32 @@ export default function HomeView({
            </div>
 
            {rooms.length === 0 ? (
-             <motion.div variants={bentoItem} className="w-full flex flex-col items-center justify-center p-12 md:p-24 rounded-3xl bg-gradient-to-br from-[#0c0d1e]/50 to-[#050510]/50 backdrop-blur-xl border border-white/5 text-center">
-                 <div className="w-24 h-24 mb-6 relative">
-                     <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin opacity-50" style={{ animationDuration: '3s' }} />
-                     <div className="absolute inset-2 rounded-full border-r-2 border-cyan-400 animate-spin opacity-30" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
-                     <Rocket size={40} className="absolute inset-0 m-auto text-indigo-400 opacity-40" />
-                 </div>
-                 <h3 className="text-xl font-bold text-white mb-2">{t("home.silent_orbit", "المدار هادئ تماماً")}</h3>
-                 <p className="text-indigo-200/50 max-w-sm">{t("home.silent_orbit_desc", "لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.")}</p>
-             </motion.div>
-           ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.map((room) => (
-                  <StationCard
-                    key={room.id}
-                    room={room}
-                    activeUsers={activeUsers}
-                    onEnter={() => onEnterStation(room.id)}
-                    isAdmin={user.role === 'admin'}
-                  />
-                ))}
-             </div>
-           )}
-        </div>
-
-        {/* Secondary Content: Mission Tracker */}
-        <div className="grid grid-cols-1 gap-6 mt-4 max-w-xl">
-           {/* Daily Missions */}
-           <motion.div variants={bentoItem} className={cn("flex flex-col bg-[#0b0c1b]/80 backdrop-blur-xl border border-indigo-500/10 rounded-3xl p-6 relative overflow-hidden group", isAr ? "text-right" : "text-left")}>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/10 transition-colors duration-700" />
-              <div className="flex items-center gap-3 mb-6 relative z-10">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                    <Target size={18} className="text-indigo-400" />
-                </div>
-                <div>
-                   <h3 className="text-lg font-bold text-white">{isAr ? "مهام النظام" : "System Tasks"}</h3>
-                   <p className="text-xs text-indigo-200/60 uppercase tracking-widest font-bold">Daily Objectives</p>
-                </div>
+              <motion.div variants={bentoItem} className="w-full flex flex-col items-center justify-center p-12 md:p-24 rounded-3xl bg-gradient-to-br from-[#0c0d1e]/50 to-[#050510]/50 backdrop-blur-xl border border-white/5 text-center">
+                  <div className="w-24 h-24 mb-6 relative">
+                      <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin opacity-50" style={{ animationDuration: '3s' }} />
+                      <div className="absolute inset-2 rounded-full border-r-2 border-cyan-400 animate-spin opacity-30" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
+                      <Rocket size={40} className="absolute inset-0 m-auto text-indigo-400 opacity-40" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">{t("home.silent_orbit", "المدار هادئ تماماً")}</h3>
+                  <p className="text-indigo-200/50 max-w-sm">{t("home.silent_orbit_desc", "لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.")}</p>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {rooms.map((room) => (
+                   <StationCard
+                     key={room.id}
+                     room={room}
+                     activeUsers={activeUsers}
+                     onEnter={() => onEnterStation(room.id)}
+                     isAdmin={user.role === 'admin'}
+                   />
+                 ))}
               </div>
+            )}
+         </div>
+       </motion.div>
 
-              <div className="space-y-4 relative z-10">
-                 <div className="p-4 rounded-2xl bg-[#131526]/80 border border-white/5 shadow-inner">
-                    <div className="flex justify-between items-center mb-3">
-                       <span className="text-sm font-bold text-white">{isAr ? "التركيز المفرط" : "Ultimate Hyperfocus"}</span>
-                       <span className="text-[10px] font-bold px-2 py-1 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 text-orange-400 rounded-lg flex items-center gap-1 border border-orange-500/20">
-                          <Zap size={10} /> +50 XP
-                       </span>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500 font-medium mb-1.5 px-1">
-                       <span>{isAr ? "التقدم الحالي" : "Current Progress"}</span>
-                       <span>{(user.totalFocusSessions || 0) % 3} / 3</span>
-                    </div>
-                    <div className="w-full h-2 bg-[#0a0b16] rounded-full overflow-hidden shadow-inner">
-                       <div 
-                         className="h-full bg-gradient-to-l from-orange-400 to-indigo-500 relative transition-all duration-1000"
-                         style={{ width: Math.min(((user.totalFocusSessions || 0) % 3) * 33.3, 100) + '%' }}
-                       >
-                         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgoJPHJlY3Qgd2lkdGg9IjQiIGhlaWdodD0iNCIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIwLjEiLz4KPC9zdmc+')] opacity-30" />
-                       </div>
-                    </div>
-                 </div>
-              </div>
-           </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Modals placed identically as before */}
+       {/* Modals placed identically as before */}
       <AnimatePresence>
         {showCreateModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

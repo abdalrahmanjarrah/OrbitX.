@@ -202,6 +202,7 @@ import BlackHolesView from "./views/BlackHolesView";
 import AwarenessView from "./views/AwarenessView";
 import AnalyticsView from "./views/AnalyticsView";
 import FleetsView from "./views/FleetsView";
+import MissionRoleWizard from "./views/MissionRoleWizard";
 
 import { useLanguage } from "./context/LanguageContext";
 
@@ -763,6 +764,16 @@ function App() {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {userData && !userData.completedWizard && (
+          <MissionRoleWizard
+            user={userData}
+            onComplete={(updates) => {
+              setUserData((prev) => (prev ? { ...prev, ...updates } : null));
+            }}
+          />
         )}
       </AnimatePresence>
       <QuranPlayer />

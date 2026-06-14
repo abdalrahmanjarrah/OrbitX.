@@ -178,6 +178,7 @@ import BlackHolesView from './BlackHolesView';
 import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
+import { useLanguage } from "../context/LanguageContext";
 
 export default function LeaderboardView({
   user,
@@ -186,6 +187,7 @@ export default function LeaderboardView({
   user: UserData;
   onSelectUser: (id: string) => void;
 }) {
+  const { isAr, lang } = useLanguage();
   const [leaders, setLeaders] = useState<UserData[]>([]);
 
   useEffect(() => {
@@ -213,29 +215,29 @@ export default function LeaderboardView({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto"
+      className={cn("max-w-4xl mx-auto", isAr ? "text-right" : "text-left")}
+      dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="flex items-center justify-between mb-8">
+      <div className={cn("flex items-center justify-between mb-8", isAr ? "flex-row" : "flex-row-reverse")}>
         <h2 className="text-3xl font-black flex items-center gap-3">
           <Trophy className="text-yellow-400" size={32} />
-          قائمة المتصدرين
+          {isAr ? "قائمة المتصدرين" : "Cosmic Leaderboard"}
         </h2>
         <div className="px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-sm text-gray-400">
-          أفضل 50 رائد فضاء
+          {isAr ? "أفضل 50 رائد فضاء" : "Top 50 Astronauts"}
         </div>
       </div>
 
       <div className="bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-lg bg-[#0a0b16]/60">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-sm font-bold text-gray-400">
-          <div className="col-span-1 text-center">المركز</div>
-          <div className="col-span-6">الرائد</div>
-          <div className="col-span-2 text-center">المستوى</div>
-          <div className="col-span-3 text-center">نقاط الخبرة (XP)</div>
+        <div className={cn("grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-sm font-bold text-gray-400", isAr ? "text-right" : "text-left")}>
+          <div className="col-span-2 md:col-span-1 text-center">{isAr ? "المركز" : "Rank"}</div>
+          <div className="col-span-5 md:col-span-6">{isAr ? "الرائد" : "Astronaut"}</div>
+          <div className="col-span-2 text-center">{isAr ? "المستوى" : "Lvl"}</div>
+          <div className="col-span-3 text-center">{isAr ? "نقاط الخبرة (XP)" : "XP"}</div>
         </div>
 
         <div className="divide-y divide-white/5">
           {leaders.map((leader, index) => {
-            const isTop3 = index < 3;
             const rankStyle =
               index === 0
                 ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
@@ -256,7 +258,7 @@ export default function LeaderboardView({
                   leader.uid === user.uid && "bg-indigo-500/10",
                 )}
               >
-                <div className="col-span-1 flex justify-center">
+                <div className="col-span-2 md:col-span-1 flex justify-center">
                   <div
                     className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center font-bold border",
@@ -267,10 +269,10 @@ export default function LeaderboardView({
                   </div>
                 </div>
 
-                <div className="col-span-6 flex items-center gap-3">
+                <div className={cn("col-span-5 md:col-span-6 flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse justify-end")}>
                   <button
                     onClick={() => onSelectUser(leader.uid)}
-                    className="relative group"
+                    className="relative group shrink-0"
                   >
                     <img
                       src={leader.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${leader.uid}`}
@@ -283,26 +285,26 @@ export default function LeaderboardView({
                       </div>
                     )}
                   </button>
-                  <div className="flex flex-col">
+                  <div className={cn("flex flex-col overflow-hidden", isAr ? "text-right" : "text-left")}>
                     <button
                       onClick={() => onSelectUser(leader.uid)}
-                      className="font-bold text-right hover:text-indigo-500 transition-colors"
+                      className={cn("font-bold hover:text-indigo-500 transition-colors truncate", isAr ? "text-right" : "text-left")}
                     >
                       {leader.displayName}
                     </button>
                     <span
                       className={cn(
-                        "text-[10px] font-bold",
-                        getAstronautRank(leader.xp).color,
+                        "text-[10px] font-bold truncate",
+                        getAstronautRank(leader.xp, undefined, lang).color,
                       )}
                     >
-                      {getAstronautRank(leader.xp).title}
+                      {getAstronautRank(leader.xp, undefined, lang).title}
                     </span>
                   </div>
                 </div>
 
                 <div className="col-span-2 flex justify-center">
-                  <div className="px-3 py-1 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500">
+                  <div className="px-3 py-1 bg-[#0a0b16]/80 shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500">
                     {leader.level}
                   </div>
                 </div>

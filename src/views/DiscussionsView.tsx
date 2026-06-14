@@ -8,6 +8,7 @@ import {
   Flame,
   Rocket,
   ChevronRight,
+  ChevronLeft,
   Hash,
   MessageSquare,
 } from "lucide-react";
@@ -209,7 +210,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
           collection(db, "users", selectedDiscussion.userId, "notifications"),
           {
             type: "reply",
-            content: `رد ${user.displayName} على موضوعك: ${selectedDiscussion.title}`,
+            content: isAr ? `رد ${user.displayName} على موضوعك: ${selectedDiscussion.title}` : `${user.displayName} replied to your thread: ${selectedDiscussion.title}`,
             read: false,
             timestamp: serverTimestamp(),
           },
@@ -325,6 +326,21 @@ export default function DiscussionsView({ user }: { user: UserData }) {
         likedBy: hasLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
         likesCount: increment(likesCountChange),
       });
+
+      // Send Firestore notification if a new like is registered, and author is not the active user
+      if (!hasLiked && targetDisc.userId && targetDisc.userId !== user.uid) {
+        addDoc(
+          collection(db, "users", targetDisc.userId, "notifications"),
+          {
+            type: "like",
+            content: isAr
+              ? `أعجب ${user.displayName} بموضوعك: ${targetDisc.title}`
+              : `${user.displayName} liked your thread: ${targetDisc.title}`,
+            read: false,
+            timestamp: serverTimestamp(),
+          }
+        ).catch((err) => console.warn("Error sending like notification:", err));
+      }
     } catch (e) {
       // rollback or ignore silently
     }
@@ -386,7 +402,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 : "border-transparent text-gray-500 hover:text-gray-300",
             )}
           >
-            الأحدث
+            {isAr ? "الأحدث" : "Latest"}
           </button>
           <button
             onClick={() => setSortBy("trending")}
@@ -398,7 +414,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
             )}
           >
             <Flame size={14} />
-            شائع
+            {isAr ? "شائع" : "Popular"}
           </button>
         </div>
       )}
@@ -469,18 +485,18 @@ export default function DiscussionsView({ user }: { user: UserData }) {
           >
             <button
               onClick={() => setSelectedDiscussion(null)}
-              className="text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors bg-[#0a0b16] px-4 py-2 rounded-xl border border-white/5 w-max"
+              className={cn("text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors bg-[#0a0b16] px-4 py-2 rounded-xl border border-white/5 w-max", isAr ? "flex-row" : "flex-row-reverse")}
             >
-              <ChevronRight size={18} />
-              العودة للساحة
+              {isAr ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              {isAr ? "العودة للساحة" : "Back to Forum"}
             </button>
 
             <div className="p-6 md:p-8 rounded-3xl bg-[#0e1021] shadow-2xl shadow-black/40 border border-white/10 space-y-6 relative overflow-hidden">
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
 
-              <div className="flex items-start justify-between relative z-10 flex-row-reverse text-right">
-                <div className="flex items-center gap-4 flex-row-reverse">
+              <div className={cn("flex items-start justify-between relative z-10", isAr ? "flex-row-reverse text-right" : "flex-row text-left")}>
+                <div className={cn("flex items-center gap-4", isAr ? "flex-row-reverse" : "flex-row")}>
                   <img
                     src={
                       selectedDiscussion.userPhoto ||
@@ -500,8 +516,8 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                         "function"
                         ? (selectedDiscussion.timestamp as any)
                             .toDate()
-                            .toLocaleString("ar-EG")
-                        : "الآن"}
+                            .toLocaleString(isAr ? "ar-EG" : "en-US")
+                        : (isAr ? "الآن" : "Now")}
                     </p>
                   </div>
                 </div>
@@ -509,7 +525,13 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 <div className="flex gap-2">
                   <span className="px-3 py-1 bg-white/5 rounded-full text-xs text-indigo-300 font-medium border border-indigo-500/10 flex items-center gap-1">
                     <Hash size={12} />
-                    {(selectedDiscussion as any).category || "عام"}
+                    {((selectedCategory) => {
+                      if (selectedCategory === "عام") return isAr ? "عام" : "General";
+                      if (selectedCategory === "دراسة") return isAr ? "دراسة" : "Study";
+                      if (selectedCategory === "سؤال") return isAr ? "سؤال" : "Question";
+                      if (selectedCategory === "شطحة") return isAr ? "شطحة" : "Rambling";
+                      return selectedCategory;
+                    })((selectedDiscussion as any).category || "عام")}
                   </span>
                 </div>
               </div>
@@ -558,7 +580,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                   </button>
                   <div className="flex items-center gap-1.5">
                     <MessageSquare size={18} />
-                    <span>{selectedDiscussion.repliesCount} ردود</span>
+                    <span>{selectedDiscussion.repliesCount} {isAr ? "ردود" : "Replies"}</span>
                   </div>
                 </div>
 
@@ -574,7 +596,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                     className="text-red-500/70 hover:text-red-400 transition-colors flex items-center gap-1"
                   >
                     <Trash2 size={16} />
-                    <span className="hidden sm:inline">حذف</span>
+                    <span className="hidden sm:inline">{isAr ? "حذف" : "Delete"}</span>
                   </button>
                 )}
               </div>
@@ -598,8 +620,8 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                     key={reply.id}
                     className="p-5 rounded-3xl bg-[#0e1021]/80 shadow-md border border-white/5 space-y-3 ms-auto max-w-[95%] relative before:content-[''] before:absolute before:-right-4 md:before:-right-12 before:top-8 before:w-4 md:before:w-12 before:h-0.5 before:bg-indigo-500/30"
                   >
-                    <div className="flex items-center justify-between flex-row-reverse">
-                      <div className="flex items-center gap-3 flex-row-reverse">
+                    <div className={cn("flex items-center justify-between", isAr ? "flex-row-reverse" : "flex-row")}>
+                      <div className={cn("flex items-center gap-3", isAr ? "flex-row-reverse" : "flex-row")}>
                         <img
                           src={
                             reply.userPhoto ||
@@ -612,14 +634,14 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                           {reply.userName}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className={cn("flex items-center gap-3", isAr ? "flex-row-reverse" : "flex-row")}>
                         <span className="text-xs text-gray-500 font-mono">
                           {reply.timestamp &&
                           typeof (reply.timestamp as any).toDate === "function"
                             ? (reply.timestamp as any)
                                 .toDate()
-                                .toLocaleString("ar-EG")
-                            : "الآن"}
+                                .toLocaleString(isAr ? "ar-EG" : "en-US")
+                            : (isAr ? "الآن" : "Now")}
                         </span>
                         {(user.role === "admin" ||
                           reply.userId === user.uid) && (
@@ -684,16 +706,16 @@ export default function DiscussionsView({ user }: { user: UserData }) {
               <div className="py-24 text-center flex flex-col items-center justify-center gap-4 bg-[#0a0b16]/50 rounded-3xl border border-dashed border-white/10 mx-auto max-w-lg">
                 <MessageCircle className="w-16 h-16 text-gray-600" />
                 <p className="text-xl text-gray-400 font-bold">
-                  الساحة صامتة اليوم
+                  {isAr ? "الساحة صامتة اليوم" : "The forum is quiet today"}
                 </p>
                 <p className="text-gray-500 text-sm">
-                  كن أول من يفتح نقاشاً مثيراً للاهتمام!
+                  {isAr ? "كن أول من يفتح نقاشاً مثيراً للاهتمام!" : "Be the first to start an exciting discussion!"}
                 </p>
                 <button
                   onClick={() => setIsCreating(true)}
                   className="mt-4 px-6 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all font-bold"
                 >
-                  إبدأ نقاشاً
+                  {isAr ? "إبدأ نقاشاً" : "Start a discussion"}
                 </button>
               </div>
             ) : (
@@ -708,9 +730,9 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-l-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  <div className="flex flex-col md:flex-row-reverse items-start justify-between gap-4">
+                  <div className={cn("flex flex-col items-start justify-between gap-4", isAr ? "md:flex-row-reverse" : "md:flex-row")}>
                     {/* User Info & Category */}
-                    <div className="flex items-center gap-3 flex-row-reverse w-full md:w-auto justify-start">
+                    <div className={cn("flex items-center gap-3 w-full md:w-auto", isAr ? "flex-row-reverse justify-end" : "flex-row justify-start")}>
                       <img
                         src={
                           disc.userPhoto ||
@@ -719,22 +741,28 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                         className="w-10 h-10 rounded-xl border border-white/10 shadow-sm"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="text-right">
-                        <div className="flex justify-end items-center gap-2">
+                      <div className={isAr ? "text-right" : "text-left"}>
+                        <div className={cn("flex items-center gap-2", isAr ? "justify-end" : "justify-start")}>
                           <p className="font-bold text-sm text-gray-200">
                             {disc.userName}
                           </p>
                           <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-gray-400 w-max">
-                            {(disc as any).category || "عام"}
+                            {((selectedCategory) => {
+                              if (selectedCategory === "عام") return isAr ? "عام" : "General";
+                              if (selectedCategory === "دراسة") return isAr ? "دراسة" : "Study";
+                              if (selectedCategory === "سؤال") return isAr ? "سؤال" : "Question";
+                              if (selectedCategory === "شطحة") return isAr ? "شطحة" : "Rambling";
+                              return selectedCategory;
+                            })((disc as any).category || "عام")}
                           </span>
                         </div>
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[10px] text-gray-500 font-mono">
                           {disc.timestamp &&
                           typeof (disc.timestamp as any).toDate === "function"
                             ? (disc.timestamp as any)
                                 .toDate()
-                                .toLocaleDateString("ar-EG")
-                            : "الآن"}
+                                .toLocaleDateString(isAr ? "ar-EG" : "en-US")
+                            : (isAr ? "الآن" : "Now")}
                         </p>
                       </div>
                     </div>
@@ -753,39 +781,39 @@ export default function DiscussionsView({ user }: { user: UserData }) {
 
                       <div className={cn("flex gap-4 items-center w-full justify-between md:justify-start", isAr ? "flex-row-reverse" : "flex-row")}>
                         <div className="flex gap-4 items-center">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 group-hover:text-indigo-300 transition-colors">
-                            <MessageSquare size={14} />
-                            {disc.repliesCount}
+                          {/* Replies display */}
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400">
+                            <MessageSquare size={14} className="text-indigo-400" />
+                            <span>{disc.repliesCount || 0}</span>
                           </div>
-                          {((Array.isArray((disc as any).likedBy)
-                            ? (disc as any).likedBy.length
-                            : (disc as any).likesCount || 0) > 0 ||
-                            ((disc as any).likedBy || []).includes(
-                              user.uid,
-                            )) && (
-                            <div
-                              className={cn(
-                                "flex items-center gap-1 text-xs font-semibold",
+
+                          {/* Interactive Like/Heart button direct from the card listing */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLike(disc.id);
+                            }}
+                            className={cn(
+                              "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-all duration-300 h-8",
+                              ((disc as any).likedBy || []).includes(user.uid)
+                                ? "text-pink-400 bg-pink-500/10 border border-pink-500/20"
+                                : "text-gray-400 hover:text-pink-400 hover:bg-white/5 border border-transparent"
+                            )}
+                          >
+                            <Heart
+                              size={14}
+                              className={
                                 ((disc as any).likedBy || []).includes(user.uid)
-                                  ? "text-pink-400"
-                                  : "text-pink-400/80",
-                              )}
-                            >
-                              <Heart
-                                size={14}
-                                className={
-                                  ((disc as any).likedBy || []).includes(
-                                    user.uid,
-                                  )
-                                    ? "fill-pink-500"
-                                    : "fill-pink-500/20"
-                                }
-                              />
+                                  ? "fill-pink-500 text-pink-500"
+                                  : ""
+                              }
+                            />
+                            <span>
                               {Array.isArray((disc as any).likedBy)
                                 ? (disc as any).likedBy.length
                                 : (disc as any).likesCount || 0}
-                            </div>
-                          )}
+                            </span>
+                          </button>
                         </div>
 
                         {(user.role === "admin" ||
@@ -813,7 +841,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                   onClick={() => setLimitCount((prev) => prev + 20)}
                   className="px-6 py-2 rounded-full border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold"
                 >
-                  تحميل المزيد
+                  {isAr ? "تحميل المزيد" : "Load More"}
                 </button>
               </div>
             )}

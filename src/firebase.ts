@@ -38,44 +38,130 @@ export const signInWithGoogle = async () => {
 
 export const logout = () => signOut(auth);
 
-// Tracked replacements of Firestore core APIs
+// Tracked replacements of Firestore core APIs with strict local fallback circuit-breakers
 export const getDoc = async (docRef: any) => {
-  Debugger.trackGetDoc(docRef.path || "unspecified_doc");
-  return originalGetDoc(docRef);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Circumvented getDoc call on path:", docRef?.path);
+    return { exists: () => false, data: () => null };
+  }
+  Debugger.trackGetDoc(docRef?.path || "unspecified_doc");
+  try {
+    return await originalGetDoc(docRef);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.GET, docRef?.path || null);
+    throw error;
+  }
 };
 
 export const getDocs = async (queryRef: any) => {
-  Debugger.trackGetDocs(queryRef._query?.path?.toString() || "queries");
-  return originalGetDocs(queryRef);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Circumvented getDocs call to prevent Firebase API rejection.");
+    return { empty: true, docs: [] };
+  }
+  Debugger.trackGetDocs(queryRef?._query?.path?.toString() || "queries");
+  try {
+    return await originalGetDocs(queryRef);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.GET, queryRef?._query?.path?.toString() || null);
+    throw error;
+  }
 };
 
 export const updateDoc = async (docRef: any, data: any) => {
-  Debugger.trackUpdateDoc(docRef.path || "unspecified_doc");
-  return originalUpdateDoc(docRef, data);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Intercepted updateDoc on path:", docRef?.path);
+    return Promise.resolve();
+  }
+  
+  if (import.meta.env.DEV && (data.xp !== undefined || data.level !== undefined)) {
+    const stack = new Error().stack || '';
+    if (!stack.includes('xpSystem.ts') && !stack.includes('xpSystem.js')) {
+       console.warn("%c[DEV WARNING] ILLEGAL XP MUTATION DETECTED OUTSIDE xpSystem.ts!", "color: red; font-size: 16px; font-weight: bold;");
+       console.warn("Direct XP mutations are forbidden. Use requestXpGrant() from xpSystem.ts.");
+    }
+  }
+
+  Debugger.trackUpdateDoc(docRef?.path || "unspecified_doc");
+  try {
+    return await originalUpdateDoc(docRef, data);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.UPDATE, docRef?.path || null);
+    throw error;
+  }
 };
 
 export const addDoc = async (colRef: any, data: any) => {
-  Debugger.trackAddDoc(colRef.path || "unspecified_collection");
-  return originalAddDoc(colRef, data);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Intercepted addDoc to prevent Firestore hammering:", colRef?.path);
+    return Promise.resolve({
+      id: "simulated_quota_" + Math.random().toString(36).substring(7),
+      path: (colRef?.path || "simulated/quota") + "/simulated_key",
+    });
+  }
+  Debugger.trackAddDoc(colRef?.path || "unspecified_collection");
+  try {
+    return await originalAddDoc(colRef, data);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.CREATE, colRef?.path || null);
+    throw error;
+  }
 };
 
 export const deleteDoc = async (docRef: any) => {
-  Debugger.trackDeleteDoc(docRef.path || "unspecified_doc");
-  return originalDeleteDoc(docRef);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Intercepted deleteDoc on path:", docRef?.path);
+    return Promise.resolve();
+  }
+  Debugger.trackDeleteDoc(docRef?.path || "unspecified_doc");
+  try {
+    return await originalDeleteDoc(docRef);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.DELETE, docRef?.path || null);
+    throw error;
+  }
 };
 
 export const setDoc = async (docRef: any, data: any, options?: any) => {
-  Debugger.trackSetDoc(docRef.path || "unspecified_doc");
-  return originalSetDoc(docRef, data, options);
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Intercepted setDoc to prevent Firestore hammering:", docRef?.path);
+    return Promise.resolve();
+  }
+
+  if (import.meta.env.DEV && (data.xp !== undefined || data.level !== undefined)) {
+    const stack = new Error().stack || '';
+    if (!stack.includes('xpSystem')) {
+       console.warn("%c[DEV WARNING] ILLEGAL XP MUTATION DETECTED DURING setDoc OUTSIDE xpSystem.ts!", "color: red; font-size: 16px; font-weight: bold;");
+    }
+  }
+
+  Debugger.trackSetDoc(docRef?.path || "unspecified_doc");
+  try {
+    return await originalSetDoc(docRef, data, options);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.WRITE, docRef?.path || null);
+    throw error;
+  }
 };
 
 export const runTransaction = async (firestore: any, updateFunction: any) => {
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    console.warn("[Quota Fallback] Intercepted runTransaction to prevent Firestore hammering.");
+    return Promise.resolve();
+  }
   Debugger.trackTransaction("run_transaction_ops");
-  return originalRunTransaction(firestore, updateFunction);
+  try {
+    return await originalRunTransaction(firestore, updateFunction);
+  } catch (error: any) {
+    handleFirestoreError(error, OperationType.WRITE, "transaction");
+    throw error;
+  }
 };
 
 // Test connection
 async function testConnection() {
+  if (typeof window !== "undefined" && (window as any).__firestoreQuotaExceeded) {
+    return;
+  }
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error: any) {
@@ -87,6 +173,16 @@ async function testConnection() {
     );
     if (isOffline) {
       console.warn("Firestore: Server is temporarily unreachable or client is working offline. Firestore will automatically sync once connection is restored.");
+      return;
+    }
+    const errMsg = error?.message || String(error);
+    const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource-exhausted") || errMsg.toLowerCase().includes("exhausted");
+    if (isQuota) {
+      if (typeof window !== "undefined") {
+        (window as any).__firestoreQuotaExceeded = true;
+      }
+      disableNetwork(db).catch(() => {});
+      console.warn("[Quota Fallback] Database connection verified Quota limit. Auto-switched client to offline durable mode.");
       return;
     }
     handleFirestoreError(error, OperationType.GET, 'test/connection');

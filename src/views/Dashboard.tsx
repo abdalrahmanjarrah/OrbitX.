@@ -125,8 +125,6 @@ import {
   deleteField,
   writeBatch,
 } from "firebase/firestore";
-import { UserSearchView } from "../components/UserSearchView";
-
 import { FirestoreError } from 'firebase/firestore';
 
 function onSnapshot(...args: any[]) {
@@ -156,32 +154,35 @@ import MobileNavPill from './MobileNavPill';
 import DockButton from './DockButton';
 import ChallengeModal from './ChallengeModal';
 import ArticleModal from './ArticleModal';
-import HomeView from './HomeView';
 import StationCard from './StationCard';
-import ExhibitionGallery from './ExhibitionGallery';
-import SuggestionsSection from './SuggestionsSection';
-import QuranPlayer from './QuranPlayer';
-import PersonalTasks from './PersonalTasks';
-import StudyRoomView from './StudyRoomView';
-import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
-import FocusHeatmap from './FocusHeatmap';
-import ProfileView from './ProfileView';
-import DiscussionsView from './DiscussionsView';
-import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
-import SupportView from './SupportView';
-import BadgeCard from './BadgeCard';
-import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
 import UserModal from './UserModal';
 import NavLink from './NavLink';
-import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
-import ChallengesHubView from './ChallengesHubView';
-import AnalyticsView from './AnalyticsView';
-import FleetsView from './FleetsView';
 import { useLanguage } from "../context/LanguageContext";
+
+// Lazy-Loaded Cinematic Sector Components (Code-Splitting)
+const HomeView = React.lazy(() => import('./HomeView'));
+const ExhibitionGallery = React.lazy(() => import('./ExhibitionGallery'));
+const SuggestionsSection = React.lazy(() => import('./SuggestionsSection'));
+const QuranPlayer = React.lazy(() => import('./QuranPlayer'));
+const PersonalTasks = React.lazy(() => import('./PersonalTasks'));
+const StudyRoomView = React.lazy(() => import('./StudyRoomView'));
+const LeaderboardView = React.lazy(() => import('./LeaderboardView'));
+const ChatView = React.lazy(() => import('./ChatView'));
+const FocusHeatmap = React.lazy(() => import('./FocusHeatmap'));
+const ProfileView = React.lazy(() => import('./ProfileView'));
+const DiscussionsView = React.lazy(() => import('./DiscussionsView'));
+const ScheduleView = React.lazy(() => import('./ScheduleView'));
+const AdminView = React.lazy(() => import('./AdminView'));
+const SupportView = React.lazy(() => import('./SupportView'));
+const BadgeCard = React.lazy(() => import('./BadgeCard'));
+const CosmicDiary = React.lazy(() => import('./CosmicDiary'));
+const FarmDisplay = React.lazy(() => import('./FarmDisplay'));
+const BlackHolesView = React.lazy(() => import('./BlackHolesView'));
+const AwarenessView = React.lazy(() => import('./AwarenessView'));
+const ChallengesHubView = React.lazy(() => import('./ChallengesHubView'));
+const AnalyticsView = React.lazy(() => import('./AnalyticsView'));
+const FleetsView = React.lazy(() => import('./FleetsView'));
+const UserSearchView = React.lazy(() => import('../components/UserSearchView').then((m) => ({ default: m.UserSearchView })));
 
 export default function Dashboard({
   user,
@@ -295,12 +296,21 @@ export default function Dashboard({
 
   if (activeStation) {
     return (
-      <StudyRoomView
-        user={user}
-        stationId={activeStation}
-        onExit={() => setActiveStation(null)}
-        onSelectUser={setSelectedUserId}
-      />
+      <React.Suspense fallback={
+        <div className="min-h-screen bg-[#03040B] flex flex-col items-center justify-center relative">
+          <Rocket className="w-12 h-12 text-indigo-400 animate-bounce" />
+          <p className="text-xs text-indigo-300 font-mono tracking-widest mt-4 animate-pulse">
+            {isAr ? "بروتوكول تهيئة المحطة..." : "INITIALIZING SECTOR PORTAL..."}
+          </p>
+        </div>
+      }>
+        <StudyRoomView
+          user={user}
+          stationId={activeStation}
+          onExit={() => setActiveStation(null)}
+          onSelectUser={setSelectedUserId}
+        />
+      </React.Suspense>
     );
   }
 
@@ -762,24 +772,33 @@ export default function Dashboard({
              transition={{ duration: 0.3 }}
              className="h-full"
           >
-            {activeTab === "home" && <HomeView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
-            {activeTab === "chat" && <ChatView user={user} onSelectUser={setSelectedUserId} />}
-            {activeTab === "search" && <UserSearchView user={user} onSelectUser={setSelectedUserId} />}
-            {activeTab === "profile" && <ProfileView user={user} />}
-            {activeTab === "discussions" && <DiscussionsView user={user} />}
-            {activeTab === "schedule" && <ScheduleView user={user} />}
-            {activeTab === "challenges" && <ChallengesHubView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
-            {activeTab === "farm" && (
-              <div className="max-w-4xl mx-auto animate-fade-in pb-12">
-                <FarmDisplay user={user} isOwner={true} isStudying={false} />
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[400px] w-full relative">
+                <Rocket className="w-10 h-10 text-indigo-400 animate-bounce" />
+                <p className="text-[10px] text-indigo-300 font-mono tracking-widest mt-4 animate-pulse uppercase">
+                  {isAr ? "تحميل قطاع المدار الفضائي..." : "CONNECTING TO SECTOR PROTOCOL..."}
+                </p>
               </div>
-            )}
-            {activeTab === "leaderboard" && <LeaderboardView user={user} onSelectUser={setSelectedUserId} />}
-            {activeTab === "admin" && <AdminView user={user} />}
-            {activeTab === "support" && <SupportView user={user} />}
-            {activeTab === "awareness" && <AwarenessView user={user} />}
-            {activeTab === "blackholes" && <BlackHolesView user={user} />}
-            {activeTab === "fleets" && <FleetsView user={user} />}
+            }>
+              {activeTab === "home" && <HomeView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
+              {activeTab === "chat" && <ChatView user={user} onSelectUser={setSelectedUserId} />}
+              {activeTab === "search" && <UserSearchView user={user} onSelectUser={setSelectedUserId} />}
+              {activeTab === "profile" && <ProfileView user={user} />}
+              {activeTab === "discussions" && <DiscussionsView user={user} />}
+              {activeTab === "schedule" && <ScheduleView user={user} />}
+              {activeTab === "challenges" && <ChallengesHubView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
+              {activeTab === "farm" && (
+                <div className="max-w-4xl mx-auto animate-fade-in pb-12">
+                  <FarmDisplay user={user} isOwner={true} isStudying={false} />
+                </div>
+              )}
+              {activeTab === "leaderboard" && <LeaderboardView user={user} onSelectUser={setSelectedUserId} />}
+              {activeTab === "admin" && <AdminView user={user} />}
+              {activeTab === "support" && <SupportView user={user} />}
+              {activeTab === "awareness" && <AwarenessView user={user} />}
+              {activeTab === "blackholes" && <BlackHolesView user={user} />}
+              {activeTab === "fleets" && <FleetsView user={user} />}
+            </React.Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

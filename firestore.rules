@@ -83,6 +83,8 @@ service cloud.firestore {
              (!('fleetId' in data) || data.fleetId is string) &&
              (!('fleetInvites' in data) || data.fleetInvites is list) &&
              (!('lastActiveDate' in data) || data.lastActiveDate is string) &&
+             (!('completedWizard' in data) || data.completedWizard is bool) &&
+             (!('dailyFocusTarget' in data) || data.dailyFocusTarget is number) &&
              (!('lastXpUpdate' in data) || (data.lastXpUpdate is number || data.lastXpUpdate is string));
     }
 
@@ -111,6 +113,8 @@ service cloud.firestore {
              (!('fleetId' in data) || data.fleetId is string) &&
              (!('fleetInvites' in data) || data.fleetInvites is list) &&
              (!('lastActiveDate' in data) || data.lastActiveDate is string) &&
+             (!('completedWizard' in data) || data.completedWizard is bool) &&
+             (!('dailyFocusTarget' in data) || data.dailyFocusTarget is number) &&
              (!('lastActiveTime' in data) || (data.lastActiveTime is number || data.lastActiveTime is string || data.lastActiveTime is timestamp)) &&
              (!('lastXpUpdate' in data) || (data.lastXpUpdate is number || data.lastXpUpdate is string));
     }
@@ -196,6 +200,15 @@ service cloud.firestore {
              data.description is string && data.description.size() >= 1 && data.description.size() <= 10000 &&
              (data.timestamp is number || data.timestamp is timestamp) &&
              data.adminId is string;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.userId is string &&
+             data.userName is string &&
+             data.status in ['open', 'closed'] &&
+             data.lastMessage is string &&
+             (data.updatedAt is timestamp || data.updatedAt is number) &&
+             data.messages is list;
     }
 
     // ===============================================================
@@ -455,9 +468,12 @@ service cloud.firestore {
                       isValidMessage(request.resource.data) && 
                       request.resource.data.userId == request.auth.uid &&
                       isRecent(request.resource.data.timestamp);
-      allow update: if isAuthenticated() && 
-                      request.auth.uid == resource.data.userId && 
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userPhoto']);
+      allow update: if isAuthenticated() && isNotBanned() && (
+                      (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userPhoto'])) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comments']) ||
+                      isAdmin()
+                    );
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId) || isAdmin();
     }
 
@@ -474,10 +490,13 @@ service cloud.firestore {
                       isValidDiscussion(request.resource.data) && 
                       request.resource.data.userId == request.auth.uid &&
                       isRecent(request.resource.data.timestamp);
-      allow update: if isAuthenticated() && (
+      allow update: if isAuthenticated() && isNotBanned() && (
                       (request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userPhoto'])) ||
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']) && request.resource.data.likesCount == resource.data.likesCount + 1) ||
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['repliesCount', 'lastActivity']) && request.resource.data.repliesCount == resource.data.repliesCount + 1)
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount']) && (request.resource.data.likesCount == resource.data.likesCount + 1 || request.resource.data.likesCount == resource.data.likesCount - 1)) ||
+                      (request.resource.data.diff(resource.data).affectedKeys().hasAny(['repliesCount']) && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['repliesCount', 'lastActivity']) && 
+                       (request.resource.data.repliesCount == resource.data.repliesCount + 1 || request.resource.data.repliesCount == resource.data.repliesCount - 1)) ||
+                      isAdmin()
                     );
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId) || isAdmin();
 
@@ -583,7 +602,10 @@ service cloud.firestore {
     }
 
     match /support_tickets/{ticketId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidSupportTicket(request.resource.data);
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid && isValidSupportTicket(request.resource.data));
+      allow delete: if isAdmin();
     }
 
     match /app_updates/{updateId} {

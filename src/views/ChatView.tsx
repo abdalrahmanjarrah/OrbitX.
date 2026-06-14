@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   MessageCircle,
   Send,
@@ -13,8 +14,13 @@ import {
   Smile,
   Plus,
   Camera,
-  Bell,
   X,
+  Heart,
+  Share2,
+  MessageSquare,
+  ThumbsUp,
+  Image,
+  Paperclip,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../lib/utils";
@@ -36,7 +42,6 @@ import {
   orderBy,
   limit as firestoreLimit,
   onSnapshot as originalOnSnapshot,
-  increment,
 } from "firebase/firestore";
 import { Message, UserData, getAstronautRank } from "../shared";
 import { playSound } from "../lib/sound";
@@ -290,10 +295,14 @@ const EMOJI_CATEGORIES = [
   },
 ];
 
-// Module-level variables to persist scroll state across re-mounts
-let savedScrollPosition = -1;
-let savedIsAtBottom = true;
-let unreadCountSinceAway = 0;
+interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string;
+  text: string;
+  timestamp: number;
+}
 
 export default function ChatView({
   user,
@@ -306,20 +315,28 @@ export default function ChatView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isChatEnabled, setIsChatEnabled] = useState(true);
   const [newMessage, setNewMessage] = useState("");
-  const [replyTo, setReplyTo] = useState<{
-    id: string;
-    text: string;
-    userName: string;
-  } | null>(null);
-
   const [loading, setLoading] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
 
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  // Helper to load fallback messages from the local server REST API
+  const loadFallbackMessages = async () => {
+    try {
+      const response = await fetch("/api/chat/messages");
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.messages) {
+          setMessages(data.messages);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load fallback messages:", err);
+    }
+  };
 
-  const initialLoad = useRef(true);
+  // Expanded comments section state per-post
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+
   const prevCount = useRef(0);
   const lastMsgTime = useRef(0);
 
@@ -334,7 +351,13 @@ export default function ChatView({
   const [isUploading, setIsUploading] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  // Refs for custom elements and caret handling
+  // In-app success feedback
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Custom delete confirmation modal state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Refs for custom elements
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -370,7 +393,6 @@ export default function ChatView({
 
     setNewMessage(before + emoji + after);
 
-    // Put caret right after the inserted emoji on next tick
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + emoji.length, start + emoji.length);
@@ -387,10 +409,11 @@ export default function ChatView({
 
     const isImage = file.type.startsWith("image/");
 
-    // Non-images must be under 1MB, images are compressed dynamically
     if (!isImage && file.size > 1024 * 1024) {
       alert(
-        "حجم الملف كبير جداً! يجب أن يكون أقل من 1 ميغابايت لتخزينه بسلاسة في المحطة.",
+        isAr
+          ? "حجم الملف كبير جداً! يجب أن يكون أقل من 1 ميغابايت لتخزينه بسلاسة في المحطة."
+          : "File size is too large! It must be under 1MB to store it safely on the station."
       );
       return;
     }
@@ -401,10 +424,9 @@ export default function ChatView({
       const dataUrl = event.target?.result as string;
 
       if (isImage) {
-        const img = new Image();
+        const img = new window.Image();
         img.src = dataUrl;
         img.onload = () => {
-          // Dynamic compression with canvas (downscale to max 500px width/height and quality 0.3)
           const canvas = document.createElement("canvas");
           const max_width = 500;
           const max_height = 500;
@@ -431,7 +453,7 @@ export default function ChatView({
           canvas.toBlob(
             (blob) => {
               if (!blob) {
-                alert("فشل معالجة الصورة.");
+                alert(isAr ? "فشل معالجة الصورة." : "Failed to process image.");
                 setIsUploading(false);
                 return;
               }
@@ -439,7 +461,11 @@ export default function ChatView({
               reader.onload = (e) => {
                 const compressed = e.target?.result as string;
                 if (compressed.length > 700000) {
-                  alert("الصورة كبيرة جداً حتى بعد الضغط. جرب صورة أصغر.");
+                  alert(
+                    isAr
+                      ? "الصورة كبيرة جداً حتى بعد الضغط. جرب صورة أصغر."
+                      : "Image is too large even after compression. Please try a smaller image."
+                  );
                   setIsUploading(false);
                   return;
                 }
@@ -453,12 +479,16 @@ export default function ChatView({
               reader.readAsDataURL(blob);
             },
             "image/jpeg",
-            0.3,
+            0.3
           );
         };
         img.onerror = () => {
           if (file.size > 1024 * 1024) {
-            alert("عذراً، فشل تحميل ومعالجة هذه الصورة الضخمة.");
+            alert(
+              isAr
+                ? "عذراً، فشل تحميل ومعالجة هذه الصورة الضخمة."
+                : "Sorry, failed to load and process this large image."
+            );
             setIsUploading(false);
             return;
           }
@@ -489,28 +519,32 @@ export default function ChatView({
     return () => unsub();
   }, []);
 
+  // Load initial fallback messages on mount
   useEffect(() => {
-    setLoading(true);
+    loadFallbackMessages().finally(() => {
+      setLoading(false);
+    });
+  }, []);
+
+  // Fetch posts sorted from newest to oldest via real-time subscription
+  useEffect(() => {
     const q = query(
       collection(db, "global_chat"),
       orderBy("timestamp", "desc"),
-      firestoreLimit(30),
+      firestoreLimit(50)
     );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        let msgs = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as Message,
+        setIsFallbackMode(false);
+        const msgs = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as Message
         );
-        msgs = msgs.reverse();
 
-        if (!initialLoad.current && msgs.length > prevCount.current) {
-          const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg && lastMsg.userId !== user.uid) {
+        if (msgs.length > prevCount.current && prevCount.current > 0) {
+          const newestMsg = msgs[0];
+          if (newestMsg && newestMsg.userId !== user.uid) {
             playSound("message");
-            if (!savedIsAtBottom) {
-              setUnreadCount((prev) => prev + 1);
-            }
           }
         }
 
@@ -519,88 +553,50 @@ export default function ChatView({
         setLoading(false);
       },
       (e) => {
-        handleFirestoreError(e, OperationType.GET, "global_chat");
-        setLoading(false);
-      },
+        console.warn("Firestore snapshot subscription failed (quota limit?), activating REST fallback mode:", e);
+        setIsFallbackMode(true);
+        loadFallbackMessages().finally(() => {
+          setLoading(false);
+        });
+      }
     );
     return () => unsubscribe();
   }, [user.uid]);
 
-  // Handle restoring scroll position
+  // REST polling fallback when Firestore subscription is blocked/offline
   useEffect(() => {
-    if (!loading && initialLoad.current) {
-      initialLoad.current = false;
-      setTimeout(() => {
-        if (scrollRef.current) {
-          if (savedScrollPosition > -1 && !savedIsAtBottom) {
-            scrollRef.current.scrollTop = savedScrollPosition;
-            setShowScrollBottom(true);
-            setUnreadCount(unreadCountSinceAway);
-          } else {
-            scrollToBottom(false);
-          }
-        }
-      }, 50);
-    } else if (!loading && !initialLoad.current) {
-      // New message arrived
-      if (scrollRef.current) {
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg && lastMsg.userId === user.uid) {
-          scrollToBottom(true);
-        } else if (savedIsAtBottom) {
-          scrollToBottom(true);
-        }
-      }
-    }
-  }, [messages, loading]);
+    if (!isFallbackMode) return;
+    const interval = setInterval(() => {
+      loadFallbackMessages();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isFallbackMode]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    savedScrollPosition = target.scrollTop;
-
-    const isBottom =
-      Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) <
-      20;
-    savedIsAtBottom = isBottom;
-
-    if (isBottom) {
-      setShowScrollBottom(false);
-      setUnreadCount(0);
-      unreadCountSinceAway = 0;
-    } else {
-      setShowScrollBottom(true);
-    }
-  };
-
-  useEffect(() => {
-    // Persist unread count if we unmount while away from bottom
-    return () => {
-      unreadCountSinceAway = unreadCount;
-    };
-  }, [unreadCount]);
-
-  const scrollToBottom = (smooth = true) => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({
-        behavior: smooth ? "smooth" : "auto",
-      });
-      savedIsAtBottom = true;
-    }
-  };
-
-  const handleSendMessage = async () => {
+  const handlePostMessage = async () => {
     if (!isChatEnabled && user.role !== "admin") {
-      alert("الشات العام موقف حالياً من قبل الإدارة.");
+      alert(
+        isAr
+          ? "الشات العام موقف حالياً من قبل الإدارة."
+          : "Public chat is currently disabled by administrators."
+      );
       return;
     }
     if (!newMessage.trim() && !attachment) return;
     if (newMessage.length > 500) {
-      alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
+      alert(
+        isAr
+          ? "الرسالة طويلة جداً! الحد الأقصى هو 500 حرف."
+          : "Message is too long! The limit is 500 characters."
+      );
       return;
     }
     const now = Date.now();
     if (now - lastMsgTime.current < 2000) {
-      alert("الرجاء الانتظار قليلاً قبل إرسال رسالة أخرى.");
+      alert(
+        isAr
+          ? "الرجاء الانتظار قليلاً قبل نشر منشور آخر."
+          : "Please wait a moment before publishing another post."
+      );
       return;
     }
     lastMsgTime.current = now;
@@ -614,105 +610,362 @@ export default function ChatView({
       } else {
         finalMessageText +=
           (finalMessageText ? "\n\n" : "") +
-          `[📎 تحميل الملف: ${attachment.name}](${attachment.dataUrl})`;
+          `[📎 ${isAr ? "تحميل الملف" : "Download File"}: ${attachment.name}](${attachment.dataUrl})`;
       }
     }
 
+    const messageId = "msg_local_temp_" + Date.now();
     const messageData = {
+      id: messageId,
       text: finalMessageText,
       userId: user.uid,
       userName: user.displayName,
       userPhoto: user.photoURL,
-      userRankTitle: getAstronautRank(user.xp).title,
-      userRankColor: getAstronautRank(user.xp).color,
-      userRankIcon: getAstronautRank(user.xp).icon,
-      timestamp: serverTimestamp(),
+      userRankTitle: getAstronautRank(user.xp, undefined, lang).title,
+      userRankColor: getAstronautRank(user.xp, undefined, lang).color,
+      userRankIcon: getAstronautRank(user.xp, undefined, lang).icon,
+      timestamp: Date.now(),
       type: "text",
-      ...(replyTo ? { replyTo } : {}),
+      likes: [],
+      comments: [],
     };
 
     setNewMessage("");
-    setReplyTo(null);
     setAttachment(null);
+    setShowEmojiPicker(false);
 
     try {
-      await addDoc(collection(db, "global_chat"), messageData);
-    } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, "global_chat");
+      // Optimistic state addition
+      setMessages((prev) => [messageData as any, ...prev]);
+
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch("/api/chat/post", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          text: finalMessageText,
+          userName: user.displayName,
+          userPhoto: user.photoURL,
+          userRankTitle: getAstronautRank(user.xp, undefined, lang).title,
+          userRankColor: getAstronautRank(user.xp, undefined, lang).color,
+          userRankIcon: getAstronautRank(user.xp, undefined, lang).icon,
+          type: "text",
+        }),
+      });
+
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData && resData.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === messageId ? resData.message : m))
+          );
+        }
+        showToast(isAr ? "تم نشر المنشور كصورة نجمية!" : "Post published to the cosmos!");
+      } else {
+        // Direct write fallback
+        await addDoc(collection(db, "global_chat"), {
+          ...messageData,
+          timestamp: serverTimestamp(),
+        });
+        showToast(isAr ? "تم نشر المنشور كصورة نجمية!" : "Post published to the cosmos!");
+      }
+    } catch (e: any) {
+      console.warn("API write failed, trying direct Firestore write:", e.message || e);
+      try {
+        await addDoc(collection(db, "global_chat"), {
+          ...messageData,
+          timestamp: serverTimestamp(),
+        });
+        showToast(isAr ? "تم نشر المنشور كصورة نجمية!" : "Post published to the cosmos!");
+      } catch (dbErr) {
+        handleFirestoreError(dbErr, OperationType.WRITE, "global_chat");
+        showToast(isAr ? "فشل النشر الفضائي بسبب حدود الحصص اليومية." : "Posting failed due to database limit bounds.");
+      }
     }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
+    // Optimistic delete
+    setMessages((prev) => prev.filter((msg) => msg.id !== msgId));
+
     try {
-      await deleteDoc(doc(db, "global_chat", msgId));
-    } catch (e: any) {
-      if (e?.code === "permission-denied") {
-        alert("انتهت صلاحية الجلسة. أعد تسجيل الدخول.");
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/chat/delete/${msgId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+      if (response.ok) {
+        showToast(isAr ? "تم حذف المنشور بنجاح!" : "Post has been deleted.");
       } else {
-        alert("فشل الحذف. حاول مرة ثانية.");
+        await deleteDoc(doc(db, "global_chat", msgId)).catch(() => null);
+        showToast(isAr ? "تم حذف المنشور بنجاح!" : "Post has been deleted.");
       }
-      handleFirestoreError(e, OperationType.DELETE, `global_chat/${msgId}`);
+    } catch (e: any) {
+      console.warn("API delete failed, trying direct delete:", e.message || e);
+      try {
+        await deleteDoc(doc(db, "global_chat", msgId));
+        showToast(isAr ? "تم حذف المنشور بنجاح!" : "Post has been deleted.");
+      } catch (dbErr) {
+        showToast(isAr ? "فشل حذف المنشور." : "Failed to delete post.");
+      }
     }
   };
 
-  // Group messages by day
-  const groupedMessages = messages.reduce(
-    (acc, msg) => {
-      const date = msg.timestamp?.toDate() || new Date();
-      const dateStr = date.toLocaleDateString("ar-EG", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+  const handleClearAllPosts = async () => {
+    setDeleteConfirmId(null);
+    setMessages([]); // Optimistically clear all instantly so screen never turns black
+    showToast(isAr ? "جاري إعادة بناء الفضاء وتصفية المنشورات..." : "Clearing space and sweeping posts...");
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch("/api/chat/delete-all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
       });
-      if (!acc[dateStr]) acc[dateStr] = [];
-      acc[dateStr].push(msg);
-      return acc;
-    },
-    {} as Record<string, Message[]>,
-  );
+
+      if (response.ok) {
+        showToast(isAr ? "تم تنظيف الساحة الفضائية بالكامل بنجاح!" : "Galaxy feed cleared successfully!");
+      } else {
+        const promises = messages.map((msg) => deleteDoc(doc(db, "global_chat", msg.id)).catch(() => null));
+        await Promise.all(promises);
+        showToast(isAr ? "تم تنظيف الساحة الفضائية بالكامل بنجاح!" : "Galaxy feed cleared successfully!");
+      }
+    } catch (e: any) {
+      console.warn("API delete-all failed, trying direct batch delete:", e.message || e);
+      try {
+        const promises = messages.map((msg) => deleteDoc(doc(db, "global_chat", msg.id)));
+        await Promise.all(promises);
+        showToast(isAr ? "تم تنظيف الساحة الفضائية بالكامل بنجاح!" : "Galaxy feed cleared successfully!");
+      } catch (dbErr) {
+        showToast(isAr ? "تم تصفية الساحة الفضائية محلياً." : "Galaxy feed cleared locally.");
+      }
+    }
+  };
+
+  // Liking a post
+  const handleLikePost = async (postId: string, currentLikes: string[] = []) => {
+    const hasLiked = currentLikes.includes(user.uid);
+    const updatedLikes = hasLiked
+      ? currentLikes.filter((id) => id !== user.uid)
+      : [...currentLikes, user.uid];
+
+    // Optimistic update
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === postId ? { ...msg, likes: updatedLikes } : msg))
+    );
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/chat/like/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("HTTP error " + response.status);
+      }
+    } catch (e) {
+      console.warn("REST like failed, falling back to direct write:", e);
+      try {
+        await updateDoc(doc(db, "global_chat", postId), { likes: updatedLikes });
+        
+        // Direct notification fallback
+        const post = messages.find((m) => m.id === postId);
+        if (post && post.userId && post.userId !== user.uid && !hasLiked) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            type: "like",
+            content: isAr 
+              ? `أعجب ${user.displayName} بمنشورك في الشات الكوني!` 
+              : `${user.displayName} liked your post in the cosmic chat!`,
+            read: false,
+            timestamp: serverTimestamp()
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  // Commenting on a post
+  const handleAddComment = async (postId: string, commentsList: any[] = []) => {
+    const text = commentInputs[postId]?.trim();
+    if (!text) return;
+
+    const tempCommentId = "cmt_temp_" + Date.now();
+    const newComment: Comment = {
+      id: tempCommentId,
+      userId: user.uid,
+      userName: user.displayName,
+      userPhoto: user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
+      text: text,
+      timestamp: Date.now(),
+    };
+
+    const updatedComments = [...commentsList, newComment];
+
+    // Optimistic UI update
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === postId ? { ...msg, comments: updatedComments } : msg))
+    );
+    setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/chat/comment/${postId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData && resData.comments) {
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === postId ? { ...msg, comments: resData.comments } : msg))
+          );
+        }
+      } else {
+        throw new Error("HTTP error " + response.status);
+      }
+    } catch (e) {
+      console.warn("REST comment failed, falling back to direct write:", e);
+      try {
+        await updateDoc(doc(db, "global_chat", postId), {
+          comments: updatedComments.map(c => c.id === tempCommentId ? { ...c, id: Math.random().toString(36).substring(2, 9) + Date.now() } : c),
+        });
+
+        // Direct notification fallback
+        const post = messages.find((m) => m.id === postId);
+        if (post && post.userId && post.userId !== user.uid) {
+          await addDoc(collection(db, "users", post.userId, "notifications"), {
+            type: "reply",
+            content: isAr 
+              ? `علق ${user.displayName} على منشورك: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`
+              : `${user.displayName} commented on your post: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
+            read: false,
+            timestamp: serverTimestamp()
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string, commentsList: any[]) => {
+    const updated = commentsList.filter((c) => c.id !== commentId);
+
+    // Optimistic UI update
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === postId ? { ...msg, comments: updated } : msg))
+    );
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      await fetch(`/api/chat/comment/delete/${postId}/${commentId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+    } catch (e) {
+      console.error("REST comment delete failed, falling back to direct write:", e);
+      try {
+        await updateDoc(doc(db, "global_chat", postId), { comments: updated });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleShareClick = (msgText: string) => {
+    // Strip markdown image urls for cleaner share
+    const cleanText = msgText.replace(/!\[.*?\]\(.*?\)/g, "").trim();
+    navigator.clipboard.writeText(cleanText);
+    showToast(isAr ? "تم نسخ المنشور إلى الحافظة بنجاح!" : "Post text copied to clipboard!");
+  };
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   return (
     <div
-      className="max-w-5xl mx-auto h-[calc(100vh-140px)] flex flex-col bg-gradient-to-br from-[#0a0b16]/95 to-[#0e1021]/95 shadow-2xl border border-indigo-500/20 rounded-3xl overflow-hidden relative backdrop-blur-3xl shadow-indigo-500/5"
+      className="max-w-4xl mx-auto flex flex-col bg-transparent shadow-none"
       dir={isAr ? "rtl" : "ltr"}
     >
-      {/* Ambient background glow */}
-      <div className="absolute top-0 inset-x-0 h-32 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
+      {/* Toast alert overlay */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] bg-[#1a1c38] border-2 border-indigo-500/50 text-white font-bold px-6 py-3 rounded-2xl shadow-[0_10px_30px_rgba(99,102,241,0.25)] flex items-center gap-2"
+          >
+            <div className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
+            <span>{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
-      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20 relative z-10">
+      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/20 rounded-3xl mb-6 backdrop-blur-md relative z-10">
         <div className="flex items-center gap-4">
           {user.role === "admin" && (
-            <button
-              onClick={async () => {
-                try {
-                  await setDoc(
-                    doc(db, "system", "settings"),
-                    { isChatEnabled: !isChatEnabled },
-                    { merge: true },
-                  );
-                } catch (e) {
-                  // handle errors silently in ui
-                }
-              }}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-lg",
-                !isChatEnabled
-                  ? "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
-                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20",
-              )}
-            >
-              <Shield size={14} />
-              {!isChatEnabled
-                ? isAr
-                  ? "مغلق"
-                  : "Closed"
-                : isAr
-                  ? "مفتوح"
-                  : "Open"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    await setDoc(
+                      doc(db, "system", "settings"),
+                      { isChatEnabled: !isChatEnabled },
+                      { merge: true }
+                    );
+                  } catch (e) {
+                    // handle errors silently in ui
+                  }
+                }}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-lg cursor-pointer",
+                  !isChatEnabled
+                    ? "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
+                    : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                )}
+              >
+                <Shield size={14} />
+                {!isChatEnabled
+                  ? isAr
+                    ? "مغلق"
+                    : "Closed"
+                  : isAr
+                    ? "مفتوح"
+                    : "Open"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirmId("ALL_MESSAGES")}
+                className="text-xs px-3 py-1.5 rounded-xl font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/25 transition-all flex items-center gap-1.5 shadow-lg cursor-pointer"
+                title={isAr ? "حذف جميع المنشورات من المحطة" : "Clear All Posts"}
+              >
+                <Trash2 size={13} />
+                <span>{isAr ? "مسح الساحة" : "Clear Feed"}</span>
+              </button>
+            </div>
           )}
           <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
             <div className="relative flex h-2.5 w-2.5">
@@ -726,302 +979,23 @@ export default function ChatView({
         </div>
 
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-white flex items-center gap-2">
-            {t("chat.title", "Star Chat Global Broadcast")}
-            <PlanetIcon />
+          <h2 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-white flex items-center gap-2">
+            {isAr ? "منشورات رواد الفضاء" : "Astronaut Feed"}
+            <span className="text-xl">🪐</span>
           </h2>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div
-        className="flex-1 p-4 md:p-6 overflow-y-auto relative z-10 custom-scrollbar scroll-smooth"
-        ref={scrollRef}
-        onScroll={handleScroll}
-      >
-        {loading ? (
-          <div className="space-y-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex gap-4 animate-pulse",
-                  i % 2 === 0 ? "flex-row-reverse" : "flex-row",
-                )}
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/5 shrink-0" />
-                <div className="w-48 h-16 bg-white/5 rounded-2xl" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-6 pb-2">
-            {Object.entries(groupedMessages).map(([date, msgs]) => (
-              <div key={date} className="space-y-5">
-                <div className="flex justify-center sticky top-2 z-20">
-                  <span className="px-3 py-1 bg-[#101223]/90 border border-white/10 rounded-full text-xs text-gray-400 font-bold shadow-lg backdrop-blur-md">
-                    {date}
-                  </span>
-                </div>
-                {msgs.map((msg, index) => {
-                  const isMe = msg.userId === user.uid;
-                  const showAvatar =
-                    index === 0 || msgs[index - 1].userId !== msg.userId;
-                  const isUnreadBoundary =
-                    unreadCount > 0 &&
-                    msg.id ===
-                      messages[Math.max(0, messages.length - unreadCount)]?.id;
-
-                  return (
-                    <div key={msg.id}>
-                      {isUnreadBoundary && (
-                        <div className="flex items-center gap-3 my-6">
-                          <div className="flex-1 h-px bg-gradient-to-r from-pink-500/0 to-pink-500/50" />
-                          <span className="text-xs font-bold text-pink-400 bg-pink-500/10 px-3 py-1 rounded-full border border-pink-500/20 shadow-lg shadow-pink-500/20">
-                            رسائل جديدة
-                          </span>
-                          <div className="flex-1 h-px bg-gradient-to-l from-pink-500/0 to-pink-500/50" />
-                        </div>
-                      )}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={cn(
-                          "flex gap-3",
-                          isMe ? "flex-row-reverse" : "flex-row",
-                        )}
-                      >
-                        {/* Avatar */}
-                        <div className="w-10 flex flex-col items-center shrink-0">
-                          {showAvatar ? (
-                            <button
-                              onClick={() => onSelectUser(msg.userId)}
-                              className="relative group"
-                            >
-                              <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-sm" />
-                              <img
-                                src={
-                                  msg.userPhoto ||
-                                  `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`
-                                }
-                                className="w-10 h-10 rounded-xl relative z-10 border border-white/10 object-cover bg-[#0a0b16]"
-                                referrerPolicy="no-referrer"
-                                alt={msg.userName}
-                              />
-                            </button>
-                          ) : (
-                            <div className="w-10" />
-                          )}
-                        </div>
-
-                        {/* Message Content */}
-                        <div
-                          className={cn(
-                            "flex flex-col max-w-[85%] md:max-w-[70%]",
-                            isMe ? "items-end" : "items-start",
-                          )}
-                        >
-                          {/* Headers */}
-                          {showAvatar && (
-                            <div className="flex flex-row-reverse items-center gap-2 mb-1.5 px-1">
-                              <button
-                                onClick={() => onSelectUser(msg.userId)}
-                                className="font-bold text-sm text-gray-200 hover:text-indigo-300 transition-colors"
-                              >
-                                {msg.userName}
-                              </button>
-                              {msg.userRankIcon && (
-                                <span
-                                  className="text-xs"
-                                  title={msg.userRankTitle}
-                                >
-                                  {msg.userRankIcon}
-                                </span>
-                              )}
-                              {msg.userRankTitle && (
-                                <span
-                                  className={cn(
-                                    "text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/5",
-                                    msg.userRankColor,
-                                  )}
-                                >
-                                  {msg.userRankTitle}
-                                </span>
-                              )}
-                              <span
-                                className="text-[10px] text-gray-500 font-mono"
-                                dir="ltr"
-                              >
-                                {msg.timestamp
-                                  ?.toDate()
-                                  .toLocaleTimeString("en-US", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Bubble */}
-                          <div className="group relative">
-                            {/* Reply Preview */}
-                            {(msg as any).replyTo && (
-                              <div
-                                className={cn(
-                                  "text-xs text-gray-400 mb-1 flex items-center gap-2 p-1.5 rounded-lg bg-black/20 border-l-2 border-indigo-500 w-max max-w-full opacity-80",
-                                  isMe
-                                    ? "flex-row"
-                                    : "flex-row-reverse ms-auto",
-                                )}
-                              >
-                                <Reply size={12} className="shrink-0" />
-                                <span className="font-bold truncate max-w-[100px]">
-                                  {(msg as any).replyTo.userName}
-                                </span>
-                                <span className="truncate max-w-[150px] opacity-70">
-                                  {(msg as any).replyTo.text}
-                                </span>
-                              </div>
-                            )}
-
-                            <div
-                              className={cn(
-                                "px-4 py-2.5 text-[15px] leading-relaxed relative z-10 shadow-sm transition-all markdown-body whitespace-pre-wrap",
-                                isMe
-                                  ? "bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-3xl rounded-tr-sm"
-                                  : "bg-[#181a2e] border border-white/5 text-gray-100 rounded-3xl rounded-tl-sm",
-                              )}
-                              dir={isAr ? "rtl" : "ltr"}
-                              style={{ wordBreak: "break-word" }}
-                            >
-                              <Markdown
-                                components={{
-                                  img: ({ ...props }) => {
-                                    if (!props.src) return null;
-                                    return (
-                                      <img
-                                        {...props}
-                                        src={props.src || undefined}
-                                        className="max-h-60 rounded-xl mt-2 border border-white/10 hover:scale-[1.01] transition-all cursor-zoom-in object-cover max-w-full block shadow-md"
-                                        referrerPolicy="no-referrer"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (props.src)
-                                            setLightboxImage(props.src);
-                                        }}
-                                      />
-                                    );
-                                  },
-                                  a: ({ ...props }) => {
-                                    const isDataUrl =
-                                      props.href?.startsWith("data:");
-                                    return (
-                                      <a
-                                        {...props}
-                                        download={
-                                          isDataUrl
-                                            ? props.children?.toString() ||
-                                              "file"
-                                            : undefined
-                                        }
-                                        className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-300 font-bold px-3 py-1.5 rounded-xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all mt-2 max-w-full truncate text-xs"
-                                      >
-                                        {props.children}
-                                      </a>
-                                    );
-                                  },
-                                }}
-                              >
-                                {msg.text}
-                              </Markdown>
-                            </div>
-
-                            {/* Context Menu (Hover) */}
-                            <div
-                              className={cn(
-                                "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1",
-                                isMe
-                                  ? "-left-12 pr-2"
-                                  : "-right-12 pl-2 flex-row-reverse",
-                              )}
-                            >
-                              <button
-                                onClick={() =>
-                                  setReplyTo({
-                                    id: msg.id,
-                                    text: msg.text,
-                                    userName: msg.userName,
-                                  })
-                                }
-                                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 transition-colors backdrop-blur-md border border-white/5"
-                                title="رد"
-                              >
-                                <Reply size={14} />
-                              </button>
-                              {(user.role === "admin" ||
-                                msg.userId === user.uid) && (
-                                <button
-                                  onClick={async () => {
-                                    if (
-                                      confirm(
-                                        "هل أنت متأكد من حذف هذه الرسالة؟",
-                                      )
-                                    ) {
-                                      await handleDeleteMessage(msg.id);
-                                    }
-                                  }}
-                                  className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors backdrop-blur-md border border-red-500/10"
-                                  title="حذف"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
-        <div ref={bottomRef} className="h-4" />
-      </div>
-
-      {/* Floating Scroll to Bottom button */}
-      <AnimatePresence>
-        {showScrollBottom && (
-          <motion.button
-            initial={{ opacity: 0, y: 20, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.8 }}
-            onClick={() => scrollToBottom(true)}
-            className="absolute bottom-24 right-8 z-30 w-10 h-10 bg-indigo-500 text-white rounded-full shadow-xl shadow-indigo-900/50 flex items-center justify-center border border-indigo-400 hover:bg-indigo-400 transition-colors group"
-          >
-            <ChevronDown
-              size={20}
-              className="group-hover:translate-y-0.5 transition-transform"
-            />
-            {unreadCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#101223] shadow-md animate-bounce">
-                {unreadCount > 9 ? "+9" : unreadCount}
-              </span>
-            )}
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Input Area */}
-      <div className="p-4 bg-[#0a0b16]/80 border-t border-white/5 relative z-20 backdrop-blur-xl">
-        {!isChatEnabled && user.role !== "admin" ? (
-          <div className="w-full bg-red-500/10 border border-red-500/30 rounded-2xl px-6 py-4 text-center text-red-400 font-bold flex items-center justify-center gap-2">
+      {/* FEED LIST & COMPOSE */}
+      <div className="space-y-6 pb-20">
+        {/* Compose Box (At the Top) */}
+        {(!isChatEnabled && user.role !== "admin") ? (
+          <div className="w-full bg-red-500/10 border border-red-500/30 rounded-3xl px-6 py-4 text-center text-red-400 font-bold flex items-center justify-center gap-2 shadow-lg">
             <Shield size={18} />
-            الدردشة العامة مغلقة حالياً من قبل الإدارة للإزعاج
+            {isAr ? "تم إغلاق ساحة النشر مؤقتاً من قبل الإدارة" : "Feed postings are currently disabled by management"}
           </div>
         ) : (
-          <div className="relative">
+          <div className="bg-[#0e1021]/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl relative overflow-visible">
             <input
               type="file"
               ref={fileInputRef}
@@ -1030,144 +1004,156 @@ export default function ChatView({
               accept="image/*,application/pdf,text/plain"
             />
 
-            {/* Loader */}
-            {isUploading && (
-              <div
-                className="text-xs text-indigo-400 font-bold flex items-center gap-1.5 justify-start px-4 py-2 animate-pulse"
-                dir={isAr ? "rtl" : "ltr"}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
-                {isAr ? "جاري تحميل ومعالجة الملف..." : "Uploading and processing file..."}
-              </div>
-            )}
-
-            {/* Attachment Thumbnail View */}
-            {attachment && (
-              <div
-                className="mb-3 ms-4 me-16 flex items-center justify-between text-sm bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-2 text-gray-300 relative group backdrop-blur-md"
-                dir={isAr ? "rtl" : "ltr"}
-              >
-                <div className="flex items-center gap-3">
-                  {attachment.type === "image" ? (
-                    <img
-                      src={attachment.dataUrl}
-                      className="w-10 h-10 rounded-lg object-cover border border-white/10 cursor-pointer hover:opacity-80 transition-all"
-                      title={isAr ? "اضغط لتكبير الصورة" : "Click to enlarge image"}
-                      onClick={() => setLightboxImage(attachment.dataUrl)}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-semibold text-xs animate-bounce">
-                      {attachment.type === "pdf" ? "PDF" : "📁"}
-                    </div>
-                  )}
-                  <div className={isAr ? "text-right" : "text-left"}>
-                    <p className="text-xs font-bold text-white max-w-[200px] truncate">
-                      {attachment.name}
-                    </p>
-                    <p className="text-[10px] text-gray-500">
-                      {isAr ? "مستعد للإرسال كملف مرفق" : "Ready to send as attachment"}
-                    </p>
-                  </div>
+            <div className={cn("flex gap-3 items-start", isAr ? "flex-row" : "flex-row-reverse")}>
+              {/* Text Inputs */}
+              <div className="flex-1 space-y-3">
+                <div className={cn("flex gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
+                  <img
+                    src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`}
+                    className="w-10 h-10 rounded-xl border border-white/10 shrink-0 bg-[#0a0b16]"
+                    alt={user.displayName}
+                  />
+                  <textarea
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder={isAr ? "اكتب منشوراً جديداً ليراه جميع المستكشفين..." : "Write a new post for all explorers to see..."}
+                    className={cn("flex-1 bg-transparent border-none py-2 text-white placeholder:text-gray-500 text-base focus:outline-none resize-none custom-scrollbar min-h-[60px] max-h-48", isAr ? "text-right" : "text-left")}
+                    dir={isAr ? "rtl" : "ltr"}
+                    rows={2}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = "auto";
+                      target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
+                    }}
+                  />
                 </div>
+
+                {/* Loader status */}
+                {isUploading && (
+                  <div className="text-xs text-indigo-400 font-bold flex items-center gap-1.5 justify-start animate-pulse px-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+                    {isAr ? "جاري تحميل ومعالجة الملف..." : "Uploading and processing file..."}
+                  </div>
+                )}
+
+                {/* Selected Attachment Preview */}
+                {attachment && (
+                  <div className="flex items-center justify-between text-sm bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 text-gray-300 relative group backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                      {attachment.type === "image" ? (
+                        <img
+                          src={attachment.dataUrl}
+                          className="w-12 h-12 rounded-xl object-cover border border-white/10 cursor-pointer hover:opacity-80 transition-all"
+                          title={isAr ? "اضغط لتكبير الصورة" : "Click to enlarge image"}
+                          onClick={() => setLightboxImage(attachment.dataUrl)}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-semibold text-xs animate-bounce">
+                          {attachment.type === "pdf" ? "PDF" : "📁"}
+                        </div>
+                      )}
+                      <div className={isAr ? "text-right" : "text-left"}>
+                        <p className="text-xs font-bold text-white max-w-[200px] truncate">
+                          {attachment.name}
+                        </p>
+                        <p className="text-[10px] text-indigo-300 font-semibold">
+                          {isAr ? "جاهز للإرفاق بالمنشور" : "Ready to attach to post"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setAttachment(null)}
+                      className="p-1.5 hover:bg-white/10 inline-flex items-center justify-center rounded-full transition-colors text-red-500 hover:text-red-400"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions Partition */}
+            <div className="border-t border-white/5 mt-4 pt-3 flex flex-wrap gap-2 items-center justify-between">
+              <div className="flex items-center gap-2">
+                {/* Media Attachment buttons */}
                 <button
-                  onClick={() => setAttachment(null)}
-                  className="p-1.5 hover:bg-white/10 inline-flex items-center justify-center rounded-full transition-colors text-red-400 hover:text-red-300"
+                  type="button"
+                  onClick={handlePlusClick}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <X size={14} />
+                  <Camera size={14} className="text-indigo-400" />
+                  <span>{isAr ? "إرفاق وسائط" : "Attach Media"}</span>
+                </button>
+
+                {/* Emojis toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={cn(
+                    "px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer",
+                    showEmojiPicker
+                      ? "bg-indigo-600/20 border-indigo-500 text-indigo-400"
+                      : "bg-white/5 border-white/5 hover:bg-white/10 text-gray-300 hover:text-white"
+                  )}
+                >
+                  <Smile size={14} className="text-yellow-400" />
+                  <span>{isAr ? "رموز" : "Emojis"}</span>
                 </button>
               </div>
-            )}
 
-            {/* Lightbox / Full-screen Image Modal */}
-            <AnimatePresence>
-              {lightboxImage && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setLightboxImage(null)}
-                  className="fixed inset-0 z-[100] bg-[#060713]/90 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
-                  dir={isAr ? "rtl" : "ltr"}
-                >
-                  {/* Top Close Button */}
-                  <button
-                    onClick={() => setLightboxImage(null)}
-                    className="absolute top-6 right-6 p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all duration-300 transform hover:scale-105 cursor-pointer"
-                  >
-                    <X size={20} />
-                  </button>
+              {/* POST BTN */}
+              <button
+                onClick={handlePostMessage}
+                disabled={!newMessage.trim() && !attachment}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-black text-sm rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed cursor-pointer"
+              >
+                <Send size={14} className={isAr ? "" : "rotate-180"} />
+                <span>{isAr ? "نشر" : "Post"}</span>
+              </button>
+            </div>
 
-                  {/* Display Image */}
-                  <motion.img
-                    initial={{ scale: 0.95, y: 15 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.95, y: 15 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                    src={lightboxImage}
-                    alt={isAr ? "مشاهدة بملء الشاشة" : "Full screen photo view"}
-                    className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10 select-none cursor-default"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Emoji Picker Popover */}
+            {/* Inline Emoji Panel */}
             <AnimatePresence>
               {showEmojiPicker && (
                 <motion.div
-                  ref={emojiPickerRef}
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute bottom-16 right-2 md:right-4 z-40 w-72 md:w-80 h-64 bg-[#0e1021]/95 text-white rounded-2xl border border-indigo-500/30 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col overflow-hidden"
-                  dir={isAr ? "rtl" : "ltr"}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="w-full mt-4 bg-black/45 border border-indigo-500/20 rounded-2xl flex flex-col overflow-hidden shadow-inner"
                 >
-                  {/* Category Tabs */}
-                  <div className="flex border-b border-white/10 bg-black/40 p-1.5 gap-1 shrink-0 scrollbar-none overflow-x-auto">
-                    {EMOJI_CATEGORIES.map((cat) => {
-                      const catLabel =
-                        cat.id === "space"
-                          ? isAr
-                            ? "فضاء 🪐"
-                            : "Space 🪐"
+                  {/* Tabs */}
+                  <div className="flex border-b border-white/5 bg-black/20 p-2 gap-1.5 shrink-0 overflow-x-auto scrollbar-none">
+                    {EMOJI_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setEmojiTab(cat.id)}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer",
+                          emojiTab === cat.id
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        {cat.id === "space"
+                          ? isAr ? "فضاء 🪐" : "Space 🪐"
                           : cat.id === "faces"
-                            ? isAr
-                              ? "وجوه 😂"
-                              : "Faces 😂"
+                            ? isAr ? "وجوه 😂" : "Faces 😂"
                             : cat.id === "hands"
-                              ? isAr
-                                ? "تفاعل 👍"
-                                : "React 👍"
-                              : isAr
-                                ? "رموز ✨"
-                                : "Symbols ✨";
-                      return (
-                        <button
-                          key={cat.id}
-                          onClick={() => setEmojiTab(cat.id)}
-                          className={cn(
-                            "px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer",
-                            emojiTab === cat.id
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-100"
-                              : "text-gray-400 hover:text-white hover:bg-white/5 scale-95",
-                          )}
-                        >
-                          {catLabel}
-                        </button>
-                      );
-                    })}
+                              ? isAr ? "تفاعل 👍" : "React 👍"
+                              : isAr ? "رموز ✨" : "Symbols ✨"}
+                      </button>
+                    ))}
                   </div>
-
-                  {/* Emoji Grid */}
-                  <div className="flex-1 p-3 overflow-y-auto grid grid-cols-6 gap-2 content-start custom-scrollbar">
-                    {EMOJI_CATEGORIES.find(
-                      (c) => c.id === emojiTab,
-                    )?.emojis.map((emoji) => (
+                  {/* Grid */}
+                  <div className="p-3 max-h-[160px] overflow-y-auto grid grid-cols-8 md:grid-cols-12 gap-1.5 content-start custom-scrollbar">
+                    {EMOJI_CATEGORIES.find((c) => c.id === emojiTab)?.emojis.map((emoji) => (
                       <button
                         key={emoji}
+                        type="button"
                         onClick={() => insertEmoji(emoji)}
-                        className="text-2xl p-1.5 hover:bg-white/10 rounded-xl transition-all hover:scale-125 duration-150 active:scale-90 flex items-center justify-center cursor-pointer"
+                        className="text-2xl p-1.5 hover:bg-white/10 rounded-xl transition-all hover:scale-115 flex items-center justify-center cursor-pointer"
                       >
                         {emoji}
                       </button>
@@ -1176,90 +1162,437 @@ export default function ChatView({
                 </motion.div>
               )}
             </AnimatePresence>
-
-            <AnimatePresence>
-              {replyTo && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: "auto" }}
-                  exit={{ opacity: 0, y: 10, height: 0 }}
-                  className="mb-2 ms-4 me-16 flex items-center justify-between text-sm bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 text-indigo-300"
-                >
-                  <button
-                    onClick={() => setReplyTo(null)}
-                    className="p-1 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
-                  >
-                    <X size={14} />
-                  </button>
-                  <div className="flex items-center gap-2 flex-row-reverse overflow-hidden">
-                    <Reply size={14} className="shrink-0" />
-                    <span className="font-bold shrink-0">
-                      رد على {replyTo.userName}:
-                    </span>
-                    <span className="truncate opacity-75">{replyTo.text}</span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className={cn("flex gap-2 items-end", isAr ? "flex-row-reverse" : "flex-row")}>
-              <button
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim() && !attachment}
-                className="w-12 h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100 disabled:cursor-not-allowed"
-              >
-                <Send size={20} className={cn("-ml-1 text-white", !isAr && "rotate-180")} />
-              </button>
-              <div className={cn("flex-1 bg-black/40 border border-white/10 rounded-2xl flex items-center p-1 focus-within:border-indigo-500/50 focus-within:bg-black/60 transition-colors shadow-inner relative", isAr ? "flex-row-reverse" : "flex-row")}>
-                <button
-                  onClick={handlePlusClick}
-                  className="w-10 h-10 shrink-0 flex items-center justify-center text-gray-500 hover:text-indigo-400 transition-colors hover:bg-white/5 rounded-xl cursor-pointer"
-                >
-                  <Plus size={20} />
-                </button>
-                <textarea
-                  ref={textareaRef}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder={isAr ? "اكتب رسالة للجميع... (Shift+Enter لسطر جديد)" : "Write a message to everyone... (Shift+Enter for new line)"}
-                  className={cn("flex-1 bg-transparent border-none px-3 py-3 max-h-32 min-h-[44px] focus:outline-none text-white placeholder:text-gray-600 resize-none custom-scrollbar", isAr ? "text-right" : "text-left")}
-                  dir={isAr ? "rtl" : "ltr"}
-                  rows={1}
-                  style={{ height: "auto" }}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
-                  }}
-                />
-                <div className="flex shrink-0">
-                  <button
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className={cn(
-                      "w-10 h-10 flex items-center justify-center transition-colors hover:bg-white/5 rounded-xl cursor-pointer",
-                      showEmojiPicker
-                        ? "text-indigo-400 bg-white/5"
-                        : "text-gray-500 hover:text-indigo-400",
-                    )}
-                  >
-                    <Smile size={20} />
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         )}
+
+        {/* POST FEED LIST */}
+        {loading ? (
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-[#0e1021]/50 border border-white/5 rounded-3xl p-6 space-y-4 animate-pulse relative"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-white/5 rounded-full w-24" />
+                    <div className="h-3 bg-white/5 rounded-full w-32" />
+                  </div>
+                </div>
+                <div className="h-20 bg-white/5 rounded-2xl w-full" />
+                <div className="h-6 bg-white/5 rounded-full w-48" />
+              </div>
+            ))}
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-20 bg-[#0e1021]/40 border border-dashed border-white/10 rounded-3xl p-8 max-w-lg mx-auto flex flex-col items-center justify-center gap-4">
+            <MessageSquare className="w-16 h-16 text-gray-650 animate-bounce" />
+            <h3 className="text-lg font-black text-white">
+              {isAr ? "الساحة فارغة تماماً" : "The galaxy is quiet"}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {isAr ? "كن أول من ينشئ منشوراً فضائياً ويتركه يعوم في المحطة!" : "Be the first to publish a cosmic post in the station!"}
+            </p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.userId === user.uid;
+            const postLikes = (msg as any).likes || [];
+            const hasLiked = postLikes.includes(user.uid);
+            const postComments: Comment[] = (msg as any).comments || [];
+
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#0e1021]/60 border border-white/10 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/20 hover:bg-[#0e1021]/85 transition-all duration-300 flex flex-col gap-4"
+              >
+                {/* Subtle soft blue/indigo cosmic spotlight effect trailing behind the card */}
+                <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 blur-3xl rounded-full pointer-events-none" />
+
+                {/* POST HEADER: User credentials + action bar on the right */}
+                <div className="flex items-center justify-between relative z-10 gap-4">
+                  <div className={cn("flex items-center gap-3.5", isAr ? "text-right" : "text-left")}>
+                    <button
+                      onClick={() => onSelectUser(msg.userId)}
+                      className="relative shrink-0"
+                    >
+                      <div className="absolute -inset-0.5 bg-gradient-to-b from-indigo-500/40 to-purple-500/40 rounded-xl opacity-0 hover:opacity-100 transition-opacity blur-xs" />
+                      <img
+                        src={msg.userPhoto || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.userId}`}
+                        className="w-11 h-11 rounded-xl relative z-10 border border-white/10 object-cover bg-[#0a0b16] shadow-md"
+                        alt={msg.userName}
+                        referrerPolicy="no-referrer"
+                      />
+                    </button>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          onClick={() => onSelectUser(msg.userId)}
+                          className="font-black text-sm text-gray-100 hover:text-indigo-400 transition-colors"
+                        >
+                          {msg.userName}
+                        </button>
+                        {msg.userRankIcon && (
+                          <span className="text-xs" title={msg.userRankTitle}>
+                            {msg.userRankIcon}
+                          </span>
+                        )}
+                        {msg.userRankTitle && (
+                          <span
+                            className={cn(
+                              "text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full bg-white/5 border border-white/5 shadow-inner scale-95",
+                              msg.userRankColor
+                            )}
+                          >
+                            {msg.userRankTitle}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                        {(() => {
+                          if (!msg.timestamp) return isAr ? "الآن" : "Now";
+                          try {
+                            let date: Date;
+                            if (typeof msg.timestamp.toDate === "function") {
+                              date = msg.timestamp.toDate();
+                            } else if (typeof msg.timestamp === "number") {
+                              date = new Date(msg.timestamp);
+                            } else if (msg.timestamp.seconds) {
+                              date = new Date(msg.timestamp.seconds * 1000);
+                            } else {
+                              date = new Date(msg.timestamp);
+                            }
+                            return date.toLocaleString(isAr ? "ar-EG" : "en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            });
+                          } catch (err) {
+                            return isAr ? "الآن" : "Now";
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions - Share next to Delete */}
+                  <div className="flex items-center gap-1.5 shrink-0 z-10">
+                    {/* Share icon button */}
+                    <button
+                      onClick={() => handleShareClick(msg.text)}
+                      className="p-1.5 rounded-xl bg-white/5 text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/20 transition-all cursor-pointer shadow-sm relative"
+                      title={isAr ? "مشاركة" : "Share"}
+                    >
+                      <Share2 size={13} />
+                    </button>
+
+                    {/* Delete icon button */}
+                    {(user.role === "admin" || isMe) && (
+                      <button
+                        onClick={() => setDeleteConfirmId(msg.id)}
+                        className="p-1.5 rounded-xl bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/15 border border-white/5 hover:border-red-500/25 transition-all cursor-pointer shadow-sm"
+                        title={isAr ? "حذف المنشور" : "Delete Post"}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* POST CONTENT */}
+                <div className="text-gray-100 text-[15px] leading-relaxed relative z-10 markdown-body break-words select-text px-1">
+                  <Markdown
+                    components={{
+                      img: ({ ...props }) => {
+                        if (!props.src) return null;
+                        return (
+                          <div className="w-full max-h-[440px] rounded-2xl overflow-hidden border border-white/10 mt-3 relative group/image bg-black/40 flex items-center justify-center">
+                            <img
+                              {...props}
+                              src={props.src || undefined}
+                              className="max-h-[440px] max-w-full rounded-2xl pointer-events-auto cursor-zoom-in object-contain select-none transition-transform hover:scale-[1.01]"
+                              referrerPolicy="no-referrer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (props.src) setLightboxImage(props.src);
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity pointer-events-none flex items-end p-4">
+                              <span className="text-[10px] text-white/50 backdrop-blur-md bg-black/40 px-3 py-1 rounded-full border border-white/10">
+                                {isAr ? "انقر لتكبير الصورة" : "Click to view full screen"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      },
+                      a: ({ ...props }) => {
+                        const isDataUrl = props.href?.startsWith("data:");
+                        return (
+                          <a
+                            {...props}
+                            download={isDataUrl ? props.children?.toString() || "file" : undefined}
+                            className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-300 font-bold px-4 py-2 rounded-2xl border border-indigo-500/15 hover:bg-indigo-500/20 hover:text-indigo-200 transition-all mt-3 max-w-full truncate text-xs"
+                          >
+                            <Paperclip size={12} className="text-indigo-400 shrink-0" />
+                            <span className="truncate">{props.children}</span>
+                          </a>
+                        );
+                      },
+                    }}
+                  >
+                    {msg.text}
+                  </Markdown>
+                </div>
+
+                {/* POST FOOTER: Simple Like & Comment button stats bar */}
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/5 relative z-10 mt-1">
+                  <div className="flex items-center gap-2">
+                    {/* Simplified Liking Interaction */}
+                    <button
+                      onClick={() => handleLikePost(msg.id, postLikes)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all font-extrabold text-xs cursor-pointer border",
+                        hasLiked
+                          ? "bg-red-500/10 text-red-400 border-red-500/20 shadow-md shadow-red-500/5 shrink-0"
+                          : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border-white/5 shrink-0"
+                      )}
+                      title={isAr ? "أعجبني" : "Like"}
+                    >
+                      <Heart size={14} className={cn(hasLiked ? "fill-red-400 stroke-red-400" : "stroke-current")} />
+                      <span>{postLikes.length}</span>
+                    </button>
+
+                    {/* Comment Stats toggling comments expand */}
+                    <button
+                      onClick={() => {
+                        setExpandedComments((prev) => ({
+                          ...prev,
+                          [msg.id]: !prev[msg.id],
+                        }));
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all font-extrabold text-xs cursor-pointer border shrink-0",
+                        expandedComments[msg.id]
+                          ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                          : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border-white/5"
+                      )}
+                      title={isAr ? "التعليقات" : "Comments"}
+                    >
+                      <MessageSquare size={14} />
+                      <span>{postComments.length}</span>
+                    </button>
+                  </div>
+
+                  {postComments.length > 0 && !expandedComments[msg.id] && (
+                    <button
+                      onClick={() => {
+                        setExpandedComments((prev) => ({ ...prev, [msg.id]: true }));
+                      }}
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline transition-all cursor-pointer font-bold shrink-0"
+                    >
+                      {isAr ? `عرض ${postComments.length} تعليقات` : `View ${postComments.length} comments`}
+                    </button>
+                  )}
+                </div>
+
+                {/* EXPANDABLE COMMENTS WINDOW */}
+                <AnimatePresence>
+                  {expandedComments[msg.id] && postComments.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="space-y-2.5 overflow-hidden border-t border-white/5 pt-3 mt-1.5"
+                    >
+                      <div className="space-y-2.5 max-h-56 overflow-y-auto custom-scrollbar pr-1 pl-1">
+                        {postComments.map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="bg-black/20 rounded-2xl p-3 border border-white/5 hover:bg-black/35 transition-colors relative"
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-1">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={comment.userPhoto}
+                                  className="w-6.5 h-6.5 rounded-lg border border-white/5 bg-gray-950"
+                                  alt={comment.userName}
+                                />
+                                <div className={cn("text-[11px] font-black", comment.userId === user.uid ? "text-indigo-400" : "text-gray-200")}>
+                                  {comment.userName}
+                                </div>
+                              </div>
+                              <span className="text-[8px] text-gray-500 font-mono">
+                                {new Date(comment.timestamp).toLocaleTimeString(isAr ? "ar-EG" : "en-US", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-300 leading-relaxed pl-1 whitespace-pre-wrap select-text">
+                              {comment.text}
+                            </p>
+
+                            {/* Delete Comment */}
+                            {(user.role === "admin" || comment.userId === user.uid) && (
+                              <button
+                                onClick={() => handleDeleteComment(msg.id, comment.id, postComments)}
+                                className="absolute bottom-2 left-2 p-1 text-gray-600 hover:text-red-400 transition-colors rounded hover:bg-red-500/5 cursor-pointer"
+                                title={isAr ? "حذف التعليق" : "Delete Comment"}
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* PERMANENT INLINE COMMENT BAR: caption "أضف تعليقًا" under the post actions */}
+                <div className="flex gap-2.5 items-center mt-1 pt-3 border-t border-white/5 relative z-10 w-full">
+                  <img
+                    src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`}
+                    className="w-8 h-8 rounded-lg border border-white/10 shrink-0 bg-[#0a0b16] shadow-inner object-cover"
+                    alt={user.displayName}
+                  />
+                  <div className="flex-1 bg-black/45 border border-white/10 rounded-2xl flex items-center p-1 focus-within:border-indigo-500/50 transition-all shadow-inner relative overflow-visible">
+                    <input
+                      type="text"
+                      value={commentInputs[msg.id] || ""}
+                      onChange={(e) =>
+                        setCommentInputs((prev) => ({ ...prev, [msg.id]: e.target.value }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddComment(msg.id, postComments);
+                        }
+                      }}
+                      placeholder={isAr ? "أضف تعليقًا..." : "Add a comment..."}
+                      className="flex-1 bg-transparent border-none text-xs px-3 py-2 focus:outline-none text-white placeholder:text-gray-500 min-w-0"
+                    />
+                    <button
+                      onClick={() => handleAddComment(msg.id, postComments)}
+                      disabled={!(commentInputs[msg.id] || "").trim()}
+                      className="p-1.5 bg-indigo-650 hover:bg-indigo-500 text-white rounded-xl transition-all disabled:opacity-30 cursor-pointer text-center flex items-center justify-center shrink-0"
+                    >
+                      <Send size={11} className={isAr ? "" : "rotate-180"} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })
+        )}
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmId && typeof document !== "undefined" && createPortal(
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmId(null)}
+              className="absolute inset-0 bg-[#060713]/80 backdrop-blur-md cursor-pointer z-40"
+            />
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-50 w-full max-w-sm bg-[#0e1021] border border-red-500/25 p-5 md:p-6 rounded-3xl shadow-[0_20px_50px_rgba(239,68,68,0.18)] text-center flex flex-col gap-4 pointer-events-auto"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto text-red-400 shrink-0">
+                <Trash2 size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white mb-1.5">
+                  {deleteConfirmId === "ALL_MESSAGES"
+                    ? isAr ? "تطهير الساحة الفضائية؟" : "Clear Cosmic Feed?"
+                    : isAr ? "حذف المنشور؟" : "Delete Post?"}
+                </h3>
+                <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                  {deleteConfirmId === "ALL_MESSAGES"
+                    ? isAr
+                      ? "هل أنت متأكد تماماً من رغبتك في حذف جميع المنشورات من الفضاء؟ هذا الإجراء فوري ولا يمكن التراجع عنه."
+                      : "Are you absolutely sure you want to delete all posts from the feed? This action is immediate and permanent."
+                    : isAr
+                      ? "هل أنت متأكد من رغبتك في حذف هذا المنشور؟ لا يمكن التراجع عن هذه الخطوة في الفضاء الخارجي."
+                      : "Are you sure you want to delete this post? This step cannot be undone in deep space."}
+                </p>
+              </div>
+              <div className="flex gap-2.5 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-4.5 py-2 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs transition-all cursor-pointer"
+                >
+                  {isAr ? "إلغاء التراجع" : "Cancel"}
+                </button>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const targetId = deleteConfirmId;
+                    setDeleteConfirmId(null); // Close modal first so progress toast is clean and modal disappears
+                    if (targetId === "ALL_MESSAGES") {
+                      await handleClearAllPosts();
+                    } else {
+                      await handleDeleteMessage(targetId);
+                    }
+                  }}
+                  className="px-4.5 py-2 rounded-xl bg-red-650 hover:bg-red-500 text-white font-black text-xs transition-all cursor-pointer shadow-md shadow-red-650/15"
+                >
+                  {deleteConfirmId === "ALL_MESSAGES"
+                    ? isAr ? "نعم، تطهير الكل" : "Yes, Clear All"
+                    : isAr ? "تأكيد الحذف" : "Confirm Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && typeof document !== "undefined" && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 z-[99999] bg-[#060713]/90 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-6 right-6 p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all duration-300 pointer-events-auto cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <motion.img
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+              src={lightboxImage}
+              alt={isAr ? "مشاهدة بملء الشاشة" : "Full screen photo view"}
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10 select-none cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>,
+          document.body
+        )}
+      </AnimatePresence>
     </div>
   );
-}
-
-function PlanetIcon() {
-  return <span className="text-xl inline-block -translate-y-0.5">🪐</span>;
 }

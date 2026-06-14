@@ -548,6 +548,8 @@ export interface UserData {
   level: number;
   xp: number;
   missionRole?: string;
+  completedWizard?: boolean;
+  dailyFocusTarget?: number;
   role: "admin" | "user";
   inventory?: string[];
   items?: string[];

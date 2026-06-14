@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Swords, RefreshCw, Trophy, Zap, Info, Loader2, Sparkles, AlertTriangle } from "lucide-react";
+import { Swords, RefreshCw, Zap, Loader2 } from "lucide-react";
 import { UserData, Challenge } from "../shared";
 import { db } from "../firebase";
-import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { ChallengesHero } from "../components/challenges/ChallengesHero";
 import { ActiveChallengesList } from "../components/challenges/ActiveChallengesList";
 import { ChallengeInvites } from "../components/challenges/ChallengeInvites";
-import { ChallengeHistory } from "../components/challenges/ChallengeHistory";
-import { ChallengeLeaderboard } from "../components/challenges/ChallengeLeaderboard";
 import { HowChallengesWork } from "../components/challenges/HowChallengesWork";
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../context/LanguageContext";
@@ -27,7 +25,7 @@ export default function ChallengesHubView({
   const { isAr, t } = useLanguage();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<"active" | "invites" | "history" | "leaderboard">("active");
+  const [activeSubTab, setActiveSubTab] = useState<"active" | "invites">("active");
 
   const fetchAllChallenges = async () => {
     setLoading(true);
@@ -131,30 +129,6 @@ export default function ChallengesHubView({
                 : `Invites & Requests (${incomingInvites.length + outgoingInvites.length})`}
             </span>
           </button>
-
-          <button
-            onClick={() => setActiveSubTab("history")}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
-              activeSubTab === "history"
-                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/30"
-                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            <Trophy size={14} />
-            <span>{isAr ? "أرشيف المعارك" : "Battle Log"}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab("leaderboard")}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
-              activeSubTab === "leaderboard"
-                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/30"
-                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            <Sparkles size={14} />
-            <span>{isAr ? "صرح المصارعين الـ 10" : "Top 10 Gladiators"}</span>
-          </button>
         </div>
 
         {/* Global Manual telemetry refresh button */}
@@ -224,19 +198,6 @@ export default function ChallengesHubView({
                   outgoingInvites={outgoingInvites}
                   currentUser={user}
                   onRefresh={fetchAllChallenges}
-                />
-              )}
-
-              {activeSubTab === "history" && (
-                <ChallengeHistory
-                  challenges={challenges}
-                  currentUser={user}
-                />
-              )}
-
-              {activeSubTab === "leaderboard" && (
-                <ChallengeLeaderboard
-                  onSelectUser={onSelectUser}
                 />
               )}
             </motion.div>
