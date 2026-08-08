@@ -630,20 +630,6 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-            className="inline-flex items-center gap-2.5 bg-indigo-950/40 backdrop-blur-xl border border-indigo-500/30 rounded-full px-5 py-2.5 text-xs text-indigo-300 font-bold tracking-widest mb-8 shadow-[0_0_40px_rgba(99,102,241,0.2)]"
-          >
-            <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_12px_#6366f1]" />
-            {isAr ? "نظام تشغيل إنتاجية للتركيز العميق" : "A Deep-Focus Productivity Operating System"}
-            <span className="w-px h-4 bg-white/10 mx-1.5" />
-            <span className="text-gray-400 font-mono tracking-wider">
-              v2.5_SYS_STABLE
-            </span>
-          </motion.div>
-
           <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.12] tracking-tight mb-8 drop-shadow-2xl">
             <span className="block text-white mb-3">
               {isAr ? "ليست مجرّد منصة دراسة..." : "Not Just Another Focus App..."}
