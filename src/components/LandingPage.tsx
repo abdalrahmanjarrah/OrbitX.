@@ -128,75 +128,29 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const [oscillators, setOscillators] = useState<any[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sound Synth matching the theme rules
+  // Spacecraft engine ambient — looped WAV source
   const toggleAmbientSound = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
     if (isSoundOn) {
-      oscillators.forEach((osc) => {
-        try {
-          osc.stop();
-        } catch (e) {}
-      });
-      setOscillators([]);
+      audio.pause();
       setIsSoundOn(false);
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().then(() => {
-          audioCtxRef.current = null;
-        });
-      }
     } else {
-      try {
-        const AudioContextClass =
-          window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContextClass();
-        audioCtxRef.current = ctx;
-
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-        const gain = ctx.createGain();
-
-        osc1.type = "sine";
-        osc1.frequency.setValueAtTime(75, ctx.currentTime);
-
-        osc2.type = "triangle";
-        osc2.frequency.setValueAtTime(76.5, ctx.currentTime);
-
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(120, ctx.currentTime);
-
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-
-        osc1.connect(filter);
-        osc2.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc1.start();
-        osc2.start();
-
-        setOscillators([osc1, osc2]);
-        setIsSoundOn(true);
-      } catch (e) {
-        console.error("Audio Context initialization blocked", e);
-      }
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        setIsSoundOn(false);
+      });
+      setIsSoundOn(true);
     }
   };
 
   useEffect(() => {
     return () => {
-      oscillators.forEach((osc) => {
-        try {
-          osc.stop();
-        } catch (e) {}
-      });
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-      }
+      audioRef.current?.pause();
     };
-  }, [oscillators]);
+  }, []);
 
   // Handle subtle mouse movements for beautiful depth effect
   useEffect(() => {
@@ -650,6 +604,13 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 <VolumeX className="w-4 h-4" />
               )}
             </button>
+            <audio
+              ref={audioRef}
+              src={`${import.meta.env.BASE_URL}sounds/spaceship.wav`}
+              loop
+              preload="auto"
+              className="hidden"
+            />
             <button
               onClick={() => setShowLoginModal(true)}
               className="relative group bg-white hover:bg-white/95 text-black font-black px-6 py-2.5 rounded-xl text-xs tracking-wide transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] flex items-center gap-2 font-sans"
