@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut,
+  signInWithEmailAndPassword as originalSignInWithEmail,
+  createUserWithEmailAndPassword as originalCreateUserWithEmail
+} from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
@@ -37,6 +44,26 @@ export const signInWithGoogle = async () => {
 };
 
 export const logout = () => signOut(auth);
+
+export const signInWithEmail = async (email: string, password: string) => {
+  try {
+    const result = await originalSignInWithEmail(auth, email, password);
+    return result.user;
+  } catch (error: any) {
+    console.error("Error signing in with Email/Password", error);
+    throw error;
+  }
+};
+
+export const registerWithEmail = async (email: string, password: string) => {
+  try {
+    const result = await originalCreateUserWithEmail(auth, email, password);
+    return result.user;
+  } catch (error: any) {
+    console.error("Error registering with Email/Password", error);
+    throw error;
+  }
+};
 
 // Tracked replacements of Firestore core APIs with strict local fallback circuit-breakers
 export const getDoc = async (docRef: any) => {

@@ -187,7 +187,6 @@ import QuranPlayer from "./views/QuranPlayer";
 import PersonalTasks from "./views/PersonalTasks";
 import StudyRoomView from "./views/StudyRoomView";
 import LeaderboardView from "./views/LeaderboardView";
-import ChatView from "./views/ChatView";
 import FocusHeatmap from "./views/FocusHeatmap";
 import ProfileView from "./views/ProfileView";
 import DiscussionsView from "./views/DiscussionsView";
@@ -379,6 +378,10 @@ function App() {
                   `profiles/${user.uid}`,
                 ),
               );
+
+              // Immediately transition user state to prevent lockouts on realtime subscription delays
+              setUserData(newUserData);
+              setView("dashboard");
             };
             initUser();
           }
@@ -554,7 +557,7 @@ function App() {
     }
   }, [userData]);
 
-  if (loading) {
+  if (loading || (user && !userData)) {
     return (
       <div className="min-h-screen bg-space-dark flex items-center justify-center">
         <Rocket className="w-12 h-12 text-indigo-400 animate-bounce" />
@@ -605,8 +608,8 @@ function App() {
               <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-sans">
                 <p className="font-semibold text-gray-200">
                   {isAr
-                    ? "تلقينا خطأ شبكة من ميزة الحماية بالمتصفح أثناء محاولة فتح نافذة تسجيل الدخول."
-                    : "We encountered a network or security error from the browser while attempting to open the authentication window."}
+                    ? "تلقينا خطأ من مزود Google أو أن الميزة مقيدة في متصفحك."
+                    : "We encountered an error from the Google provider or it is restricted in your browser."}
                 </p>
 
                 <div className="bg-black/40 border border-white/5 rounded-2xl p-4 text-xs font-mono text-gray-400 text-left overflow-x-auto">
@@ -615,8 +618,8 @@ function App() {
 
                 <p className="text-gray-400">
                   {isAr
-                    ? "تمنع المتصفحات الحديثة أحياناً إطارات المعاينة (iFrames) من الوصول إلى ملفات تعريف الارتباط المخصصة للتحقق من الهوية. يرجى تجربة الحلول التالية:"
-                    : "Modern browsers sometimes prevent iframes from accessing authentication or session cookies. Please try the following suggestions:"}
+                    ? "تمنع المتصفحات الحديثة أحياناً النوافذ المنبثقة للتحقق من الهوية داخل إطارات المعاينة. يرجى تجربة الحل الأنسب أدناه:"
+                    : "Modern browsers sometimes block popup logins within preview frames. Please try the solution below:"}
                 </p>
 
                 {/* List of solutions */}
@@ -625,40 +628,12 @@ function App() {
                     <span className="text-lg mt-0.5">🌐</span>
                     <div className={isAr ? "text-right" : "text-left"}>
                       <h4 className="font-bold text-indigo-300 text-xs">
-                        {isAr ? "العرض في علامة تبويب جديدة (الحل الأسرع والأنسب)" : "Open in new window (most reliable)"}
+                        {isAr ? "العرض في علامة تبويب جديدة (الحل الأسرع والأنسب)" : "Open in a new tab (most reliable)"}
                       </h4>
                       <p className="text-xs text-gray-400 mt-1">
                         {isAr
-                          ? "افتح التطبيق في صفحة مستقلة كاملة بدلاً من إطار المعاينة داخل المنصة. اضغط على زر المعاينة الخارجي (Open in new tab) أعلى يمين نافذة AI Studio."
-                          : "Open the app in an independent browser tab instead of the inline preview iframe. Click the 'Open in new tab' / external pop-out icon at the top right of the AI Studio window."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                    <span className="text-lg mt-0.5">🛡️</span>
-                    <div className={isAr ? "text-right" : "text-left"}>
-                      <h4 className="font-bold text-amber-300 text-xs">
-                        {isAr ? "إيقاف مانع الإعلانات أو دروع الحماية" : "Disable Content Blockers / Shields"}
-                      </h4>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {isAr
-                          ? "إذا كنت تستخدم uBlock Origin أو AdBlock أو Brave Shields، قم بإيقافها مؤقتاً للنطاق الحالي للسماح باتصال تسجيل الدخول الآمن."
-                          : "If you are running uBlock Origin, AdBlock, or Brave Shields, temporarily whitelist or disable them to permit secure popup authentication windows."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                    <span className="text-lg mt-0.5">🍪</span>
-                    <div className={isAr ? "text-right" : "text-left"}>
-                      <h4 className="font-bold text-cyan-300 text-xs">
-                        {isAr ? "سماح بملفات تعريف ارتباط الطرف الثالث" : "Allow Third-Party Cookies"}
-                      </h4>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {isAr
-                          ? "تأكت من سماح المتصفح بملفات تعريف الارتباط للطرف الثالث (Third-Party Cookies) للسماح للإطار بالتحقق من جلستك الفضائية."
-                          : "Enable third-party cookies or cross-site tracking flags inside your browser settings temporarily so the preview iframe can authenticate secure cosmic missions."}
+                          ? "افتح التطبيق في صفحة مستقلة كاملة لتخطي قيود الإطار. اضغط على زر المعاينة الخارجي (Open in new tab) أعلى يمين نافذة AI Studio."
+                          : "Open the app in an independent browser tab to bypass iframe restrictions. Click 'Open in new tab' at the top right of the AI Studio window."}
                       </p>
                     </div>
                   </div>
@@ -666,10 +641,10 @@ function App() {
               </div>
 
               {/* Footer controls */}
-              <div className={cn("flex items-center gap-3 mt-6 pt-6 border-t border-white/5 font-sans", isAr ? "justify-end" : "justify-start")}>
+              <div className={cn("flex flex-wrap items-center gap-3 mt-6 pt-6 border-t border-white/5 font-sans", isAr ? "justify-end" : "justify-start")}>
                 <button
                   onClick={() => setLoginError(null)}
-                  className="px-5 py-2.5 bg-white/5 rounded-xl text-xs font-bold text-gray-300 hover:bg-white/10 transition-all border border-white/5"
+                  className="px-4 py-2.5 bg-white/5 rounded-xl text-xs font-bold text-gray-300 hover:bg-white/10 transition-all border border-white/5"
                 >
                   {isAr ? "إلغاء" : "Cancel"}
                 </button>
@@ -678,9 +653,9 @@ function App() {
                     setLoginError(null);
                     handleLogin();
                   }}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-indigo-900/30"
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-indigo-900/30"
                 >
-                  {isAr ? "إعادة المحاولة" : "Retry"}
+                  {isAr ? "إعادة محاولة Google" : "Retry Google"}
                 </button>
               </div>
             </div>

@@ -239,8 +239,15 @@ export default function SupportView({ user }: { user: UserData }) {
     if (!window.confirm(isAr ? "هل أنت متأكد من حذف هذه الرسالة؟" : "Are you sure you want to delete this message?")) return;
     try {
       const ticketRef = doc(db, "support_tickets", ticket.id);
+      
+      // Filter out target message securely by checkingSender, timestamp, and content
+      // This is 100% robust and bypasses arrayRemove silences if any property type slightly shifts
+      const updatedMessages = ticket.messages.filter(m => 
+        !(m.createdAt === message.createdAt && m.senderId === message.senderId && m.text === message.text)
+      );
+
       await updateDoc(ticketRef, {
-        messages: arrayRemove(message)
+        messages: updatedMessages
       });
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `support_tickets/${ticket.id}`);
@@ -571,7 +578,7 @@ export default function SupportView({ user }: { user: UserData }) {
                               {/* Option to delete specific message */}
                               <button
                                 onClick={() => handleDeleteMessage(activeTicket, msg)}
-                                className="opacity-0 group-hover/msg:opacity-100 hover:text-red-400 text-gray-500 transition-all rounded p-0.5"
+                                className="opacity-60 lg:opacity-0 lg:group-hover/msg:opacity-100 hover:text-red-400 text-gray-500 transition-all rounded p-1 hover:bg-white/5"
                                 title="Delete message"
                               >
                                 <Trash size={12} />

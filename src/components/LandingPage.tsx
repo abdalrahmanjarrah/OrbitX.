@@ -1473,11 +1473,12 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
 
               {/* Google OAuth Launcher control with spectacular shadow */}
               <button
+                type="button"
                 onClick={() => {
                   setShowLoginModal(false);
                   onLogin();
                 }}
-                className="relative w-full group overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl py-4.5 text-[16px] font-black text-white shadow-[0_0_35px_rgba(99,102,241,0.35)] hover:shadow-[0_0_55px_rgba(99,102,241,0.55)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3"
+                className="relative w-full group overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl py-4.5 text-[16px] font-black text-white shadow-[0_0_35px_rgba(99,102,241,0.35)] hover:shadow-[0_0_55px_rgba(99,102,241,0.55)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3 relative z-10"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <svg

@@ -183,7 +183,6 @@ import SuggestionsSection from "./SuggestionsSection";
 import QuranPlayer from "./QuranPlayer";
 import StudyRoomView from "./StudyRoomView";
 import LeaderboardView from "./LeaderboardView";
-import ChatView from "./ChatView";
 import FocusHeatmap from "./FocusHeatmap";
 import ProfileView from "./ProfileView";
 import DiscussionsView from "./DiscussionsView";

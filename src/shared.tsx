@@ -786,11 +786,6 @@ export const getTourSteps = (isMobile: boolean): any[] => {
       disableBeacon: true,
     },
     {
-      target: ".tour-step-chat",
-      content:
-        "الشات العام: تواصل مع جميع رواد الفضاء المتواجدين حالياً وشارك أفكارك وتحدياتك مع المجتمع.",
-    },
-    {
       target: ".tour-step-discussions",
       content:
         "ساحة النقاش: اطرح أسئلتك الأكاديمية وشارك في نقاشات هادفة للتبادل العلمي.",

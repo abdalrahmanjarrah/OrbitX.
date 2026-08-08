@@ -4,6 +4,8 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Old OAuth popup closer removed - handled gracefully in the render pipeline below
+
 // --- GLOBAL FIRESTORE WRITE PROTECTION / CIRCUIT BREAKER ---
 import('firebase/firestore').then((firestore) => {
   try {
@@ -219,11 +221,72 @@ import('firebase/firestore').then((firestore) => {
 // -------------------------------------------------------------
 
 import { LanguageProvider } from "./context/LanguageContext.tsx";
+import { supabase } from "./supabaseAdapter";
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <LanguageProvider>
-      <App />
-    </LanguageProvider>
-  </StrictMode>,
+// Determine if we are inside an OAuth popup window
+const isPopup = typeof window !== "undefined" && (
+  window.opener || 
+  window.name === "supabase-oauth" || 
+  window.location.hash.includes("access_token=") || 
+  window.location.search.includes("code=")
 );
+
+if (isPopup) {
+  // Let Supabase process the hash fragment and session state asynchronously
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    // Notify the main parent window via postMessage if available
+    if (window.opener) {
+      try {
+        window.opener.postMessage({ type: "supabase-oauth-success" }, "*");
+      } catch (e) {
+        console.error("Failed to postMessage to opener:", e);
+      }
+    }
+
+    // Broadcast the auth success across tabs/iframes using BroadcastChannel
+    try {
+      const channel = new BroadcastChannel("supabase-auth-channel");
+      channel.postMessage({ type: "OAUTH_SUCCESS" });
+      channel.close();
+    } catch (e) {
+      console.error("Failed to broadcast oauth success:", e);
+    }
+
+    // Close the popup window after a short delay to allow state write
+    setTimeout(() => {
+      try {
+        window.close();
+      } catch (e) {
+        console.error("Failed to close popup window:", e);
+      }
+    }, 800);
+  }).catch((err) => {
+    console.error("Error retrieving session in popup:", err);
+  });
+
+  // Render a minimal, clean Arabic loading message as the user requested
+  createRoot(document.getElementById('root')!).render(
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      backgroundColor: '#0a0b16',
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      textAlign: 'center'
+    }}>
+      <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>جاري تسجيل الدخول...</h2>
+      <p style={{ fontSize: '14px', color: '#8b8fba' }}>سيتم إغلاق هذه النافذة تلقائياً</p>
+    </div>
+  );
+} else {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
+    </StrictMode>,
+  );
+}

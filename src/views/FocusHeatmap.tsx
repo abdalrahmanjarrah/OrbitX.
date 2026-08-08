@@ -164,7 +164,6 @@ import QuranPlayer from './QuranPlayer';
 import PersonalTasks from './PersonalTasks';
 import StudyRoomView from './StudyRoomView';
 import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
 import ProfileView from './ProfileView';
 import DiscussionsView from './DiscussionsView';
 import ScheduleView from './ScheduleView';

@@ -14,6 +14,20 @@ import { getAuth as getAdminAuth } from "firebase-admin/auth";
 
 dotenv.config();
 
+// Initialize Supabase Admin client if credentials are provided
+import { createClient } from "@supabase/supabase-js";
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = supabaseUrl && supabaseServiceKey && supabaseServiceKey !== "your-service-role-key" && supabaseServiceKey !== ""
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
+
+if (supabaseAdmin) {
+  console.log("[SYSTEM] Supabase Admin active for backend database operations and token verification.");
+} else {
+  console.log("[SYSTEM] Supabase Admin is inactive. Defaulting backend to Firebase.");
+}
+
 // Initialize Firebase for server-side cleanups
 const firebaseConfig = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8")
@@ -37,6 +51,111 @@ try {
 } catch (e) {
   console.log("[SYSTEM] Firebase Admin already initialized. Reusing connection.", e);
   adminDb = getAdminFirestore(undefined as any, firebaseConfig.firestoreDatabaseId);
+}
+
+// Server-side database operation wrappers
+async function compatGetDoc(docRef: any): Promise<any> {
+  if (supabaseAdmin) {
+    const docPath = typeof docRef === "string" ? docRef : docRef.path;
+    const parts = docPath.split("/");
+    const id = parts[parts.length - 1];
+    try {
+      const { data, error } = await supabaseAdmin.from("documents").select("data").eq("path", docPath).maybeSingle();
+      if (error) throw error;
+      return {
+        exists: () => !!data,
+        data: () => data?.data || null,
+        id
+      };
+    } catch (err) {
+      console.error("[Supabase Server compatGetDoc] failed:", err);
+      return { exists: () => false, data: () => null, id };
+    }
+  }
+  return await getDoc(docRef);
+}
+
+async function compatUpdateDoc(docRef: any, updates: any): Promise<void> {
+  if (supabaseAdmin) {
+    const docPath = typeof docRef === "string" ? docRef : docRef.path;
+    const parts = docPath.split("/");
+    const collectionName = parts[parts.length - 2];
+    const id = parts[parts.length - 1];
+    try {
+      // Fetch current
+      const { data: current, error: getErr } = await supabaseAdmin.from("documents").select("data").eq("path", docPath).maybeSingle();
+      if (getErr) throw getErr;
+      
+      let mergedData = current?.data || {};
+      for (const key in updates) {
+        const val = updates[key];
+        // Handle deleteField sentinel and arrayRemove mock
+        if (val && typeof val === "object" && val._methodName === "FieldValue.delete") {
+          delete mergedData[key];
+        } else if (val && typeof val === "object" && val._methodName === "FieldValue.arrayRemove") {
+          const arr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
+          const toRemove = val._elements || [];
+          mergedData[key] = arr.filter((item: any) => !toRemove.includes(item));
+        } else {
+          mergedData[key] = val;
+        }
+      }
+
+      const { error } = await supabaseAdmin.from("documents").upsert({
+        path: docPath,
+        collection: collectionName,
+        id,
+        data: mergedData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "path" });
+      if (error) throw error;
+      return;
+    } catch (err) {
+      console.error("[Supabase Server compatUpdateDoc] failed:", err);
+      throw err;
+    }
+  }
+  return await updateDoc(docRef, updates);
+}
+
+async function compatAddDoc(colRef: any, docData: any): Promise<any> {
+  if (supabaseAdmin) {
+    const colPath = typeof colRef === "string" ? colRef : colRef.path;
+    const parts = colPath.split("/");
+    const collectionName = parts[parts.length - 1];
+    const randomId = "id_srv_" + Math.random().toString(36).substr(2, 9);
+    const docPath = colPath + "/" + randomId;
+    try {
+      const { error } = await supabaseAdmin.from("documents").upsert({
+        path: docPath,
+        collection: collectionName,
+        id: randomId,
+        data: docData,
+        updated_at: new Date().toISOString()
+      });
+      if (error) throw error;
+      return { id: randomId, path: docPath };
+    } catch (err) {
+      console.error("[Supabase Server compatAddDoc] failed:", err);
+      throw err;
+    }
+  }
+  return await addDoc(colRef, docData);
+}
+
+async function compatDeleteDoc(docRef: any): Promise<void> {
+  if (supabaseAdmin) {
+    const docPath = typeof docRef === "string" ? docRef : docRef.path;
+    try {
+      const { error } = await supabaseAdmin.from("documents").delete().eq("path", docPath);
+      if (error) throw error;
+      return;
+    } catch (err) {
+      console.error("[Supabase Server compatDeleteDoc] failed:", err);
+      throw err;
+    }
+  }
+  return await deleteDoc(docRef);
 }
 
 // Local JSON file and memory cache for fallback in case of Firestore quota limits or downtime
@@ -75,6 +194,37 @@ loadChatCacheFromDisk();
 
 // Populate cache from Firestore on startup if Firestore is functional
 async function syncCacheFromFirestoreOnBoot() {
+  if (supabaseAdmin) {
+    try {
+      console.log("[SYSTEM] Syncing local feed cache from Supabase PostgreSQL...");
+      const { data, error } = await supabaseAdmin
+        .from("documents")
+        .select("id, data")
+        .eq("collection", "global_chat");
+      
+      if (error) throw error;
+      if (data && data.length > 0) {
+        let fetched = data.map(row => {
+          const timestamp = row.data?.timestamp ? new Date(row.data.timestamp).getTime() : Date.now();
+          return {
+            id: row.id,
+            ...row.data,
+            timestamp
+          };
+        });
+        // Sort descending by timestamp
+        fetched.sort((a, b) => b.timestamp - a.timestamp);
+        localChatCache = fetched.slice(0, 100);
+        saveChatCacheToDisk();
+        console.log(`[SYSTEM] Successfully synced ${localChatCache.length} posts from Supabase.`);
+      }
+      return;
+    } catch (err) {
+      console.warn("[SYSTEM] Supabase cache sync on boot failed, using existing disk backup:", err.message || err);
+      return;
+    }
+  }
+
   try {
     console.log("[SYSTEM] Syncing local feed cache from Firestore...");
     const snapshot = await adminDb.collection("global_chat")
@@ -143,6 +293,23 @@ async function startServer() {
       return null;
     }
     const token = authHeader.split("Bearer ")[1];
+
+    if (supabaseAdmin) {
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        if (!error && user) {
+          return {
+            uid: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || "رائد فضاء",
+            picture: user.user_metadata?.avatar_url || "",
+          };
+        }
+      } catch (err) {
+        // Fall back to Firebase verification if token is a Firebase token
+      }
+    }
+
     try {
       const decodedToken = await getAdminAuth().verifyIdToken(token);
       return decodedToken;
@@ -570,7 +737,7 @@ async function startServer() {
 
       const doLeaveRoom = async () => {
         const roomRef = doc(db, "rooms", roomId);
-        const roomSnap = await getDoc(roomRef);
+        const roomSnap = await compatGetDoc(roomRef);
 
         if (roomSnap.exists()) {
           const rData = roomSnap.data();
@@ -590,12 +757,12 @@ async function startServer() {
             updates.timerStatus = "idle";
           }
 
-          await updateDoc(roomRef, updates);
+          await compatUpdateDoc(roomRef, updates);
 
           // Optional: add system message if there are other participants
           if (rem.length > 0) {
             const msgCol = collection(db, "rooms", roomId, "messages");
-            await addDoc(msgCol, {
+            await compatAddDoc(msgCol, {
               text: `🚀 غادر المحرك (${userName || userId}) المحطة (إغلاق التبويب/المتصفح).`,
               userId: "system",
               userName: "نظام التنبيه",
@@ -609,9 +776,9 @@ async function startServer() {
           if (rem.length === 0) {
             setTimeout(async () => {
               try {
-                const checkSnap = await getDoc(roomRef);
+                const checkSnap = await compatGetDoc(roomRef);
                 if (checkSnap.exists() && (!(checkSnap.data() as any).participants || (checkSnap.data() as any).participants.length === 0)) {
-                  await deleteDoc(roomRef);
+                  await compatDeleteDoc(roomRef);
                 }
               } catch (e) {}
             }, 300000);
@@ -620,14 +787,14 @@ async function startServer() {
 
         // Also reset currentActivity for the user
         const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, {
+        await compatUpdateDoc(userRef, {
           currentActivity: "في لوحة التحكم",
         });
 
         // Instantly delete typing indicator document on the server as well
         try {
           const typingRef = doc(db, "rooms", roomId, "typing", userId);
-          await deleteDoc(typingRef);
+          await compatDeleteDoc(typingRef);
         } catch (e) {}
       };
 

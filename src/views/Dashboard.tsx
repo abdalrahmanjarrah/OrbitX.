@@ -167,7 +167,6 @@ const QuranPlayer = React.lazy(() => import('./QuranPlayer'));
 const PersonalTasks = React.lazy(() => import('./PersonalTasks'));
 const StudyRoomView = React.lazy(() => import('./StudyRoomView'));
 const LeaderboardView = React.lazy(() => import('./LeaderboardView'));
-const ChatView = React.lazy(() => import('./ChatView'));
 const FocusHeatmap = React.lazy(() => import('./FocusHeatmap'));
 const ProfileView = React.lazy(() => import('./ProfileView'));
 const DiscussionsView = React.lazy(() => import('./DiscussionsView'));
@@ -316,7 +315,6 @@ export default function Dashboard({
 
   const focusTabs = ["home", "schedule", "challenges", "farm", "blackholes"];
   const communityTabs = [
-    "chat",
     "search",
     "discussions",
     "fleets",
@@ -331,14 +329,13 @@ export default function Dashboard({
 
   const setCategory = (cat: string) => {
     if (cat === "focus") handleTabChange("home");
-    if (cat === "community") handleTabChange("chat");
+    if (cat === "community") handleTabChange("search");
     if (cat === "profile") handleTabChange("profile");
   };
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
     let activity = "في لوحة القيادة المركزية";
-    if (tab === "chat") activity = "في الإشارات الكونية (الشات)";
     if (tab === "profile") activity = "يعاين الهوية الفضائية";
     if (tab === "discussions") activity = "في مجلس الحكماء الفضائي";
     if (tab === "schedule") activity = "يبرمج مسار الرحلة";
@@ -652,7 +649,6 @@ export default function Dashboard({
               )}
               {currentCategory === "community" && (
                 <>
-                  <NavPill icon={<MessageSquare size={14} />} label={t("nav.chat", "الشات")} active={activeTab === "chat"} onClick={() => handleTabChange("chat")} className="tour-step-chat" />
                   <NavPill icon={<Search size={14} />} label={t("nav.search", "البث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
                   <NavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "النقاشات")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
                   <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
@@ -781,7 +777,6 @@ export default function Dashboard({
               </div>
             }>
               {activeTab === "home" && <HomeView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
-              {activeTab === "chat" && <ChatView user={user} onSelectUser={setSelectedUserId} />}
               {activeTab === "search" && <UserSearchView user={user} onSelectUser={setSelectedUserId} />}
               {activeTab === "profile" && <ProfileView user={user} />}
               {activeTab === "discussions" && <DiscussionsView user={user} />}
@@ -818,7 +813,6 @@ export default function Dashboard({
             {/* ... Mobile Sub-nav for others ... */}
             {currentCategory === "community" && (
                 <>
-                  <MobileNavPill icon={<MessageSquare size={14} />} label={t("nav.chat", "الشات")} active={activeTab === "chat"} onClick={() => handleTabChange("chat")} />
                   <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "الاستكشاف")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
                   <MobileNavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "مجلس الحكماء")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} />
                   <MobileNavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />

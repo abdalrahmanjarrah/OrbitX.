@@ -78,6 +78,7 @@ import {
   Bell,
   BarChart3,
   Search, Globe2, UserCircle,
+  Film, Disc, Sparkles,
 } from "lucide-react";
 import {
   LineChart,
@@ -148,6 +149,7 @@ function onSnapshot(...args: any[]) {
 }
 
 
+import { useLanguage } from "../context/LanguageContext";
 import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';
@@ -163,7 +165,6 @@ import SuggestionsSection from './SuggestionsSection';
 import PersonalTasks from './PersonalTasks';
 import StudyRoomView from './StudyRoomView';
 import LeaderboardView from './LeaderboardView';
-import ChatView from './ChatView';
 import FocusHeatmap from './FocusHeatmap';
 import ProfileView from './ProfileView';
 import DiscussionsView from './DiscussionsView';
@@ -179,23 +180,273 @@ import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 
+class InterstellarSynthEngine {
+  private ctx: AudioContext | null = null;
+  public isPlaying: boolean = false;
+  private timeoutId: any = null;
+  private activeOscillators: { stop: () => void }[] = [];
+  private step = 0;
+  private mainGain: GainNode | null = null;
+  private volumeValue = 0.6;
+
+  constructor() {}
+
+  setVolume(vol: number) {
+    this.volumeValue = vol;
+    if (this.mainGain && this.ctx) {
+      this.mainGain.gain.setValueAtTime(vol * 0.15, this.ctx.currentTime);
+    }
+  }
+
+  start(onPlayBeat?: (step: number) => void) {
+    if (this.isPlaying) return;
+    
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    try {
+      this.ctx = new AudioContextClass();
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+
+      this.isPlaying = true;
+      this.step = 0;
+      
+      this.mainGain = this.ctx.createGain();
+      this.mainGain.gain.setValueAtTime(this.volumeValue * 0.15, this.ctx.currentTime);
+      
+      const delay = this.ctx.createDelay(1.0);
+      delay.delayTime.value = 0.45;
+      
+      const feedback = this.ctx.createGain();
+      feedback.gain.value = 0.35;
+      
+      this.mainGain.connect(this.ctx.destination);
+      this.mainGain.connect(delay);
+      delay.connect(feedback);
+      feedback.connect(delay);
+      delay.connect(this.ctx.destination);
+
+      const playLoop = () => {
+        if (!this.isPlaying || !this.ctx) return;
+
+        const tempo = 85; 
+        const stepDuration = 60 / tempo; 
+        const currentStep = this.step;
+
+        const measure = Math.floor(currentStep / 8) % 4;
+        const beatInMeasure = currentStep % 8;
+
+        let highNote = 659.25; 
+        if (measure === 0 || measure === 2) {
+          highNote = (beatInMeasure % 2 === 0) ? 659.25 : 783.99; 
+        } else {
+          highNote = (beatInMeasure % 2 === 0) ? 659.25 : 698.46; 
+        }
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(highNote, this.ctx.currentTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1500, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + stepDuration * 1.6);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.mainGain);
+
+        try {
+          osc.start();
+          osc.stop(this.ctx.currentTime + stepDuration * 1.8);
+          this.activeOscillators.push({ stop: () => { try { osc.stop(); } catch(e){} } });
+        } catch (e) {}
+
+        if (beatInMeasure === 0) {
+          let bassFreq = 110.0; 
+          if (measure === 1) bassFreq = 82.41; 
+          if (measure === 2) bassFreq = 87.31; 
+          if (measure === 3) bassFreq = 130.81; 
+
+          const sub = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          const subFilter = this.ctx.createBiquadFilter();
+
+          sub.type = 'sine';
+          sub.frequency.setValueAtTime(bassFreq, this.ctx.currentTime);
+
+          subFilter.type = 'lowpass';
+          subFilter.frequency.setValueAtTime(250, this.ctx.currentTime);
+
+          subGain.gain.setValueAtTime(0, this.ctx.currentTime);
+          subGain.gain.linearRampToValueAtTime(0.18, this.ctx.currentTime + 0.5);
+          subGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + stepDuration * 7.5);
+
+          sub.connect(subFilter);
+          subFilter.connect(subGain);
+          subGain.connect(this.mainGain);
+
+          try {
+            sub.start();
+            sub.stop(this.ctx.currentTime + stepDuration * 8);
+            this.activeOscillators.push({ stop: () => { try { sub.stop(); } catch(e){} } });
+          } catch (e) {}
+
+          const swell = this.ctx.createOscillator();
+          const swellGain = this.ctx.createGain();
+          
+          swell.type = 'triangle';
+          swell.frequency.setValueAtTime(bassFreq * 1.5, this.ctx.currentTime); 
+
+          swellGain.gain.setValueAtTime(0, this.ctx.currentTime);
+          swellGain.gain.linearRampToValueAtTime(0.03, this.ctx.currentTime + 1.2);
+          swellGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + stepDuration * 7.0);
+
+          swell.connect(swellGain);
+          swellGain.connect(this.mainGain);
+
+          try {
+            swell.start();
+            swell.stop(this.ctx.currentTime + stepDuration * 8);
+            this.activeOscillators.push({ stop: () => { try { swell.stop(); } catch(e){} } });
+          } catch (e) {}
+        }
+
+        if (onPlayBeat) {
+          onPlayBeat(currentStep);
+        }
+
+        this.step++;
+        this.timeoutId = setTimeout(playLoop, stepDuration * 1000);
+      };
+
+      playLoop();
+    } catch (err) {
+      console.error("Synthesizer initialization failed", err);
+    }
+  }
+
+  stop() {
+    this.isPlaying = false;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this.activeOscillators.forEach(osc => {
+      try {
+        osc.stop();
+      } catch (e) {}
+    });
+    this.activeOscillators = [];
+    if (this.ctx) {
+      try {
+        this.ctx.close();
+      } catch (e) {}
+      this.ctx = null;
+    }
+    this.mainGain = null;
+  }
+}
+
 export default function QuranPlayer() {
   const [reciterIndex, setReciterIndex] = useState(0);
   const [surahIndex, setSurahIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Custom Space soundtrack integration
+  const [audioMode, setAudioMode] = useState<"quran" | "interstellar">("quran");
+  const [interstellarType, setInterstellarType] = useState<"original" | "synth">("original");
+  const [synthStep, setSynthStep] = useState(0);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+  const synthEngineRef = useRef<InterstellarSynthEngine | null>(null);
+  const { isAr } = useLanguage();
 
+  // Initialize synth engine lazily
+  if (!synthEngineRef.current) {
+    synthEngineRef.current = new InterstellarSynthEngine();
+  }
+
+  // Handle volume changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
+    if (synthEngineRef.current) {
+      synthEngineRef.current.setVolume(volume);
+    }
   }, [volume]);
 
-  const playPromiseRef = useRef<Promise<void> | null>(null);
+  // Handle reloading audio when mode or index changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [audioMode, surahIndex, reciterIndex]);
+
+  // Clean up synth engine on unmount
+  useEffect(() => {
+    return () => {
+      if (synthEngineRef.current) {
+        synthEngineRef.current.stop();
+      }
+    };
+  }, []);
+
+  const handleModeChange = async (mode: "quran" | "interstellar") => {
+    if (synthEngineRef.current) {
+      synthEngineRef.current.stop();
+    }
+    if (audioRef.current) {
+      if (playPromiseRef.current) {
+        await playPromiseRef.current.catch(() => {});
+      }
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setAudioMode(mode);
+  };
+
+  const handleInterstellarTypeChange = async (type: "original" | "synth") => {
+    if (synthEngineRef.current) {
+      synthEngineRef.current.stop();
+    }
+    if (audioRef.current) {
+      if (playPromiseRef.current) {
+        await playPromiseRef.current.catch(() => {});
+      }
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setInterstellarType(type);
+  };
 
   const togglePlay = async () => {
+    if (audioMode === "interstellar" && interstellarType === "synth") {
+      const engine = synthEngineRef.current;
+      if (!engine) return;
+
+      if (isPlaying) {
+        engine.stop();
+        setIsPlaying(false);
+      } else {
+        engine.stop(); // safety check
+        engine.start((step) => {
+          setSynthStep(step);
+        });
+        setIsPlaying(true);
+      }
+      return;
+    }
+
     if (!audioRef.current) return;
 
     if (isPlaying) {
@@ -206,6 +457,9 @@ export default function QuranPlayer() {
       setIsPlaying(false);
     } else {
       try {
+        if (synthEngineRef.current) {
+          synthEngineRef.current.stop();
+        }
         playPromiseRef.current = audioRef.current.play();
         setIsPlaying(true);
         await playPromiseRef.current;
@@ -243,6 +497,9 @@ export default function QuranPlayer() {
   };
 
   const getAudioUrl = () => {
+    if (audioMode === "interstellar") {
+      return "https://archive.org/download/interstellar-theme/Interstellar%20-%20Main%2520Theme%20-%20Hans%2520Zimmer.mp3";
+    }
     const surahNum = (surahIndex + 1).toString().padStart(3, "0");
     return `${RECITERS[reciterIndex].server}${surahNum}.mp3`;
   };

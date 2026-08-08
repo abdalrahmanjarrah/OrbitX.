@@ -25,7 +25,6 @@ const dictionary: Record<string, Record<string, string>> = {
     "nav.challenges": "Battles ⚔️",
     "nav.farm": "Cosmic Farm",
     "nav.blackholes": "Black Holes",
-    "nav.chat": "Star Chat",
     "nav.search": "Broadcast",
     "nav.discussions": "Discussions",
     "nav.fleets": "Fleets",
@@ -94,12 +93,6 @@ const dictionary: Record<string, Record<string, string>> = {
     "study.crew": "Active Station Crew",
     "study.leave": "Leave Station",
     "study.completed_ok": "Focus cycle completed! Good job, pilot. XP and coins added to your stash.",
-
-    // Chat View
-    "chat.title": "Star Chat Global Broadcast",
-    "chat.placeholder": "Transmit sub-space thoughts to other rangers...",
-    "chat.send": "Transmit",
-    "chat.delete_msg": "Delete Transmisson",
 
     // Challenges Arena Hero
     "hero.tag": "Rangers Battle · OrbitX",
