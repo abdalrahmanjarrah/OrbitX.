@@ -56,6 +56,13 @@ export class MockFieldValue {
   constructor(public type: "arrayUnion" | "arrayRemove" | "increment" | "serverTimestamp" | "deleteField", public payload?: any) {}
 }
 
+export class FirestoreError extends Error {
+  constructor(message?: string, public code?: string) {
+    super(message);
+    this.name = "FirestoreError";
+  }
+}
+
 export const arrayUnion = (...values: any[]) => new MockFieldValue("arrayUnion", values);
 export const arrayRemove = (...values: any[]) => new MockFieldValue("arrayRemove", values);
 export const increment = (n: number) => new MockFieldValue("increment", n);
@@ -156,7 +163,7 @@ export const documentId = () => "__documentId__";
 
 // 4. Snapshots Emulation
 export class MockDocSnapshot {
-  constructor(private _exists: boolean, private _id: string, private _data: any) {}
+  constructor(private _exists: boolean, private _id: string, private _data: any, public ref: MockDocRef | null = null) {}
   id = this._id;
   exists() { return this._exists; }
   data() { return this._data || null; }
@@ -177,9 +184,9 @@ export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
   if (!isRealSupabase) {
     const local = getLocalDocs().find(d => d.path === docRef.path);
     if (!local) {
-      return new MockDocSnapshot(false, docRef.id, null);
+      return new MockDocSnapshot(false, docRef.id, null, docRef);
     }
-    return new MockDocSnapshot(true, docRef.id, local.data);
+      return new MockDocSnapshot(true, docRef.id, local.data, docRef);
   }
 
   try {
@@ -191,16 +198,16 @@ export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
 
     if (error) throw error;
     if (!data) {
-      return new MockDocSnapshot(false, docRef.id, null);
+      return new MockDocSnapshot(false, docRef.id, null, docRef);
     }
-    return new MockDocSnapshot(true, docRef.id, data.data);
+    return new MockDocSnapshot(true, docRef.id, data.data, docRef);
   } catch (err) {
     console.warn(`[Supabase Compatibility] getDoc failed on ${docRef.path}, falling back to local DB:`, err);
     const local = getLocalDocs().find(d => d.path === docRef.path);
     if (!local) {
-      return new MockDocSnapshot(false, docRef.id, null);
+      return new MockDocSnapshot(false, docRef.id, null, docRef);
     }
-    return new MockDocSnapshot(true, docRef.id, local.data);
+      return new MockDocSnapshot(true, docRef.id, local.data, docRef);
   }
 };
 
@@ -263,7 +270,7 @@ export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQ
       documents = documents.slice(0, limitConstraint.n);
     }
 
-    const snapshots = documents.map(d => new MockDocSnapshot(true, d.id, d.data));
+    const snapshots = documents.map(d => new MockDocSnapshot(true, d.id, d.data, doc(colRef, d.id)));
     return new MockQuerySnapshot(snapshots);
   };
 
@@ -332,7 +339,7 @@ export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQ
       documents = documents.slice(0, limitConstraint.n);
     }
 
-    const snapshots = documents.map(d => new MockDocSnapshot(true, d.id, d.data));
+    const snapshots = documents.map(d => new MockDocSnapshot(true, d.id, d.data, doc(colRef, d.id)));
     return new MockQuerySnapshot(snapshots);
   } catch (err) {
     console.warn("[Supabase Compatibility] getDocs failed, falling back to local DB:", err);
@@ -548,7 +555,7 @@ export const runTransaction = async (dbInstance: any, updateFunction: (transacti
   return await updateFunction(transactionObj);
 };
 
-export const writeBatch = () => {
+export const writeBatch = (_dbInstance?: any) => {
   const operations: (() => Promise<void>)[] = [];
   return {
     set: (docRef: MockDocRef, data: any, options?: any) => {
@@ -897,9 +904,9 @@ class MockAuth {
 // 7. Global Exports
 export const auth = new MockAuth();
 export const db = {};
-export const initializeApp = () => ({});
-export const getFirestore = () => db;
-export const initializeFirestore = () => db;
-export const getAuth = () => auth;
+export const initializeApp = (_config?: any) => ({});
+export const getFirestore = (_app?: any, _databaseId?: any) => db;
+export const initializeFirestore = (_app?: any, _settings?: any, _databaseId?: any) => db;
+export const getAuth = (_app?: any) => auth;
 export const disableNetwork = async () => {};
 export const getDocFromServer = getDoc;
