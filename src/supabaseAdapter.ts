@@ -626,13 +626,14 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Helper to get the correct redirect URL, resolving localhost to the actual environment URL
+// Helper to get the correct redirect URL for the OAuth popup.
+// Must stay on the SAME origin as the app so the PKCE code_verifier (stored in
+// that origin's localStorage) can complete the session exchange inside the popup.
 const getRedirectUrl = () => {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  if (origin.includes("localhost") || origin.includes("127.0.0.1") || origin.startsWith("http://10.")) {
-    return "https://ais-dev-h7znwe7lpee7pk7vyclbkj-6254332619.europe-west2.run.app";
-  }
-  return origin || "https://ais-dev-h7znwe7lpee7pk7vyclbkj-6254332619.europe-west2.run.app";
+  const base = import.meta.env.BASE_URL || "/";
+  const basePath = base.startsWith("/") ? base : "/" + base;
+  return (origin + basePath).replace(/\/+$/, "") || "https://ais-dev-h7znwe7lpee7pk7vyclbkj-6254332619.europe-west2.run.app";
 };
 
 // Google sign in via OAuth popup or redirection
