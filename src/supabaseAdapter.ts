@@ -112,37 +112,61 @@ const ensureHydrated = (): Promise<void> => {
 
 const refreshFromServer = async () => {
   try {
-    const { data, error } = await supabase
+    // 1) Light sweep: metadata + updated_at only (cheap in bandwidth/reads).
+    //    Never pull every doc's full data on every 30s tick.
+    const sweep = await supabase
       .from("documents")
-      .select("id, collection, path, data, updated_at");
-    if (error) throw error;
-    const changed: string[] = [];
+      .select("id, collection, path, updated_at");
+    if (sweep.error) throw sweep.error;
     const seen = new Set<string>();
-    (data || []).forEach(row => {
-      const path = row.path;
-      seen.add(path);
-      const prev = memoryDb.get(path);
-      const next: FallbackDoc = {
-        path,
-        collection: row.collection,
-        id: row.id,
-        data: row.data,
-        updated_at: row.updated_at || ""
-      };
+    const changed: string[] = [];
+    (sweep.data || []).forEach(row => {
+      seen.add(row.path);
+      const prev = memoryDb.get(row.path);
       const changedRemote =
         !prev ||
-        Date.parse(prev.updated_at || "") !== Date.parse(next.updated_at || "");
+        Date.parse(prev.updated_at || "") !== Date.parse(row.updated_at || "");
       if (changedRemote) {
-        changed.push(path);
+        changed.push(row.path);
       }
-      memoryDb.set(path, next);
     });
+    // 2) Docs deleted remotely
     Array.from(memoryDb.keys()).forEach(path => {
       if (!seen.has(path)) {
         changed.push(path);
         memoryDb.delete(path);
       }
     });
+
+    // 3) Only fetch full payloads for docs that actually changed remotely
+    if (changed.length > 0) {
+      let fetched: any[] = [];
+      if (changed.length > 500) {
+        const all = await supabase
+          .from("documents")
+          .select("id, collection, path, data, updated_at");
+        if (all.error) throw all.error;
+        fetched = all.data || [];
+      } else {
+        const full = await supabase
+          .from("documents")
+          .select("id, collection, path, data, updated_at")
+          .in("path", changed);
+        if (full.error) throw full.error;
+        fetched = full.data || [];
+      }
+      fetched.forEach(row => {
+        if (!row.path) return;
+        memoryDb.set(row.path, {
+          path: row.path,
+          collection: row.collection,
+          id: row.id,
+          data: row.data,
+          updated_at: row.updated_at || ""
+        });
+      });
+    }
+
     rebuildIndex();
     memoryHydrated = true;
     // Only re-render listeners whose data actually changed
