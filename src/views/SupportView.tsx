@@ -317,31 +317,23 @@ export default function SupportView({ user }: { user: UserData }) {
     }
   };
 
-  // Fetch published suggestions so users see their ideas + admin replies
+  // Live published suggestions so users see their ideas + admin replies in real time
   useEffect(() => {
-    let isMounted = true;
-    const fetchSuggestions = async () => {
-      try {
-        const snap = await getDocs(
-          query(
-            collection(db, "suggestions"),
-            orderBy("timestamp", "desc"),
-            limit(50),
-          ),
-        );
-        if (isMounted) {
-          setSuggestionsList(
-            snap.docs.map((d) => ({ id: d.id, ...d.data() })),
-          );
-        }
-      } catch (e) {
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, "suggestions"),
+        orderBy("timestamp", "desc"),
+        limit(50),
+      ),
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setSuggestionsList(list);
+      },
+      (e) => {
         handleFirestoreError(e, OperationType.GET, "suggestions");
-      }
-    };
-    fetchSuggestions();
-    return () => {
-      isMounted = false;
-    };
+      },
+    );
+    return unsubscribe;
   }, []);
 
   const handleReplySuggestion = async (id: string) => {

@@ -663,8 +663,9 @@ export default function AdminView({ user }: { user: UserData }) {
         </div>
       </div>
 
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Signals Intercept */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* SIGNALS INTERCEPT (suggestions + support tickets) — temporarily removed from admin panel.
+        Signals Intercept card
         <div className="bg-[#050B14] border border-cyan-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.1)_inset] lg:col-span-2">
           <h3 className="text-cyan-400 font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
             <Radio size={18} /> Signals Intercept (Reports & Ideas)
@@ -792,6 +793,7 @@ export default function AdminView({ user }: { user: UserData }) {
             </div>
           </div>
         </div>
+*/}
 
         {/* Media Surveillance */}
         <div className="bg-[#050B14] border border-cyan-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.1)_inset]">
