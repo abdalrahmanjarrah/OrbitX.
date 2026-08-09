@@ -491,7 +491,7 @@ function StudyRoomContent({
           const secs = totalSecs % 60;
           const countdownStr =
             remainingMs <= 0
-              ? "انتهت مدة النزال"
+              ? "انتهت مدة السباق"
               : days > 0
                 ? `${days}ي و ${hrs}س و ${mins}د`
                 : hrs > 0
@@ -521,7 +521,7 @@ function StudyRoomContent({
                   </div>
                   {challengeData.status === "completed" ? (
                     <div className="text-sm font-bold text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-1.5 flex items-center gap-1.5">
-                      🏆 انتهى النزال! البطل الفائز:{" "}
+                      🏆 انتهى السباق! البطل الفائز:{" "}
                       {challengeData.winnerId === challengeData.challengerId
                         ? challengeData.challengerName
                         : challengeData.winnerId === challengeData.challengedId

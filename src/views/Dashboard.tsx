@@ -341,7 +341,7 @@ export default function Dashboard({
     if (tab === "leaderboard") activity = "يراقب التصنيف المجري 🏆";
     if (tab === "admin") activity = "في غرفة القيادة العليا 🛡️";
     if (tab === "awareness") activity = "يستقبل إشارات الوعي 📡";
-    if (tab === "challenges") activity = "يتحضر للمباريات والنزالات ⚔️";
+    if (tab === "challenges") activity = "يستعد لسباقات التركيز";
     if (tab === "farm") activity = "يرعى المزرعة الفضائية 🐓";
     if (tab === "blackholes") activity = "يتفادى الثقوب السوداء 🌌";
     if (tab === "fleets") activity = "يدير الأسطول المجري 🌌";
@@ -641,7 +641,7 @@ export default function Dashboard({
                 <>
                   <NavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
                   <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
-                  <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات ⚔️")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
+                  <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
                   <NavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
@@ -809,7 +809,7 @@ export default function Dashboard({
                 <>
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
                   <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
-                  <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات ⚔️")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
+                  <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
                   <MobileNavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>

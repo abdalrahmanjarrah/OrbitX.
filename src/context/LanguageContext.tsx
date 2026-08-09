@@ -22,7 +22,7 @@ const dictionary: Record<string, Record<string, string>> = {
     // Navigation Pills
     "nav.home": "Stations",
     "nav.schedule": "Schedule",
-    "nav.challenges": "Battles ⚔️",
+    "nav.challenges": "Races",
     "nav.farm": "Cosmic Farm",
     "nav.blackholes": "Black Holes",
     "nav.search": "Broadcast",

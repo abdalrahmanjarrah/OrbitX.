@@ -534,7 +534,7 @@ export default function ProfileView({
                 border: "border-blue-500/20",
               },
               {
-                title: "النزالات الفائزة",
+                title: "السباقات الفائزة",
                 value: user.challengeWins || 0,
                 icon: <Swords size={20} />,
                 color: "text-indigo-400",
