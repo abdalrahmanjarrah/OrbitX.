@@ -65,13 +65,11 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
   const handleAcceptInvite = async (challenge: Challenge) => {
     try {
       await updateDoc(doc(db, "challenges", challenge.id), {
-        status: "active",
-        startTime: Date.now(),
-        createdAt: Date.now()
+        status: "accepted"
       });
       await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
         type: "challenge_accepted",
-        content: `قبل ${currentUser.displayName} تحديك! انطلق إلى صفحة التحديات لبدء المبارزة. ⚔️`,
+        content: `قبل ${currentUser.displayName} تحديك! ادخل الآن إلى قمرة المعركة — يبدأ النزال الفعلي عندما يكون كلاكما داخل القمرة. ⚔️`,
         challengeId: challenge.id,
         senderId: currentUser.uid,
         senderName: currentUser.displayName,

@@ -194,6 +194,8 @@ export default function UserModal({
   const [exhibitions, setExhibitions] = useState<any[]>([]);
   const [friends, setFriends] = useState<UserData[]>([]);
   const [myFleet, setMyFleet] = useState<Fleet | null>(null);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [challengeDuration, setChallengeDuration] = useState(25);
 
   useEffect(() => {
     let isMounted = true;
@@ -284,6 +286,37 @@ export default function UserModal({
       isMounted = false;
     };
   }, [userId]);
+
+  const sendChallengeFromProfile = async () => {
+    if (!userData || !currentUser) return;
+    try {
+      await addDoc(collection(db, "challenges"), {
+        challengerId: currentUserId,
+        challengerName: currentUser.displayName,
+        challengerPhoto: currentUser.photoURL || null,
+        challengedId: userId,
+        challengedName: userData.displayName,
+        challengedPhoto: userData.photoURL || null,
+        status: "pending",
+        durationMinutes: challengeDuration,
+        createdAt: Date.now(),
+      });
+      await addDoc(collection(db, "users", userId, "notifications"), {
+        type: "challenge_invite",
+        senderId: currentUserId,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
+        challengeDuration: challengeDuration,
+        content: `⚡ ${currentUser.displayName} رمى عليك صفخة تحدي: ${challengeDuration} دقيقة تركيز! رد عليه قبل انتهاء الصلاحية.`,
+        read: false,
+        timestamp: serverTimestamp(),
+      }).catch(console.error);
+      setShowChallengeModal(false);
+      alert(`صفخة التحدي مرسلة! ${userData.displayName} سيتلقى إشعاراً بدعوتك.`);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, "challenges");
+    }
+  };
 
   const handleSendFriendRequest = async () => {
     if (!userData || !currentUser) return;
@@ -390,6 +423,14 @@ export default function UserModal({
                       >
                         {isFriend ? <Users size={16} /> : <Plus size={16} />}
                         {isFriend ? "إلغاء الصداقة" : "إرسال طلب صداقة"}
+                      </button>
+                    )}
+                    {userId !== currentUserId && (
+                      <button
+                        onClick={() => setShowChallengeModal(true)}
+                        className="px-6 py-2 rounded-xl font-bold transition-all text-sm flex items-center gap-2 bg-gradient-to-l from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 border border-amber-300/30"
+                      >
+                        <Swords size={16} /> صفخة تحدي
                       </button>
                     )}
                     {userId !== currentUserId &&
@@ -649,6 +690,52 @@ export default function UserModal({
           </div>
         </motion.div>
       </div>
+
+      {showChallengeModal && userData && (
+        <div className="fixed inset-0 z-[120] bg-[#000108]/90 backdrop-blur-xl flex items-center justify-center p-4" onClick={() => setShowChallengeModal(false)}>
+          <div
+            className="w-full max-w-sm rounded-3xl glass border border-amber-500/30 p-6 text-center space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-900/40">
+              <Swords size={30} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-white">صفخة تحدي لـ {userData.displayName}</h3>
+              <p className="text-sm text-gray-400 mt-1">
+                اختر مدة النزال — يبدأ العدّاد فعلياً عندما تدخلان قمرة المعركة معاً.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[25, 50, 90].map((dur) => (
+                <button
+                  key={dur}
+                  onClick={() => setChallengeDuration(dur)}
+                  className={`py-3 rounded-xl font-black text-sm border transition-colors ${
+                    challengeDuration === dur
+                      ? "bg-amber-500 text-black border-amber-300"
+                      : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {dur} دقيقة
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={sendChallengeFromProfile}
+              className="w-full py-3 rounded-xl font-black text-sm bg-gradient-to-l from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white flex items-center justify-center gap-2 transition-colors"
+            >
+              <Swords size={16} /> إرسال الصفخة
+            </button>
+            <button
+              onClick={() => setShowChallengeModal(false)}
+              className="w-full py-2 text-xs font-bold text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

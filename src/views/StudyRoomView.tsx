@@ -513,7 +513,9 @@ function StudyRoomContent({
                     <p className="text-xs text-gray-400">
                       {challengeData.status === "completed"
                         ? `مكتمل (${challengeData.durationMinutes} دقيقة)`
-                        : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
+                        : challengeData.status === "accepted"
+                          ? "بانتظار دخول الطرفين... يبدأ النزال الفعلي عندما تكونان معاً داخل القمرة"
+                          : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
                     </p>
                   </div>
                   {challengeData.status === "completed" ? (

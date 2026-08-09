@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Swords, RefreshCw, Zap, Loader2 } from "lucide-react";
+import { Swords, RefreshCw, Zap, Loader2, Trophy } from "lucide-react";
 import { UserData, Challenge } from "../shared";
 import { db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -7,6 +7,7 @@ import { ChallengesHero } from "../components/challenges/ChallengesHero";
 import { ActiveChallengesList } from "../components/challenges/ActiveChallengesList";
 import { ChallengeInvites } from "../components/challenges/ChallengeInvites";
 import { HowChallengesWork } from "../components/challenges/HowChallengesWork";
+import { ChallengeHistory } from "../components/challenges/ChallengeHistory";
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../context/LanguageContext";
 import { cn } from "../lib/utils";
@@ -25,7 +26,7 @@ export default function ChallengesHubView({
   const { isAr, t } = useLanguage();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<"active" | "invites">("active");
+  const [activeSubTab, setActiveSubTab] = useState<"active" | "invites" | "history">("active");
 
   const fetchAllChallenges = async () => {
     setLoading(true);
@@ -65,7 +66,7 @@ export default function ChallengesHubView({
   const incomingInvites = challenges.filter(c => c.status === "pending" && c.challengedId === user.uid);
   const outgoingInvites = challenges.filter(c => c.status === "pending" && c.challengerId === user.uid);
   const activeChallenges = challenges.filter(c => c.status === "active" || c.status === "accepted");
-  const completedChallenges = challenges.filter(c => c.status === "completed" || c.status === "declined" || c.status === "cancelled");
+  const completedChallenges = challenges.filter(c => c.status === "completed");
 
   return (
     <div className={cn("space-y-8 pb-32", isAr ? "text-right" : "text-left")} dir={isAr ? "rtl" : "ltr"}>
@@ -127,6 +128,22 @@ export default function ChallengesHubView({
               {isAr 
                 ? `الدعوات والطلبات (${incomingInvites.length + outgoingInvites.length})` 
                 : `Invites & Requests (${incomingInvites.length + outgoingInvites.length})`}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab("history")}
+            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
+              activeSubTab === "history"
+                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
+            }`}
+          >
+            <Trophy size={14} />
+            <span>
+              {isAr 
+                ? `السجل والإحصائيات (${completedChallenges.length})` 
+                : `History & Stats (${completedChallenges.length})`}
             </span>
           </button>
         </div>
@@ -198,6 +215,13 @@ export default function ChallengesHubView({
                   outgoingInvites={outgoingInvites}
                   currentUser={user}
                   onRefresh={fetchAllChallenges}
+                />
+              )}
+
+              {activeSubTab === "history" && (
+                <ChallengeHistory
+                  challenges={challenges}
+                  currentUser={user}
                 />
               )}
             </motion.div>

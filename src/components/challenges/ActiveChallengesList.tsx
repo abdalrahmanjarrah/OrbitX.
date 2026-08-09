@@ -70,6 +70,12 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
   };
 
   const handleFinishChallengeEarly = async (challenge: Challenge) => {
+    // Prevent double-claim: only an active battle can be settled
+    if (challenge.status !== "active") {
+      alert("هذا النزال تم احتسابه سابقاً أو لم يبدأ بعد.");
+      return;
+    }
+
     // Determine winner based on current score
     const score1 = challenge.progressPlayer1 || 0;
     const score2 = challenge.progressPlayer2 || 0;
@@ -84,6 +90,9 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
       winnerId = "tie";
     }
 
+    // Real duel only counts if both players actually entered the battle room
+    const bothEntered = !!(challenge as any).p1EnteredAt && !!(challenge as any).p2EnteredAt;
+
     try {
       await updateDoc(doc(db, "challenges", challenge.id), {
         status: "completed",
@@ -91,40 +100,50 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
         completedAt: Date.now()
       });
 
-      // Award the winner!
+      // Award the winner — full rewards only for a real duel (both entered)
       if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
         const uRef = doc(db, "users", winnerId);
         const pRef = doc(db, "profiles", winnerId);
         const { arrayUnion } = await import("firebase/firestore");
 
-        await updateDoc(uRef, {
-          coins: increment(50),
-          badges: arrayUnion("challenge_champ"),
-          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          xp: increment(100)
-        });
+        if (bothEntered) {
+          await updateDoc(uRef, {
+            coins: increment(50),
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          });
 
-        await updateDoc(pRef, {
-          badges: arrayUnion("challenge_champ"),
-          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          xp: increment(100)
-        });
+          await updateDoc(pRef, {
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          });
 
-        // Push notifications
-        await addDoc(collection(db, "users", winnerId, "notifications"), {
-          type: "challenge_win",
-          content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challenge.challengerId ? challenge.challengedName : challenge.challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
-          read: false,
-          timestamp: serverTimestamp(),
-        });
+          // Push notifications
+          await addDoc(collection(db, "users", winnerId, "notifications"), {
+            type: "challenge_win",
+            content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challenge.challengerId ? challenge.challengedName : challenge.challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
 
-        const loserId = winnerId === challenge.challengerId ? challenge.challengedId : challenge.challengerId;
-        await addDoc(collection(db, "users", loserId, "notifications"), {
-          type: "challenge_completed",
-          content: `⚔️ انتهى النزال! فاز ${winnerId === challenge.challengerId ? challenge.challengerName : challenge.challengedName} بـ ${Math.max(score1, score2)} دقيقة مقابل ${Math.min(score1, score2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
-          read: false,
-          timestamp: serverTimestamp(),
-        });
+          const loserId = winnerId === challenge.challengerId ? challenge.challengedId : challenge.challengerId;
+          await addDoc(collection(db, "users", loserId, "notifications"), {
+            type: "challenge_completed",
+            content: `⚔️ انتهى النزال! فاز ${winnerId === challenge.challengerId ? challenge.challengerName : challenge.challengedName} بـ ${Math.max(score1, score2)} دقيقة مقابل ${Math.min(score1, score2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
+        } else {
+          // Default win: opponent never entered — no big rewards
+          await addDoc(collection(db, "users", winnerId, "notifications"), {
+            type: "challenge_completed",
+            content: `⚔️ انتهى النزال بانتصارك (الخصم لم يدخل القمرة). لم تُمنح جوائز النزال الحقيقي.`,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
+        }
       } else {
         // Tie
         const msg = `🤝 انتهى النزال بالتعادل بين ${challenge.challengerName} و ${challenge.challengedName} بـ ${score1} دقيقة تركيز لكل منهما!`;
@@ -192,11 +211,16 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
         const myPercent = Math.round((myXp / totalXp) * 100);
         const oppPercent = 100 - myPercent;
 
-        // Time calculations
-        const start = challenge.startTime || challenge.createdAt || Date.now();
-        const elapsedMinutes = Math.floor((Date.now() - start) / 60000);
-        const minutesLeft = Math.max(0, (challenge.durationMinutes || 60) - elapsedMinutes);
-        const isExpired = minutesLeft <= 0;
+        // Time calculations — timer only runs once the battle actually started
+        const isAccepted = challenge.status === "accepted";
+        const start = isAccepted
+          ? null
+          : (challenge.startTime || challenge.createdAt || Date.now());
+        const elapsedMinutes = start ? Math.floor((Date.now() - start) / 60000) : 0;
+        const minutesLeft = isAccepted
+          ? challenge.durationMinutes || 60
+          : Math.max(0, (challenge.durationMinutes || 60) - elapsedMinutes);
+        const isExpired = isAccepted ? false : minutesLeft <= 0;
 
         const isBehind = oppXp > myXp;
         const behindDiff = oppXp - myXp;
@@ -220,14 +244,14 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isExpired ? "bg-amber-400" : "bg-emerald-400"}`}></span>
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${isExpired ? "bg-amber-500" : "bg-emerald-500"}`}></span>
                 </span>
-                <span className={`text-[11px] font-bold ${isExpired ? "text-amber-400" : "text-emerald-400"} tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-white/[0.03] border border-white/5`}>
-                  {isExpired ? "بانتظار الحساب" : "نزال نشط"}
+                <span className={`text-[11px] font-bold ${isAccepted ? "text-amber-400" : isExpired ? "text-amber-400" : "text-emerald-400"} tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-white/[0.03] border border-white/5`}>
+                  {isAccepted ? "بانتظار دخول الطرفين" : isExpired ? "بانتظار الحساب" : "نزال نشط"}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-gray-300 text-xs font-mono">
                 <Timer size={12} className="text-indigo-400" />
-                <span>{isExpired ? "مكتمل المدة" : `المتبقي: ${minutesLeft} د`}</span>
+                <span>{isAccepted ? "المؤقت لا يعمل بعد" : isExpired ? "مكتمل المدة" : `المتبقي: ${minutesLeft} د`}</span>
               </div>
             </div>
 
@@ -310,16 +334,22 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
                 </button>
               ) : null}
 
-              <button
-                onClick={() => handleFinishChallengeEarly(challenge)}
-                className={`py-[11px] px-4 font-bold text-xs transition-all border rounded-xl cursor-pointer ${
-                  isExpired 
-                    ? "flex-1 bg-gradient-to-l from-amber-500 to-orange-600 border-amber-500/30 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-[pulse_2s_infinite] hover:brightness-110 active:scale-95" 
-                    : "bg-white/5 hover:bg-white/10 border-white/5 text-gray-300 active:scale-95"
-                }`}
-              >
-                {isExpired ? "🏆 احتساب النتائج وحصد الجوائز" : "إنهاء واحتساب"}
-              </button>
+              {isAccepted ? (
+                <p className="flex-1 text-center text-[11px] font-bold text-amber-400/80 py-[11px] bg-amber-400/5 border border-amber-400/20 rounded-xl">
+                  ⏳ النزال يبدأ تلقائياً عندما يدخل كلاكما قمرة المعركة
+                </p>
+              ) : (
+                <button
+                  onClick={() => handleFinishChallengeEarly(challenge)}
+                  className={`py-[11px] px-4 font-bold text-xs transition-all border rounded-xl cursor-pointer ${
+                    isExpired 
+                      ? "flex-1 bg-gradient-to-l from-amber-500 to-orange-600 border-amber-500/30 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-[pulse_2s_infinite] hover:brightness-110 active:scale-95" 
+                      : "bg-white/5 hover:bg-white/10 border-white/5 text-gray-300 active:scale-95"
+                  }`}
+                >
+                  {isExpired ? "🏆 احتساب النتائج وحصد الجوائز" : "إنهاء واحتساب"}
+                </button>
+              )}
             </div>
           </div>
         );
