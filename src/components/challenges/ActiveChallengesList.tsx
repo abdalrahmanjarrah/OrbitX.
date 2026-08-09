@@ -157,7 +157,12 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
         const isChallenger = challenge.challengerId === currentUser.uid;
         const myXp = isChallenger ? (challenge.progressPlayer1 || 0) : (challenge.progressPlayer2 || 0);
         const oppXp = isChallenger ? (challenge.progressPlayer2 || 0) : (challenge.progressPlayer1 || 0);
+        const myName = isChallenger ? challenge.challengerName : challenge.challengedName;
         const opponentName = isChallenger ? challenge.challengedName : challenge.challengerName;
+        const myPhoto = isChallenger ? challenge.challengerPhoto : challenge.challengedPhoto;
+        const oppPhoto = isChallenger ? challenge.challengedPhoto : challenge.challengerPhoto;
+        const myInitial = (myName || "؟").charAt(0);
+        const oppInitial = (opponentName || "؟").charAt(0);
 
         // Progress calc
         const totalXp = (myXp + oppXp) || 1;
@@ -216,7 +221,19 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
               {/* My Side */}
               <div className="col-span-3 flex flex-col justify-center">
                 <div className="flex flex-col items-center justify-center">
-                  <div className="text-[10px] text-indigo-300 font-semibold tracking-wide uppercase">أنت (البطل)</div>
+                  {myPhoto ? (
+                    <img
+                      src={myPhoto}
+                      alt={myName}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/40 mb-1.5"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-black text-sm mb-1.5">
+                      {myInitial}
+                    </div>
+                  )}
+                  <div className="text-[10px] text-indigo-300 font-semibold tracking-wide uppercase truncate max-w-full">أنت (البطل)</div>
                   <div className="text-3xl font-black text-white mt-1.5 tracking-tight font-mono">{myXp} د</div>
                   {myLead && (
                     <span className="mt-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full flex items-center gap-0.5">
@@ -236,6 +253,18 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
               {/* Opponent Side */}
               <div className="col-span-3 flex flex-col justify-center">
                 <div className="flex flex-col items-center justify-center">
+                  {oppPhoto ? (
+                    <img
+                      src={oppPhoto}
+                      alt={opponentName}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-fuchsia-500/40 mb-1.5"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/40 flex items-center justify-center text-fuchsia-300 font-black text-sm mb-1.5">
+                      {oppInitial}
+                    </div>
+                  )}
                   <div className="text-[10px] text-fuchsia-300 font-semibold tracking-wide uppercase truncate max-w-full">{opponentName}</div>
                   <div className="text-3xl font-black text-white mt-1.5 tracking-tight font-mono">{oppXp} د</div>
                   {oppLead && (
@@ -260,8 +289,8 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
                 />
               </div>
               <div className="flex justify-between text-[10px] font-mono font-bold text-gray-500">
-                <span>قوة البطل: {myPercent}%</span>
-                <span>المنافس: {oppPercent}%</span>
+                <span className="text-indigo-300/80">أنت: {myXp} د</span>
+                <span className="text-fuchsia-300/80">الخصم: {oppXp} د</span>
               </div>
             </div>
 

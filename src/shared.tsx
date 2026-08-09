@@ -444,7 +444,7 @@ export const BADGES = [
     id: "challenge_champ",
     title: "بطل المعركة 🏆",
     icon: "👑",
-    description: "شارة التحديات الفاخرة - حصل عليها لانتصاره في معركة التركيز وسحق خصومه!",
+    description: "شارة التحديات الفاخرة - حصل عليها لانتصاره في سباق التركيز!",
     minXp: 999999,
   },
 ];
@@ -657,6 +657,8 @@ export interface Challenge {
   challengerName: string;
   challengedId: string;
   challengedName: string;
+  challengerPhoto?: string | null;
+  challengedPhoto?: string | null;
   status: "pending" | "accepted" | "active" | "completed" | "cancelled" | "expired" | "declined";
   createdAt: number;
   startTime?: number;

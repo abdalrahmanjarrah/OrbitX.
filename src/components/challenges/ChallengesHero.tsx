@@ -53,7 +53,7 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
         >
           ساحة{" "}
           <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            المعارك الفضائية
+            سباقات التركيز
           </span>
         </motion.h1>
 
@@ -61,11 +61,33 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-gray-400 text-sm leading-relaxed max-w-lg mb-6"
+          className="text-gray-400 text-sm leading-relaxed max-w-lg mb-5"
         >
-          تحدَّ رفاقك في جلسات تركيز حقيقية. الدقائق تتراكم فقط لما تكون داخل
-          محطة وتايمرك شغال — مين يدرس أكثر بالوقت المحدد يفوز.
+          تحدَّ رفاقك وارفع راية الأكثر تركيزاً. كل دقيقة دراسة حقيقية تجمعها بأي
+          محطة تتحول لنقطة — ومين يجمع أكتر دقائق خلال المدة المحددة يحرز الجوائز.
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 max-w-2xl"
+        >
+          {[
+            { icon: "👋", step: "اختر زميلاً" },
+            { icon: "⏱️", step: "حدد مدة السباق" },
+            { icon: "📚", step: "ادرس عادي وجمّع دقائقك" },
+            { icon: "🏆", step: "الأكثر تركيزاً يفوز" },
+          ].map((s) => (
+            <div
+              key={s.step}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold text-gray-300"
+            >
+              <span className="text-sm">{s.icon}</span>
+              {s.step}
+            </div>
+          ))}
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -78,7 +100,7 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/35 text-indigo-400 text-sm font-medium hover:bg-indigo-500/25 hover:border-indigo-500/55 transition-all active:scale-95 cursor-pointer"
           >
             <Rocket size={14} />
-            إطلاق نزال جديد
+            إطلاق سباق جديد
           </button>
           <button
             onClick={onInviteFriendClick}

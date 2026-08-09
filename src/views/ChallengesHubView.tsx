@@ -109,7 +109,7 @@ export default function ChallengesHubView({
           >
             <Swords size={14} />
             <span>
-              {isAr ? `المعارك النشطة (${activeChallenges.length})` : `Active Battles (${activeChallenges.length})`}
+              {isAr ? `السباقات النشطة (${activeChallenges.length})` : `Active Races (${activeChallenges.length})`}
             </span>
           </button>
 

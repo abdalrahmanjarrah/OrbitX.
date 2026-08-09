@@ -126,8 +126,10 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       const challengeData = {
         challengerId: currentUser.uid,
         challengerName: currentUser.displayName,
+        challengerPhoto: currentUser.photoURL || null,
         challengedId: selectedFriend.uid,
         challengedName: selectedFriend.displayName || "صديق",
+        challengedPhoto: selectedFriend.photoURL || null,
         status: "pending",
         createdAt: Date.now(),
         durationMinutes: duration,
@@ -165,7 +167,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       <div className="lg:col-span-5 p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/50 backdrop-blur-md">
         <h3 className="text-md font-bold text-white flex items-center gap-2 mb-4">
           <Swords size={16} className="text-indigo-400" />
-          <span>مبارزة سريعة جديدة</span>
+          <span>سباق تركيز سريع</span>
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-6">
           حدد زميلاً دراسياً واختر مدة السباق. كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء المدة يحرز الجوائز!
@@ -255,7 +257,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                   ) : (
                     <Send size={13} />
                   )}
-                  <span>إرسال دعوة النزال</span>
+                  <span>إرسال دعوة السباق</span>
                 </button>
               </motion.div>
             )}
