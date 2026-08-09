@@ -432,6 +432,16 @@ export default function NotificationsDropdown({
                           عرض التحدي
                         </button>
                       </div>
+                    ) : n.type === "support_reply" ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Shield size={14} className="text-emerald-400" />
+                          <span className="font-bold text-emerald-400">
+                            {isAr ? "رد الإدارة" : "Admin Reply"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-300">{n.content}</p>
+                      </div>
                     ) : (
                       n.content
                     )}

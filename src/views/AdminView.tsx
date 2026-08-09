@@ -89,6 +89,8 @@ export default function AdminView({ user }: { user: UserData }) {
   const [updateTitle, setUpdateTitle] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
   const [updateDescription, setUpdateDescription] = useState("");
+  const [replySuggestionId, setReplySuggestionId] = useState<string | null>(null);
+  const [suggestionReplyText, setSuggestionReplyText] = useState("");
 
   // Anomaly Data Simulation
   const systemData = [
@@ -283,6 +285,27 @@ export default function AdminView({ user }: { user: UserData }) {
   ).length;
   const totalUsers = users.length;
   const sysHealth = activeUsers > 50 ? 85 : 98;
+  const openTickets = supportTickets.filter((t) => t.status === "open").length;
+  const openSuggestions = suggestions.length;
+
+  const handleSuggestionReply = async (id: string) => {
+    if (!suggestionReplyText.trim()) return;
+    try {
+      await updateDoc(doc(db, "suggestions", id), {
+        reply: suggestionReplyText.trim(),
+        repliedAt: serverTimestamp(),
+      });
+      const updatedSuggestions = suggestions.map((s) =>
+        s.id === id ? { ...s, reply: suggestionReplyText.trim() } : s,
+      );
+      setSuggestions(updatedSuggestions);
+      cachedSuggestions = updatedSuggestions;
+      setReplySuggestionId(null);
+      setSuggestionReplyText("");
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `suggestions/${id}`);
+    }
+  };
 
   const handleBanUser = async (uid: string, currentStatus: boolean) => {
     try {
@@ -406,6 +429,18 @@ export default function AdminView({ user }: { user: UserData }) {
                   Total Users
                 </span>
                 <span className="text-blue-400 font-bold">{totalUsers}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-cyan-500/20 pb-2">
+                <span className="text-cyan-600 uppercase text-xs">
+                  Open Tickets
+                </span>
+                <span className="text-amber-400 font-bold">{openTickets}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-cyan-500/20 pb-2">
+                <span className="text-cyan-600 uppercase text-xs">
+                  Incoming Ideas
+                </span>
+                <span className="text-fuchsia-400 font-bold">{openSuggestions}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-cyan-600 uppercase text-xs">
@@ -674,15 +709,55 @@ export default function AdminView({ user }: { user: UserData }) {
               {suggestions.map((s) => (
                 <div
                   key={s.id}
-                  className="bg-[#020308] border-l-2 border-l-yellow-500 p-2 text-xs flex justify-between group"
+                  className="bg-[#020308] border-l-2 border-l-yellow-500 p-2 text-xs flex flex-col gap-1 group"
                 >
-                  <span className="text-cyan-300 truncate pr-4">{s.text}</span>
-                  <button
-                    onClick={() => handleDeleteDoc("suggestions", s.id)}
-                    className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-cyan-300 break-words">{s.text}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => {
+                          setReplySuggestionId(s.id);
+                          setSuggestionReplyText(s.reply || "");
+                        }}
+                        className="text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Reply"
+                      >
+                        <MessageSquare size={12} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDoc("suggestions", s.id)}
+                        className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  {replySuggestionId === s.id && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <input
+                        type="text"
+                        value={suggestionReplyText}
+                        onChange={(e) => setSuggestionReplyText(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleSuggestionReply(s.id)
+                        }
+                        placeholder="Reply..."
+                        className="flex-1 bg-[#0a1120] border border-cyan-800 rounded px-2 py-1 text-cyan-200 text-[11px] outline-none focus:border-cyan-500"
+                        dir="ltr"
+                      />
+                      <button
+                        onClick={() => handleSuggestionReply(s.id)}
+                        className="text-[10px] bg-cyan-600 hover:bg-cyan-500 text-white px-2 py-1 rounded font-bold"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  )}
+                  {s.reply && (
+                    <div className="mt-1 pl-2 border-l-2 border-cyan-500 text-cyan-400">
+                      <span className="font-bold">ADMIN:</span> {s.reply}
+                    </div>
+                  )}
                 </div>
               ))}
               {suggestions.length === 0 && (

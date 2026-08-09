@@ -35,7 +35,9 @@ import {
   orderBy,
   onSnapshot,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  getDocs,
+  limit,
 } from "firebase/firestore";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../context/LanguageContext";
@@ -63,6 +65,16 @@ export default function SupportView({ user }: { user: UserData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketText, setTicketText] = useState("");
   const [suggestionText, setSuggestionText] = useState("");
+
+  // Suggestions list states
+  const [suggestionsList, setSuggestionsList] = useState<any[]>([]);
+  const [replyingSuggestionId, setReplyingSuggestionId] = useState<
+    string | null
+  >(null);
+  const [suggestionReplyText, setSuggestionReplyText] = useState("");
+  const [deletingSuggestionId, setDeletingSuggestionId] = useState<
+    string | null
+  >(null);
 
   // Chat Support states
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -215,6 +227,18 @@ export default function SupportView({ user }: { user: UserData }) {
         lastMessage: textToSend,
         updatedAt: serverTimestamp()
       });
+
+      // Notify the ticket owner that the admin replied
+      if (ticket.userId && ticket.userId !== "admin") {
+        addDoc(collection(db, "users", ticket.userId, "notifications"), {
+          type: "support_reply",
+          content: `ردّت الإدارة على تذكرتك: "${textToSend.slice(0, 100)}${
+            textToSend.length > 100 ? "..." : ""
+          }"`,
+          read: false,
+          timestamp: serverTimestamp(),
+        }).catch(() => {});
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `support_tickets/${ticket.id}`);
     }
@@ -270,13 +294,17 @@ export default function SupportView({ user }: { user: UserData }) {
     if (!suggestionText.trim()) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, "suggestions"), {
-        text: suggestionText,
+      const docRef = await addDoc(collection(db, "suggestions"), {
+        text: suggestionText.trim(),
         userId: user.uid,
         userName: user.displayName || user.email || "User",
         timestamp: serverTimestamp(),
       });
       setSuggestionText("");
+      setSuggestionsList((prev) => [
+        { id: docRef.id, text: suggestionText.trim(), userId: user.uid, userName: user.displayName || user.email || "User", timestamp: null },
+        ...prev,
+      ]);
       alert(
         isAr
           ? "تم إرسال اقتراحك بنجاح. شكراً لمساهمتك في تطوير OrbitX!"
@@ -286,6 +314,62 @@ export default function SupportView({ user }: { user: UserData }) {
       handleFirestoreError(e, OperationType.CREATE, "suggestions");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Fetch published suggestions so users see their ideas + admin replies
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSuggestions = async () => {
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "suggestions"),
+            orderBy("timestamp", "desc"),
+            limit(50),
+          ),
+        );
+        if (isMounted) {
+          setSuggestionsList(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+          );
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "suggestions");
+      }
+    };
+    fetchSuggestions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleReplySuggestion = async (id: string) => {
+    if (!suggestionReplyText.trim()) return;
+    try {
+      await updateDoc(doc(db, "suggestions", id), {
+        reply: suggestionReplyText.trim(),
+        repliedAt: serverTimestamp(),
+      });
+      setSuggestionsList((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, reply: suggestionReplyText.trim() } : s,
+        ),
+      );
+      setReplyingSuggestionId(null);
+      setSuggestionReplyText("");
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `suggestions/${id}`);
+    }
+  };
+
+  const handleDeleteSuggestion = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "suggestions", id));
+      setSuggestionsList((prev) => prev.filter((s) => s.id !== id));
+      setDeletingSuggestionId(null);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `suggestions/${id}`);
     }
   };
 
@@ -927,6 +1011,135 @@ export default function SupportView({ user }: { user: UserData }) {
                 : "Many features inside our station began as creative suggestions. Help us optimize OrbitX for everyone."}
             </p>
           </div>
+        </motion.div>
+      )}
+
+      {/* Published Suggestions Feed */}
+      {tab === "suggestions" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#0b0c16] border border-white/10 rounded-3xl p-6 md:p-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Activity size={18} className="text-fuchsia-400" />
+              {isAr ? "الاقتراحات المنشورة" : "Published Suggestions"}
+              <span className="text-xs bg-[#16182e] text-fuchsia-300 font-mono px-2 py-0.5 rounded-full border border-fuchsia-500/20">
+                {suggestionsList.length}
+              </span>
+            </h2>
+          </div>
+
+          {suggestionsList.length === 0 ? (
+            <div className="py-12 text-center text-gray-500 text-sm">
+              {isAr
+                ? "لا توجد اقتراحات بعد — كن أول من يطلق فكرة!"
+                : "No suggestions yet — be the first to launch an idea!"}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {suggestionsList.map((s) => (
+                <div
+                  key={s.id}
+                  className="p-4 md:p-5 rounded-2xl bg-[#050510] border border-white/10"
+                >
+                  <div className="flex items-center justify-between mb-2 gap-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-fuchsia-300">
+                      <Sparkles size={13} />
+                      {s.userName || "رائد"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAdminUser && (
+                        <button
+                          onClick={() => {
+                            setReplyingSuggestionId(s.id);
+                            setSuggestionReplyText(s.reply || "");
+                          }}
+                          className="text-[11px] text-blue-400 hover:underline"
+                        >
+                          {isAr ? "رد" : "Reply"}
+                        </button>
+                      )}
+                      {(isAdminUser || s.userId === user.uid) &&
+                        (deletingSuggestionId === s.id ? (
+                          <div className="flex items-center gap-1.5 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/30">
+                            <span className="text-[10px] text-red-500">
+                              {isAr ? "حذف؟" : "Delete?"}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteSuggestion(s.id)}
+                              className="text-[10px] text-red-500 font-bold"
+                            >
+                              {isAr ? "نعم" : "Yes"}
+                            </button>
+                            <button
+                              onClick={() => setDeletingSuggestionId(null)}
+                              className="text-[10px] text-gray-400"
+                            >
+                              {isAr ? "لا" : "No"}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingSuggestionId(s.id)}
+                            className="text-[11px] text-red-400 hover:underline"
+                          >
+                            {isAr ? "حذف" : "Delete"}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-100 leading-relaxed">
+                    {s.text}
+                  </p>
+
+                  {replyingSuggestionId === s.id && (
+                    <div className="flex items-center gap-2 mt-3 bg-blue-900/20 p-2 rounded-xl border border-blue-500/30">
+                      <input
+                        type="text"
+                        value={suggestionReplyText}
+                        onChange={(e) => setSuggestionReplyText(e.target.value)}
+                        placeholder={
+                          isAr ? "اكتب رد الإدارة هنا..." : "Write admin reply..."
+                        }
+                        className={cn(
+                          "flex-1 bg-transparent text-xs text-blue-100 placeholder-blue-300/50 outline-none",
+                          isAr ? "text-right" : "text-left",
+                        )}
+                        dir={isAr ? "rtl" : "ltr"}
+                      />
+                      <button
+                        onClick={() => handleReplySuggestion(s.id)}
+                        className="text-[10px] bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold"
+                      >
+                        {isAr ? "حفظ" : "Save"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReplyingSuggestionId(null);
+                          setSuggestionReplyText("");
+                        }}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 text-gray-300 px-3 py-1.5 rounded-lg"
+                      >
+                        {isAr ? "إلغاء" : "Cancel"}
+                      </button>
+                    </div>
+                  )}
+
+                  {s.reply && (
+                    <div className="mt-3 p-3 rounded-xl bg-blue-500/10 border-r-2 border-blue-500 text-xs text-blue-300">
+                      <span className="font-bold block mb-1">
+                        {isAr ? "رد الإدارة:" : "Admin reply:"}
+                      </span>
+                      {s.reply}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
     </motion.div>

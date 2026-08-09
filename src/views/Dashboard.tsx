@@ -162,7 +162,6 @@ import { useLanguage } from "../context/LanguageContext";
 // Lazy-Loaded Cinematic Sector Components (Code-Splitting)
 const HomeView = React.lazy(() => import('./HomeView'));
 const ExhibitionGallery = React.lazy(() => import('./ExhibitionGallery'));
-const SuggestionsSection = React.lazy(() => import('./SuggestionsSection'));
 const QuranPlayer = React.lazy(() => import('./QuranPlayer'));
 const PersonalTasks = React.lazy(() => import('./PersonalTasks'));
 const StudyRoomView = React.lazy(() => import('./StudyRoomView'));
