@@ -170,7 +170,6 @@ import DiscussionsView from './DiscussionsView';
 import ScheduleView from './ScheduleView';
 import AdminView from './AdminView';
 import CosmicDiary from './CosmicDiary';
-import FarmDisplay from './FarmDisplay';
 import UserModal from './UserModal';
 import NavLink from './NavLink';
 import BlackHolesView from './BlackHolesView';

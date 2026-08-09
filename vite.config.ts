@@ -13,7 +13,7 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        includeAssets: ['favicon.png'],
         manifest: {
           name: 'OrbitX',
           short_name: 'OrbitX',
@@ -26,10 +26,62 @@ export default defineConfig(({mode}) => {
           ]
         },
         workbox: {
-          maximumFileSizeToCacheInBytes: 10485760
+          maximumFileSizeToCacheInBytes: 10485760,
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/OrbitX\.\.\/(assets|sounds)\//],
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.hostname === 'api.dicebear.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'dicebear-avatars',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 500, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname === 'images.unsplash.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'unsplash-images',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname.includes('mp3quran.net') || url.hostname === 'archive.org' || url.hostname === 'assets.mixkit.co',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'orbitx-audio',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                rangeRequests: true,
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname === 'raw.githubusercontent.com' || url.hostname === 'www.transparenttextures.com' || url.hostname === 'grainy-gradients.vercel.app',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'orbitx-assets',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+          ],
         }
       })
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'motion'],
+            'vendor-charts': ['recharts'],
+            'vendor-three': ['three', 'react-globe.gl'],
+          },
+        },
+      },
+    },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

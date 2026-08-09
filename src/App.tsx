@@ -13,7 +13,7 @@ import Markdown from "react-markdown";
  */
 
 import Globe from "react-globe.gl";
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect, useRef, Component, Suspense, lazy } from "react";
 import {
   Leaf,
   Swords,
@@ -127,7 +127,6 @@ import {
   deleteField,
   writeBatch,
 } from "firebase/firestore";
-import { UserSearchView } from "./components/UserSearchView";
 
 import { FirestoreError } from "firebase/firestore";
 
@@ -172,36 +171,13 @@ import {
   ErrorBoundary,
 } from "./shared";
 import LandingPage from "./components/LandingPage";
-import NotificationsDropdown from "./views/NotificationsDropdown";
 import Dashboard from "./views/Dashboard";
-import NavPill from "./views/NavPill";
-import MobileNavPill from "./views/MobileNavPill";
-import DockButton from "./views/DockButton";
-import ChallengeModal from "./views/ChallengeModal";
-import ArticleModal from "./views/ArticleModal";
-import HomeView from "./views/HomeView";
-import StationCard from "./views/StationCard";
-import ExhibitionGallery from "./views/ExhibitionGallery";
-import SuggestionsSection from "./views/SuggestionsSection";
-import QuranPlayer from "./views/QuranPlayer";
-import PersonalTasks from "./views/PersonalTasks";
-import StudyRoomView from "./views/StudyRoomView";
-import LeaderboardView from "./views/LeaderboardView";
-import FocusHeatmap from "./views/FocusHeatmap";
-import ProfileView from "./views/ProfileView";
-import DiscussionsView from "./views/DiscussionsView";
-import ScheduleView from "./views/ScheduleView";
-import AdminView from "./views/AdminView";
-import BadgeCard from "./views/BadgeCard";
-import CosmicDiary from "./views/CosmicDiary";
-import FarmDisplay from "./views/FarmDisplay";
-import UserModal from "./views/UserModal";
-import NavLink from "./views/NavLink";
-import BlackHolesView from "./views/BlackHolesView";
-import AwarenessView from "./views/AwarenessView";
-import AnalyticsView from "./views/AnalyticsView";
-import FleetsView from "./views/FleetsView";
-import MissionRoleWizard from "./views/MissionRoleWizard";
+
+const QuranPlayer = lazy(() => import("./views/QuranPlayer"));
+const MissionRoleWizard = lazy(() =>
+  import("./views/MissionRoleWizard"),
+);
+
 
 import { useLanguage } from "./context/LanguageContext";
 
@@ -743,15 +719,19 @@ function App() {
       </AnimatePresence>
       <AnimatePresence>
         {userData && !userData.completedWizard && (
-          <MissionRoleWizard
-            user={userData}
-            onComplete={(updates) => {
-              setUserData((prev) => (prev ? { ...prev, ...updates } : null));
-            }}
-          />
+          <Suspense fallback={null}>
+            <MissionRoleWizard
+              user={userData}
+              onComplete={(updates) => {
+                setUserData((prev) => (prev ? { ...prev, ...updates } : null));
+              }}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
-      <QuranPlayer />
+      <Suspense fallback={null}>
+        <QuranPlayer />
+      </Suspense>
       <Dashboard user={userData} onLogout={logout} />
     </>
   );

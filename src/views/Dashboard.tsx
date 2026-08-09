@@ -161,24 +161,17 @@ import { useLanguage } from "../context/LanguageContext";
 
 // Lazy-Loaded Cinematic Sector Components (Code-Splitting)
 const HomeView = React.lazy(() => import('./HomeView'));
-const ExhibitionGallery = React.lazy(() => import('./ExhibitionGallery'));
-const QuranPlayer = React.lazy(() => import('./QuranPlayer'));
-const PersonalTasks = React.lazy(() => import('./PersonalTasks'));
 const StudyRoomView = React.lazy(() => import('./StudyRoomView'));
 const LeaderboardView = React.lazy(() => import('./LeaderboardView'));
-const FocusHeatmap = React.lazy(() => import('./FocusHeatmap'));
 const ProfileView = React.lazy(() => import('./ProfileView'));
 const DiscussionsView = React.lazy(() => import('./DiscussionsView'));
 const ScheduleView = React.lazy(() => import('./ScheduleView'));
 const AdminView = React.lazy(() => import('./AdminView'));
 const SupportView = React.lazy(() => import('./SupportView'));
-const BadgeCard = React.lazy(() => import('./BadgeCard'));
-const CosmicDiary = React.lazy(() => import('./CosmicDiary'));
 const FarmDisplay = React.lazy(() => import('./FarmDisplay'));
 const BlackHolesView = React.lazy(() => import('./BlackHolesView'));
 const AwarenessView = React.lazy(() => import('./AwarenessView'));
 const ChallengesHubView = React.lazy(() => import('./ChallengesHubView'));
-const AnalyticsView = React.lazy(() => import('./AnalyticsView'));
 const FleetsView = React.lazy(() => import('./FleetsView'));
 const UserSearchView = React.lazy(() => import('../components/UserSearchView').then((m) => ({ default: m.UserSearchView })));
 

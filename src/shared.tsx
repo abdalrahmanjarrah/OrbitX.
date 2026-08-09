@@ -535,9 +535,6 @@ export const RECITERS = [
   { name: "إدريس أبكر", server: "https://server6.mp3quran.net/abkr/" },
 ];
 
-import { Farm3D } from "./components/Farm3D";
-import LandingPage from "./components/LandingPage";
-
 // --- Types ---
 export interface UserData {
   uid: string;
