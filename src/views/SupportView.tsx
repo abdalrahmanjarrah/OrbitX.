@@ -157,14 +157,14 @@ export default function SupportView({ user }: { user: UserData }) {
     try {
       const initialMessage: ChatMessage = {
         senderId: user.uid,
-        senderName: user.displayName || user.email || "User",
+        senderName: user.displayName || user.email || (isAr ? "مستخدم" : "User"),
         text: ticketText,
         createdAt: Date.now()
       };
 
       const docRef = await addDoc(collection(db, "support_tickets"), {
         userId: user.uid,
-        userName: user.displayName || user.email || "User",
+        userName: user.displayName || user.email || (isAr ? "مستخدم" : "User"),
         status: "open",
         lastMessage: ticketText,
         updatedAt: serverTimestamp(),
@@ -190,7 +190,7 @@ export default function SupportView({ user }: { user: UserData }) {
     try {
       const newMessage: ChatMessage = {
         senderId: user.uid,
-        senderName: user.displayName || user.email || "User",
+        senderName: user.displayName || user.email || (isAr ? "مستخدم" : "User"),
         text: textToSend,
         createdAt: Date.now()
       };
@@ -297,12 +297,12 @@ export default function SupportView({ user }: { user: UserData }) {
       const docRef = await addDoc(collection(db, "suggestions"), {
         text: suggestionText.trim(),
         userId: user.uid,
-        userName: user.displayName || user.email || "User",
+        userName: user.displayName || user.email || (isAr ? "مستخدم" : "User"),
         timestamp: serverTimestamp(),
       });
       setSuggestionText("");
       setSuggestionsList((prev) => [
-        { id: docRef.id, text: suggestionText.trim(), userId: user.uid, userName: user.displayName || user.email || "User", timestamp: null },
+        { id: docRef.id, text: suggestionText.trim(), userId: user.uid, userName: user.displayName || user.email || (isAr ? "مستخدم" : "User"), timestamp: null },
         ...prev,
       ]);
       alert(
@@ -594,7 +594,7 @@ export default function SupportView({ user }: { user: UserData }) {
                             ? "bg-amber-600/10 border-amber-500/30 text-amber-400 hover:bg-amber-600/20"
                             : "bg-emerald-600/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/20"
                         )}
-                        title={activeTicket.status === "open" ? "Close Ticket" : "Reopen Ticket"}
+                        title={activeTicket.status === "open" ? (isAr ? "إغلاق التذكرة" : "Close Ticket") : isAr ? "إعادة فتح التذكرة" : "Reopen Ticket"}
                       >
                         {activeTicket.status === "open" ? (
                           <>
@@ -612,7 +612,7 @@ export default function SupportView({ user }: { user: UserData }) {
                       <button
                         onClick={() => handleDeleteTicket(activeTicket.id)}
                         className="p-2.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
-                        title="Delete Ticket"
+                        title={isAr ? "حذف التذكرة" : "Delete Ticket"}
                       >
                         <Trash size={14} />
                       </button>
@@ -655,7 +655,7 @@ export default function SupportView({ user }: { user: UserData }) {
                               <button
                                 onClick={() => handleDeleteMessage(activeTicket, msg)}
                                 className="opacity-60 lg:opacity-0 lg:group-hover/msg:opacity-100 hover:text-red-400 text-gray-500 transition-all rounded p-1 hover:bg-white/5"
-                                title="Delete message"
+                                title={isAr ? "حذف الرسالة" : "Delete message"}
                               >
                                 <Trash size={12} />
                               </button>

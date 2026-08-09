@@ -443,7 +443,7 @@ export default function HomeView({
               {greeting.subtext}
             </p>
             
-            <div className="flex gap-4 pt-2">
+            <div className="flex flex-wrap gap-4 pt-2">
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="group relative px-6 py-3 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] transition-all duration-500"
@@ -455,13 +455,13 @@ export default function HomeView({
                 </div>
               </button>
 
-              <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 px-2 overflow-hidden">
+              <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 px-2 overflow-hidden flex-1 min-w-0">
                 <input
                   value={joinCodeInput}
                   onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
                   placeholder={isAr ? "رمز المحطة" : "Station code"}
-                  className="w-28 bg-transparent outline-none text-white text-sm font-mono placeholder-gray-600 p-3"
+                  className="w-24 sm:w-28 bg-transparent outline-none text-white text-sm font-mono placeholder-gray-600 p-3"
                   dir="ltr"
                   maxLength={6}
                 />

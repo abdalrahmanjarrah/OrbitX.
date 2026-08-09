@@ -227,7 +227,7 @@ export default function LeaderboardView({
       </div>
 
       <div className="bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-lg bg-[#0a0b16]/60">
-        <div className={cn("grid grid-cols-12 gap-4 p-4 border-b border-white/10 text-sm font-bold text-gray-400", isAr ? "text-right" : "text-left")}>
+        <div className={cn("grid grid-cols-12 gap-2 md:gap-4 p-4 border-b border-white/10 text-sm font-bold text-gray-400", isAr ? "text-right" : "text-left")}>
           <div className="col-span-2 md:col-span-1 text-center">{isAr ? "المركز" : "Rank"}</div>
           <div className="col-span-5 md:col-span-6">{isAr ? "الرائد" : "Astronaut"}</div>
           <div className="col-span-2 text-center">{isAr ? "المستوى" : "Lvl"}</div>
@@ -252,7 +252,7 @@ export default function LeaderboardView({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={cn(
-                  "grid grid-cols-12 gap-4 p-4 items-center transition-colors hover:bg-[#0a0b16] shadow-lg shadow-indigo-900/10",
+                  "grid grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-[#0a0b16] shadow-lg shadow-indigo-900/10",
                   leader.uid === user.uid && "bg-indigo-500/10",
                 )}
               >
@@ -302,14 +302,14 @@ export default function LeaderboardView({
                 </div>
 
                 <div className="col-span-2 flex justify-center">
-                  <div className="px-3 py-1 bg-[#0a0b16]/80 shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500">
+                  <div className="px-2 md:px-3 py-1 bg-[#0a0b16]/80 shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500 text-[10px] md:text-sm">
                     {leader.level}
                   </div>
                 </div>
 
                 <div className="col-span-3 flex justify-center">
-                  <div className="flex items-center gap-1 font-mono font-bold text-yellow-400">
-                    <Zap size={14} />
+                  <div className="flex items-center gap-1 font-mono font-bold text-yellow-400 whitespace-nowrap">
+                    <Zap size={14} className="hidden sm:block" />
                     {leader.xp.toLocaleString()}
                   </div>
                 </div>

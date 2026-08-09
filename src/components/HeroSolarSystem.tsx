@@ -53,8 +53,7 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
       >
         {/* Tilted orbital map container to create deep 3D space effect */}
         <div 
-          className="relative flex items-center justify-center w-[1300px] h-[1300px] transition-transform duration-1000"
-          style={{ transform: "rotateX(0deg) rotateY(0deg)" }}
+          className="relative flex items-center justify-center w-[1300px] h-[1300px] origin-center scale-[0.32] sm:scale-[0.5] md:scale-[0.75] lg:scale-100 transition-transform duration-1000"
         >
           {/* Stellar Core / Burning Sun */}
           <div className="absolute w-28 h-28 rounded-full bg-gradient-to-tr from-amber-300 via-orange-400 to-indigo-600 shadow-[0_0_100px_rgba(249,115,22,0.8)] z-10 flex items-center justify-center">

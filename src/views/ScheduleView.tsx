@@ -431,7 +431,8 @@ export default function ScheduleView({ user }: { user: UserData }) {
 
       {/* Week Strip */}
       {!loading && !isCreating && (
-        <div className="grid grid-cols-7 gap-2 md:gap-3">
+        <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
+          <div className="grid grid-cols-7 gap-2 md:gap-3 min-w-[560px] md:min-w-0">
           {DAYS.map((dayName) => {
             const dayItems = items.filter((i) => i.day === dayName);
             const done = dayItems.filter((i) => i.completed).length;
@@ -485,6 +486,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
               </button>
             );
           })}
+          </div>
         </div>
       )}
 

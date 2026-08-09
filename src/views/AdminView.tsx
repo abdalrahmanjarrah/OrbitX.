@@ -111,7 +111,7 @@ export default function AdminView({ user }: { user: UserData }) {
         adminId: user.uid,
       });
       setAnnouncementText("");
-      alert("Annoucement dispatched to all users.");
+      alert(isAr ? "تم إرسال الإعلان لجميع المستخدمين." : "Announcement dispatched to all users.");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "global_notifications");
     }
@@ -121,7 +121,9 @@ export default function AdminView({ user }: { user: UserData }) {
     if (!announcementText.trim()) return;
     if (
       !confirm(
-        "Are you sure you want to trigger a GLOBAL EMERGENCY ALERT? This will interrupt everyone!",
+        isAr
+          ? "هل أنت متأكد من إطلاق تنبيه طوارئ عام؟ سيتم مقاطعة الجميع!"
+          : "Are you sure you want to trigger a GLOBAL EMERGENCY ALERT? This will interrupt everyone!",
       )
     )
       return;
@@ -132,7 +134,7 @@ export default function AdminView({ user }: { user: UserData }) {
         adminId: user.uid,
       });
       setAnnouncementText("");
-      alert("EMERGENCY ALERT dispatched!");
+      alert(isAr ? "تم إطلاق تنبيه الطوارئ!" : "EMERGENCY ALERT dispatched!");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "admin_alerts");
     }
@@ -354,7 +356,7 @@ export default function AdminView({ user }: { user: UserData }) {
 
   return (
     <div
-      className="min-h-screen bg-[#020308] text-cyan-50 font-mono p-4 md:p-8 space-y-8 relative overflow-hidden"
+      className="min-h-screen bg-[#020308] text-cyan-50 font-mono p-4 md:p-8 space-y-8 relative overflow-x-hidden"
       dir="ltr"
     >
       {/* Background Grid & Scanlines */}
@@ -378,17 +380,17 @@ export default function AdminView({ user }: { user: UserData }) {
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-[0_0_10px_rgba(0,255,255,0.8)]">
+            <h1 className="text-2xl md:text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-[0_0_10px_rgba(0,255,255,0.8)]">
               ORBITX OVERSEER
             </h1>
             <p className="text-cyan-500/80 text-sm tracking-widest uppercase">
-              Global Command & Control Hub
+              {isAr ? "مركز القيادة والتحكم العام" : "Global Command & Control Hub"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-6 mt-4 md:mt-0">
           <div className="flex flex-col items-end">
-            <span className="text-xs text-cyan-600 uppercase">System Time</span>
+            <span className="text-xs text-cyan-600 uppercase">{isAr ? "توقيت النظام" : "System Time"}</span>
             <span className="text-xl font-bold font-mono text-cyan-300">
               {new Date().toLocaleTimeString("en-US", { hour12: false })}
             </span>
@@ -455,7 +457,7 @@ export default function AdminView({ user }: { user: UserData }) {
                       : "bg-red-500/20 text-red-400 border border-red-500",
                   )}
                 >
-                  {isChatEnabled ? "Online" : "Offline"}
+                  {isChatEnabled ? (isAr ? "متصل" : "Online") : isAr ? "غير متصل" : "Offline"}
                 </button>
               </div>
             </div>
@@ -501,13 +503,13 @@ export default function AdminView({ user }: { user: UserData }) {
 
           <div className="bg-[#050B14] border border-yellow-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(255,255,0,0.05)_inset]">
             <h3 className="text-yellow-400 font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Radio size={18} /> Global Broadcast
+              <Radio size={18} /> {isAr ? "البث العام" : "Global Broadcast"}
             </h3>
             <div className="space-y-4">
               <textarea
                 value={announcementText}
                 onChange={(e) => setAnnouncementText(e.target.value)}
-                placeholder="Enter broadcast message..."
+                placeholder={isAr ? "اكتب رسالة البث..." : "Enter broadcast message..."}
                 className="w-full bg-[#020308] border border-yellow-900 rounded p-2 text-yellow-300 focus:outline-none focus:border-yellow-400 font-mono text-xs min-h-[80px]"
               />
               <button
@@ -589,13 +591,13 @@ export default function AdminView({ user }: { user: UserData }) {
         <div className="lg:col-span-3 bg-[#050B14] border border-cyan-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.1)_inset] flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-cyan-400 font-bold uppercase tracking-widest flex items-center gap-2">
-              <Crosshair size={18} /> Active Personnel Tracking
+              <Crosshair size={18} /> {isAr ? "تتبع الطواقم النشطة" : "Active Personnel Tracking"}
             </h3>
             <div className="relative border border-cyan-500/50 rounded flex items-center">
               <Search className="absolute left-2 w-4 h-4 text-cyan-500" />
               <input
                 type="text"
-                placeholder="Trace ID or Handle..."
+                placeholder={isAr ? "معرف التتبع أو الاسم..." : "Trace ID or Handle..."}
                 className="bg-[#020308] text-cyan-300 w-full pl-8 pr-2 py-1 text-sm focus:outline-none focus:shadow-[0_0_10px_rgba(0,255,255,0.5)] transition-all rounded"
               />
             </div>
@@ -629,9 +631,9 @@ export default function AdminView({ user }: { user: UserData }) {
                       </span>
                     </div>
                     <div className="text-xs text-cyan-600 font-mono mt-1">
-                      STATUS:{" "}
+                      {isAr ? "الحالة:" : "STATUS:"}{" "}
                       <span className="text-cyan-400">
-                        {u.currentActivity || "IDLE"}
+                        {u.currentActivity || (isAr ? "خامل" : "IDLE")}
                       </span>
                     </div>
                   </div>
@@ -640,7 +642,7 @@ export default function AdminView({ user }: { user: UserData }) {
                   <button
                     onClick={() => setEditingUser(u)}
                     className="p-2 border border-blue-900 text-blue-500 hover:border-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded transition-all"
-                    title="Modify Clearance"
+                    title={isAr ? "تعديل الصلاحيات" : "Modify Clearance"}
                   >
                     <Settings size={16} />
                   </button>
@@ -652,7 +654,7 @@ export default function AdminView({ user }: { user: UserData }) {
                         ? "border-green-900 text-green-500 hover:bg-green-900/30"
                         : "border-red-900 text-red-500 hover:bg-red-900/30 hover:border-red-500",
                     )}
-                    title={u.banned ? "Restore Access" : "Revoke Access"}
+                    title={u.banned ? (isAr ? "إعادة الوصول" : "Restore Access") : isAr ? "إلغاء الوصول" : "Revoke Access"}
                   >
                     {u.banned ? <Unlock size={16} /> : <Lock size={16} />}
                   </button>
@@ -798,7 +800,7 @@ export default function AdminView({ user }: { user: UserData }) {
         {/* Media Surveillance */}
         <div className="bg-[#050B14] border border-cyan-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.1)_inset]">
           <h3 className="text-cyan-400 font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Eye size={18} /> Media Surveillance
+            <Eye size={18} /> {isAr ? "مراقبة الوسائط" : "Media Surveillance"}
           </h3>
           <div className="grid grid-cols-3 gap-2 h-60 overflow-y-auto custom-scrollbar pr-1">
             {exhibitions.map((ex) => (
@@ -823,7 +825,7 @@ export default function AdminView({ user }: { user: UserData }) {
             ))}
             {exhibitions.length === 0 && (
               <span className="text-xs text-cyan-800 col-span-3">
-                NO MEDIA DETECTED
+                {isAr ? "لا يوجد وسائط" : "NO MEDIA DETECTED"}
               </span>
             )}
           </div>

@@ -467,7 +467,7 @@ export default function ProfileView({
                   <div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[11px] font-mono tracking-widest text-indigo-300 mb-4 shadow-sm">
                       <Rocket size={12} className="text-fuchsia-400" />
-                      {user.missionRole || "ROOKIE EXPLORER"}
+                      {user.missionRole || (isAr ? "مستكشف مبتدئ" : "ROOKIE EXPLORER")}
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black font-display tracking-tight text-white drop-shadow-lg mb-2 flex items-center gap-3">
                       {user.displayName}

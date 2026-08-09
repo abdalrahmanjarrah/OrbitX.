@@ -1313,19 +1313,21 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
             </p>
             <div className="bg-black/40 border border-white/5 p-4 rounded-xl text-left font-mono text-[10px]" dir="ltr">
               <span className="text-[#a5b4fc] block font-bold mb-1">PROPRIETARY OS TERMINAL</span>
-              <span className="text-gray-400">Email: abdalrahmanjarrah1@gmail.com</span>
-              <span className="text-gray-500 block mt-1">Creator: abdalrahman nabeel Al jarrah</span>
+              <span className="text-gray-400">{isAr ? "البريد:" : "Email:"} abdalrahmanjarrah1@gmail.com</span>
+              <span className="text-gray-500 block mt-1">{isAr ? "المصمم:" : "Creator:"} abdalrahman nabeel Al jarrah</span>
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-gray-400 font-mono" dir={isAr ? "rtl" : "ltr"}>
           <div>
-            ORBITX SPACE PROTOCOL © 2026. Developed and Crafted by{" "}
+            {isAr
+              ? "بروتوكول الفضاء أوربت إكس © 2026. تصميم وتطوير"
+              : "ORBITX SPACE PROTOCOL © 2026. Developed and Crafted by"}{" "}
             <span className="text-indigo-400 font-bold font-sans">abdalrahman nabeel Al jarrah</span>.
           </div>
           <div className="flex items-center gap-1.5" dir="ltr">
-            <span>Ground Support Email:</span>
+            <span>{isAr ? "بريد الدعم:" : "Ground Support Email:"}</span>
             <a href="mailto:abdalrahmanjarrah1@gmail.com" className="text-cyan-400 hover:underline">
               abdalrahmanjarrah1@gmail.com
             </a>

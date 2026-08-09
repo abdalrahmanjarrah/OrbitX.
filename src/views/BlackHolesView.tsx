@@ -351,7 +351,7 @@ export default function BlackHolesView({ user }: { user: UserData }) {
                           usr.photoURL ||
                           `https://api.dicebear.com/7.x/bottts/svg?seed=${usr.uid}`
                         }
-                        alt={usr.displayName || "Unnamed"}
+                        alt={usr.displayName || (isAr ? "مجهول" : "Unnamed")}
                         className="w-8 h-8 rounded-full bg-black/50"
                         referrerPolicy="no-referrer"
                       />

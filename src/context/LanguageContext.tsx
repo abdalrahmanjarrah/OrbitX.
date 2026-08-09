@@ -133,6 +133,10 @@ const dictionary: Record<string, Record<string, string>> = {
     "common.quota": "🛡️ Auxiliary Space System: Firebase database limit reached for today. We are routing all operations successfully locally to keep your focus uninterrupted.",
     "common.hide": "Dismiss",
     "common.login": "Log In",
+
+    // Level Up
+    "level_up.title": "New Level Reached! 🚀",
+    "level_up.msg": "You have been promoted to Level {level}.",
   }
 };
 

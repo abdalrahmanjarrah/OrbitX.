@@ -678,7 +678,7 @@ function StudyRoomContent({
           className={cn(
             "flex flex-col items-center justify-center relative min-h-[500px] transition-all duration-1000 py-10 lg:py-20",
             isFocusMode
-              ? "scale-[1.15] lg:scale-[1.4]"
+              ? "scale-[1.05] lg:scale-[1.25]"
               : "scale-100 lg:scale-[1.3]",
           )}
         >

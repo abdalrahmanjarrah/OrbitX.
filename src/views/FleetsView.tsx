@@ -919,8 +919,8 @@ export default function FleetsView({ user }: { user: UserData }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px] items-start">
-        <div className="lg:col-span-2 bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col h-full overflow-hidden shadow-xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[600px] items-start">
+        <div className="lg:col-span-2 bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col min-h-[400px] lg:h-full overflow-hidden shadow-xl">
           <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <MessageCircle size={20} className="text-fuchsia-400" /> غرفة
@@ -988,7 +988,7 @@ export default function FleetsView({ user }: { user: UserData }) {
           </div>
         </div>
 
-        <div className="bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col h-full">
+        <div className="bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col min-h-[300px] lg:h-full">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Shield size={20} className="text-indigo-400" /> طاقم الأسطول

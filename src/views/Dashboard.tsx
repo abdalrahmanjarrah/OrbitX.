@@ -799,7 +799,7 @@ export default function Dashboard({
 
       {/* Mobile Contextual Nav Helper */}
       <div className="md:hidden fixed bottom-[90px] left-1/2 -translate-x-1/2 z-40 w-max pointer-events-none">
-          <div className="pointer-events-auto flex gap-2 overflow-x-auto px-4 hide-scrollbar">
+          <div className="pointer-events-auto flex gap-2 overflow-x-auto px-4 no-scrollbar">
             {currentCategory === "focus" && (
                 <>
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
