@@ -485,15 +485,18 @@ function StudyRoomContent({
           const elapsedMs = Date.now() - start;
           const remainingMs = Math.max(0, totalMs - elapsedMs);
           const totalSecs = Math.floor(remainingMs / 1000);
-          const hrs = Math.floor(totalSecs / 3600);
+          const days = Math.floor(totalSecs / 86400);
+          const hrs = Math.floor((totalSecs % 86400) / 3600);
           const mins = Math.floor((totalSecs % 3600) / 60);
           const secs = totalSecs % 60;
           const countdownStr =
             remainingMs <= 0
               ? "انتهت مدة النزال"
-              : hrs > 0
-                ? `${hrs}س و ${mins}د و ${secs}ث`
-                : `${mins}د و ${secs}ث`;
+              : days > 0
+                ? `${days}ي و ${hrs}س و ${mins}د`
+                : hrs > 0
+                  ? `${hrs}س و ${mins}د و ${secs}ث`
+                  : `${mins}د و ${secs}ث`;
 
           const p1 = challengeData.progressPlayer1 || 0;
           const p2 = challengeData.progressPlayer2 || 0;
@@ -513,9 +516,7 @@ function StudyRoomContent({
                     <p className="text-xs text-gray-400">
                       {challengeData.status === "completed"
                         ? `مكتمل (${challengeData.durationMinutes} دقيقة)`
-                        : challengeData.status === "accepted"
-                          ? "بانتظار دخول الطرفين... يبدأ النزال الفعلي عندما تكونان معاً داخل القمرة"
-                          : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
+                        : `المدة الكلية: ${challengeData.durationMinutes} دقيقة / الوقت المتبقي: ${countdownStr}`}
                     </p>
                   </div>
                   {challengeData.status === "completed" ? (

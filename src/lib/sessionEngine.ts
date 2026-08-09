@@ -788,52 +788,8 @@ export function useSessionEngine(
           setChallengeData(c);
           challengeDataRef.current = c;
 
-          const myUid = auth.currentUser?.uid;
-          if (myUid && c.status === "accepted") {
-            const isP1 = myUid === c.challengerId;
-            const myField = isP1 ? "p1EnteredAt" : "p2EnteredAt";
-            const oppField = isP1 ? "p2EnteredAt" : "p1EnteredAt";
-            const oppId = isP1 ? c.challengedId : c.challengerId;
-            const myName = isP1 ? c.challengerName : c.challengedName;
-
-            (async () => {
-              try {
-                const myEntered = (c as any)[myField];
-                if (!myEntered) {
-                  await updateDoc(doc(db, "challenges", c.id), {
-                    [myField]: Date.now(),
-                  });
-                  addDoc(collection(db, "users", oppId, "notifications"), {
-                    type: "challenge_push",
-                    content: `⚔️ ${myName} دخل قمرة المعركة! ادخل أنت أيضاً ليبدأ النزال فعلياً.`,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                  }).catch(() => {});
-                }
-
-                if ((c as any)[oppField] && !(c as any).startTime) {
-                  await updateDoc(doc(db, "challenges", c.id), {
-                    status: "active",
-                    startTime: Date.now(),
-                  });
-                  const startMsg = `🚀 انطلق النزال! ${c.challengerName} ضد ${c.challengedName} — المؤقت بدأ الآن!`;
-                  addDoc(collection(db, "users", c.challengerId, "notifications"), {
-                    type: "challenge_push",
-                    content: startMsg,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                  }).catch(() => {});
-                  addDoc(collection(db, "users", c.challengedId, "notifications"), {
-                    type: "challenge_push",
-                    content: startMsg,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                  }).catch(() => {});
-                }
-              } catch (e) {
-                console.warn("Challenge start sync:", e);
-              }
-            })();
+          if (c.status === "active") {
+            checkChallengeCompletion(room.challengeId).catch(() => {});
           }
         }
       }, undefined, `challenges/${room.challengeId}`);
@@ -1297,6 +1253,9 @@ export function useSessionEngine(
               totalFocusHours: increment(room.timerDuration / 60),
             }).catch(() => {});
           }
+
+          // Non-synchronous race: every completed focus session feeds the user's active challenges
+          creditFocusToActiveChallenges(userRef.current.uid, room.timerDuration / 60000);
         }
       }
 
@@ -1348,6 +1307,39 @@ export function useSessionEngine(
     }
   }, [timeLeft, room?.timerStatus, stationId, isSpectator]);
 
+  // Credit focus minutes from ANY completed study session into the user's active challenges
+  const creditFocusToActiveChallenges = async (userId: string, minutes: number) => {
+    if (!userId || minutes <= 0) return;
+    try {
+      const q1 = query(
+        collection(db, "challenges"),
+        where("challengerId", "==", userId),
+        where("status", "==", "active")
+      );
+      const q2 = query(
+        collection(db, "challenges"),
+        where("challengedId", "==", userId),
+        where("status", "==", "active")
+      );
+      const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+      const seen = new Set<string>();
+      for (const snap of [s1, s2]) {
+        for (const d of snap.docs) {
+          if (seen.has(d.id)) continue;
+          seen.add(d.id);
+          const c = d.data();
+          const field = c.challengerId === userId ? "progressPlayer1" : "progressPlayer2";
+          await updateDoc(doc(db, "challenges", d.id), {
+            [field]: increment(minutes),
+          }).catch(() => {});
+          checkChallengeCompletion(d.id).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn("Credit focus to active challenges:", e);
+    }
+  };
+
   const checkChallengeCompletion = async (cId: string, forceCompleteEarly = false) => {
     const startMs = performance.now();
     try {
@@ -1360,13 +1352,11 @@ export function useSessionEngine(
       let challengedName = "";
       let p1 = 0;
       let p2 = 0;
-      let bothEntered = false;
 
       await runTransaction(db, async (transaction) => {
         const snap = await transaction.get(cRef);
         if (!snap.exists()) return;
         const cData = snap.data() as Challenge;
-        // Only a battle that actually started (both players entered) can be settled
         if (cData.status !== "active") return;
 
         challengerId = cData.challengerId;
@@ -1375,9 +1365,8 @@ export function useSessionEngine(
         challengedName = cData.challengedName;
         p1 = cData.progressPlayer1 || 0;
         p2 = cData.progressPlayer2 || 0;
-        bothEntered = !!(cData as any).p1EnteredAt && !!(cData as any).p2EnteredAt;
 
-        const startTime = cData.startTime || Date.now();
+        const startTime = cData.startTime || cData.createdAt || Date.now();
         const isExpired = (Date.now() - startTime) >= (cData.durationMinutes || 60) * 60000;
 
         if (isExpired || forceCompleteEarly) {
@@ -1408,43 +1397,33 @@ export function useSessionEngine(
           const pRef = doc(db, "profiles", winnerId);
           const { arrayUnion } = await import("firebase/firestore");
 
-          if (bothEntered) {
-            await updateDoc(uRef, {
-              coins: increment(50),
-              badges: arrayUnion("challenge_champ"),
-              challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-              xp: increment(100)
-            }).catch(() => {});
+          await updateDoc(uRef, {
+            coins: increment(50),
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          }).catch(() => {});
 
-            await updateDoc(pRef, {
-              badges: arrayUnion("challenge_champ"),
-              challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-              xp: increment(100)
-            }).catch(() => {});
+          await updateDoc(pRef, {
+            badges: arrayUnion("challenge_champ"),
+            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            xp: increment(100)
+          }).catch(() => {});
 
-            await addDoc(collection(db, "users", winnerId, "notifications"), {
-              type: "challenge_win",
-              content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challengerId ? challengedName : challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
-              read: false,
-              timestamp: serverTimestamp(),
-            }).catch(() => {});
+          await addDoc(collection(db, "users", winnerId, "notifications"), {
+            type: "challenge_win",
+            content: `🏆 مبروك! لقد فزت بتحدي التركيز ضد ${winnerId === challengerId ? challengedName : challengerName}! تم إضافة شارة "بطل المعركة" الأسبوعية، 50 عملة، و 100 XP!`,
+            read: false,
+            timestamp: serverTimestamp(),
+          }).catch(() => {});
 
-            const loserId = winnerId === challengerId ? challengedId : challengerId;
-            addDoc(collection(db, "users", loserId, "notifications"), {
-              type: "challenge_completed",
-              content: `⚔️ انتهى النزال! فاز ${winnerId === challengerId ? challengerName : challengedName} بـ ${Math.max(p1, p2)} دقيقة مقابل ${Math.min(p1, p2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
-              read: false,
-              timestamp: serverTimestamp(),
-            }).catch(() => {});
-          } else {
-            // Winner only, opponent never entered the room — no duel rewards
-            addDoc(collection(db, "users", winnerId, "notifications"), {
-              type: "challenge_completed",
-              content: `⚔️ انتهى التحدي بانتصارك (الخصم لم يدخل قمرة المعركة)، لذا لم تُمنح جوائز النزال الحقيقي.`,
-              read: false,
-              timestamp: serverTimestamp(),
-            }).catch(() => {});
-          }
+          const loserId = winnerId === challengerId ? challengedId : challengerId;
+          addDoc(collection(db, "users", loserId, "notifications"), {
+            type: "challenge_completed",
+            content: `⚔️ انتهى النزال! فاز ${winnerId === challengerId ? challengerName : challengedName} بـ ${Math.max(p1, p2)} دقيقة مقابل ${Math.min(p1, p2)} دقيقة لك. حظاً أوفر المرة القادمة!`,
+            read: false,
+            timestamp: serverTimestamp(),
+          }).catch(() => {});
         } else {
           // Tie or Draw
           const msg = `🤝 انتهى النزال بالتعادل بين ${challengerName} و ${challengedName} بـ ${p1} دقيقة تركيز لكل منهما!`;

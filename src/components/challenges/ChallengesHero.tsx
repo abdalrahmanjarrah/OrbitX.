@@ -42,7 +42,7 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/12 text-indigo-400 text-xs font-medium mb-4 border border-indigo-500/25 tracking-wide"
         >
           <Swords size={12} />
-          نزالات الرواد · OrbitX
+          سباقات الرواد · OrbitX
         </motion.div>
 
         <motion.h1

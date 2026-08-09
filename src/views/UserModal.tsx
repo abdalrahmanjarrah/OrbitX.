@@ -703,21 +703,28 @@ export default function UserModal({
             <div>
               <h3 className="text-xl font-black text-white">صفخة تحدي لـ {userData.displayName}</h3>
               <p className="text-sm text-gray-400 mt-1">
-                اختر مدة النزال — يبدأ العدّاد فعلياً عندما تدخلان قمرة المعركة معاً.
+                اختر مدة السباق — خلالها مين منكم بجمع أكتر دقائق تركيز (بأي محطة) هو الفائز.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {[25, 50, 90].map((dur) => (
+              {[
+                { mins: 25, label: "25 دقيقة" },
+                { mins: 50, label: "50 دقيقة" },
+                { mins: 90, label: "90 دقيقة" },
+                { mins: 360, label: "6 ساعات" },
+                { mins: 1440, label: "يوم كامل" },
+                { mins: 4320, label: "3 أيام" },
+              ].map((opt) => (
                 <button
-                  key={dur}
-                  onClick={() => setChallengeDuration(dur)}
+                  key={opt.mins}
+                  onClick={() => setChallengeDuration(opt.mins)}
                   className={`py-3 rounded-xl font-black text-sm border transition-colors ${
-                    challengeDuration === dur
+                    challengeDuration === opt.mins
                       ? "bg-amber-500 text-black border-amber-300"
                       : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
                   }`}
                 >
-                  {dur} دقيقة
+                  {opt.label}
                 </button>
               ))}
             </div>

@@ -12,6 +12,20 @@ interface ChallengeInvitesProps {
   onRefresh: () => void;
 }
 
+const formatDuration = (mins: number) => {
+  if (mins >= 1440) {
+    const d = Math.floor(mins / 1440);
+    const h = Math.floor((mins % 1440) / 60);
+    return h > 0 ? `${d} أيام و ${h} ساعات` : `${d} يوم`;
+  }
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h} ساعات و ${m} دقيقة` : `${h} ساعات`;
+  }
+  return `${mins} دقيقة`;
+};
+
 export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
   incomingInvites,
   outgoingInvites,
@@ -21,7 +35,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
   const [friends, setFriends] = useState<UserData[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<UserData | null>(null);
-  const [duration, setDuration] = useState<number>(30); // default 30 mins
+  const [duration, setDuration] = useState<number>(25);
   const [sendingInvite, setSendingInvite] = useState(false);
 
   // Load user friends on mount/refresh
@@ -65,11 +79,12 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
   const handleAcceptInvite = async (challenge: Challenge) => {
     try {
       await updateDoc(doc(db, "challenges", challenge.id), {
-        status: "accepted"
+        status: "active",
+        startTime: Date.now(),
       });
       await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
         type: "challenge_accepted",
-        content: `قبل ${currentUser.displayName} تحديك! ادخل الآن إلى قمرة المعركة — يبدأ النزال الفعلي عندما يكون كلاكما داخل القمرة. ⚔️`,
+        content: `قبل ${currentUser.displayName} التحدي! السباق بدأ الآن — مين بيجمع أكتر دقائق تركيز خلال ${challenge.durationMinutes} دقيقة؟ ⚡`,
         challengeId: challenge.id,
         senderId: currentUser.uid,
         senderName: currentUser.displayName,
@@ -126,7 +141,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       // Create a push notification
       await addDoc(collection(db, "users", selectedFriend.uid, "notifications"), {
         type: "challenge",
-        content: `دعاك ${currentUser.displayName} لتحدي تركيز درامي مدته ${duration} دقيقة! ⚔️`,
+        content: `⚡ ${currentUser.displayName} رمى عليك صفخة: مين يجمع أكتر دقائق تركيز خلال ${formatDuration(duration)}؟`,
         challengeId: docRef.id,
         senderId: currentUser.uid,
         senderName: currentUser.displayName,
@@ -152,9 +167,8 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
           <Swords size={16} className="text-indigo-400" />
           <span>مبارزة سريعة جديدة</span>
         </h3>
-        
         <p className="text-xs text-gray-400 leading-relaxed mb-6">
-          حدد زميلاً دراسياً، اختر زمن المعركة المرغوب، وادعه لخوض جولة من التركيز الصارم. الفائز سيتصدر قائمة المتحدين!
+          حدد زميلاً دراسياً واختر مدة السباق. كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء المدة يحرز الجوائز!
         </p>
 
         {loadingFriends ? (
@@ -204,20 +218,27 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                 className="space-y-3 pt-2"
               >
                 <div>
-                  <label className="text-xs text-gray-300 font-semibold block mb-2">المدة الكلية للنزال</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[60, 120, 180, 300].map((mins) => (
+                  <label className="text-xs text-gray-300 font-semibold block mb-2">مدة السباق</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { mins: 25, label: "25 دقيقة" },
+                      { mins: 50, label: "50 دقيقة" },
+                      { mins: 90, label: "90 دقيقة" },
+                      { mins: 360, label: "6 ساعات" },
+                      { mins: 1440, label: "يوم كامل" },
+                      { mins: 4320, label: "3 أيام" },
+                    ].map((opt) => (
                       <button
-                        key={mins}
+                        key={opt.mins}
                         type="button"
-                        onClick={() => setDuration(mins)}
+                        onClick={() => setDuration(opt.mins)}
                         className={`py-1.5 px-1 rounded-lg border font-mono text-[11px] font-bold transition-all ${
-                          duration === mins
+                          duration === opt.mins
                             ? "bg-fuchsia-500/10 border-fuchsia-500 text-fuchsia-400"
                             : "bg-white/[0.01] border-white/5 text-gray-400 hover:border-white/10"
                         }`}
                       >
-                        {mins >= 60 ? `${mins / 60} ساعات` : `${mins} د`}
+                        {opt.label}
                       </button>
                     ))}
                   </div>
@@ -270,7 +291,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                       <div className="text-xs font-bold text-white">{challenge.challengerName}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                         <Timer size={10} />
-                        <span>مدة التحدي: {challenge.durationMinutes} دقيقة</span>
+                        <span>مدة التحدي: {formatDuration(challenge.durationMinutes)}</span>
                       </div>
                     </div>
                   </div>

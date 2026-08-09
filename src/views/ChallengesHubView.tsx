@@ -14,13 +14,11 @@ import { cn } from "../lib/utils";
 
 interface ChallengesHubViewProps {
   user: UserData;
-  onEnterStation: (stationId: string) => void;
   onSelectUser: (userId: string) => void;
 }
 
 export default function ChallengesHubView({
   user,
-  onEnterStation,
   onSelectUser,
 }: ChallengesHubViewProps) {
   const { isAr, t } = useLanguage();
@@ -65,7 +63,7 @@ export default function ChallengesHubView({
   // Derive categories
   const incomingInvites = challenges.filter(c => c.status === "pending" && c.challengedId === user.uid);
   const outgoingInvites = challenges.filter(c => c.status === "pending" && c.challengerId === user.uid);
-  const activeChallenges = challenges.filter(c => c.status === "active" || c.status === "accepted");
+  const activeChallenges = challenges.filter(c => c.status === "active");
   const completedChallenges = challenges.filter(c => c.status === "completed");
 
   return (
@@ -185,7 +183,6 @@ export default function ChallengesHubView({
                 <ActiveChallengesList
                   challenges={challenges}
                   currentUser={user}
-                  onEnterStation={onEnterStation}
                   onRefresh={fetchAllChallenges}
                   onStartChallengeClick={() => {
                     setActiveSubTab("invites");

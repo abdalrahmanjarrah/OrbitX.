@@ -785,7 +785,7 @@ export default function Dashboard({
               {activeTab === "profile" && <ProfileView user={user} />}
               {activeTab === "discussions" && <DiscussionsView user={user} />}
               {activeTab === "schedule" && <ScheduleView user={user} />}
-              {activeTab === "challenges" && <ChallengesHubView user={user} onEnterStation={(id) => setActiveStation(id)} onSelectUser={setSelectedUserId} />}
+              {activeTab === "challenges" && <ChallengesHubView user={user} onSelectUser={setSelectedUserId} />}
               {activeTab === "farm" && (
                 <div className="max-w-4xl mx-auto animate-fade-in pb-12">
                   <FarmDisplay user={user} isOwner={true} isStudying={false} />
