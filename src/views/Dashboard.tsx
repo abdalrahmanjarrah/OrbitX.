@@ -652,7 +652,9 @@ export default function Dashboard({
                   <NavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "النقاشات")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
                   <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
                   <NavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "التصنيف")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
+                  {/* قسم الوعي (Awareness) مخفي مؤقتاً — يمكن إرجاعه بإزالة التعليق:
                   <NavPill icon={<Radio size={14} />} label={t("nav.awareness", "الوعي")} active={activeTab === "awareness"} onClick={() => handleTabChange("awareness")} className="tour-step-awareness" />
+                  */}
                 </>
               )}
               {currentCategory === "profile" && (
