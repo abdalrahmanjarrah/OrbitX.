@@ -199,7 +199,17 @@ import AnalyticsView from "./AnalyticsView";
 import FleetsView from "./FleetsView";
 import { useLanguage } from "../context/LanguageContext";
 
-export default function NotificationsDropdown({ userId }: { userId: string }) {
+export default function NotificationsDropdown({
+  userId,
+  userName,
+  userPhoto,
+  onOpenChallenges,
+}: {
+  userId: string;
+  userName?: string;
+  userPhoto?: string;
+  onOpenChallenges?: () => void;
+}) {
   const { isAr, t } = useLanguage();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [globalNotifs, setGlobalNotifs] = useState<any[]>([]);
@@ -277,6 +287,20 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
       batch.delete(doc(db, "users", userId, "notifications", notif.id));
 
       await batch.commit();
+
+      // Notify the requester that their request was accepted
+      if (notif.senderId && notif.senderId !== userId) {
+        addDoc(collection(db, "users", notif.senderId, "notifications"), {
+          type: "friend_request_accepted",
+          content: `قبل ${userName || "شخص"} طلب صداقتك! أنتم الآن رفقاء في الفضاء. 🚀`,
+          senderId: userId,
+          senderName: userName || "",
+          senderPhoto: userPhoto || "",
+          read: false,
+          timestamp: serverTimestamp(),
+        }).catch(() => {});
+      }
+
       alert("تم قبول طلب الصداقة! أنتم الآن رفقاء فضاء.");
     } catch (e) {
       console.error(e);
@@ -380,6 +404,33 @@ export default function NotificationsDropdown({ userId }: { userId: string }) {
                             إلغاء
                           </button>
                         </div>
+                      </div>
+                    ) : n.type === "challenge" ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          {n.senderPhoto ? (
+                            <img
+                              src={n.senderPhoto}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <Swords size={14} className="text-amber-400" />
+                          )}
+                          <span className="font-bold text-amber-400">
+                            {isAr ? "تحدي دراسي" : "Study Challenge"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-300">{n.content}</p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsOpen(false);
+                            onOpenChallenges?.();
+                          }}
+                          className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-[10px] font-bold py-1.5 rounded-lg transition-colors"
+                        >
+                          عرض التحدي
+                        </button>
                       </div>
                     ) : (
                       n.content

@@ -40,15 +40,158 @@ const saveLocalDocs = (docs: FallbackDoc[]) => {
   }
 };
 
-const listeners = new Set<() => void>();
-const notifyListeners = () => {
-  listeners.forEach(cb => {
-    try {
-      cb();
-    } catch (e) {
-      console.error("Error in onSnapshot listener callback:", e);
+// In-memory optimistic cache: reads are instant, writes update UI immediately
+// and persist to the network in the background.
+const memoryDb = new Map<string, FallbackDoc>();
+const collectionIndex = new Map<string, FallbackDoc[]>();
+let memoryHydrated = false;
+let hydrationPromise: Promise<void> | null = null;
+
+const rebuildIndex = () => {
+  collectionIndex.clear();
+  memoryDb.forEach(doc => {
+    const list = collectionIndex.get(doc.collection);
+    if (list) {
+      list.push(doc);
+    } else {
+      collectionIndex.set(doc.collection, [doc]);
     }
   });
+};
+
+const setCached = (doc: FallbackDoc) => {
+  memoryDb.set(doc.path, doc);
+  const list = collectionIndex.get(doc.collection);
+  if (list) {
+    const i = list.findIndex(d => d.path === doc.path);
+    if (i !== -1) {
+      list[i] = doc;
+    } else {
+      list.push(doc);
+    }
+  } else {
+    collectionIndex.set(doc.collection, [doc]);
+  }
+};
+
+const removeCached = (doc: FallbackDoc) => {
+  memoryDb.delete(doc.path);
+  const list = collectionIndex.get(doc.collection);
+  if (!list) return;
+  const i = list.findIndex(d => d.path === doc.path);
+  if (i !== -1) list.splice(i, 1);
+};
+
+const ensureHydrated = (): Promise<void> => {
+  if (memoryHydrated) return Promise.resolve();
+  if (hydrationPromise) return hydrationPromise;
+  hydrationPromise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("id, collection, path, data, updated_at");
+      if (error) throw error;
+      memoryDb.clear();
+      (data || []).forEach(row => {
+        memoryDb.set(row.path, {
+          path: row.path,
+          collection: row.collection,
+          id: row.id,
+          data: row.data,
+          updated_at: row.updated_at || ""
+        });
+      });
+      rebuildIndex();
+      memoryHydrated = true;
+    } catch (e) {
+      console.warn("[Supabase Compatibility] cache hydration failed, reads will fall back to local DB:", e);
+    }
+  })();
+  return hydrationPromise;
+};
+
+const refreshFromServer = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("documents")
+      .select("id, collection, path, data, updated_at");
+    if (error) throw error;
+    const changed: string[] = [];
+    const seen = new Set<string>();
+    (data || []).forEach(row => {
+      const path = row.path;
+      seen.add(path);
+      const prev = memoryDb.get(path);
+      const next: FallbackDoc = {
+        path,
+        collection: row.collection,
+        id: row.id,
+        data: row.data,
+        updated_at: row.updated_at || ""
+      };
+      const changedRemote =
+        !prev ||
+        Date.parse(prev.updated_at || "") !== Date.parse(next.updated_at || "");
+      if (changedRemote) {
+        changed.push(path);
+      }
+      memoryDb.set(path, next);
+    });
+    Array.from(memoryDb.keys()).forEach(path => {
+      if (!seen.has(path)) {
+        changed.push(path);
+        memoryDb.delete(path);
+      }
+    });
+    rebuildIndex();
+    memoryHydrated = true;
+    // Only re-render listeners whose data actually changed
+    notifyListeners(changed.length > 30 ? undefined : changed);
+  } catch (e) {
+    console.warn("[Supabase Compatibility] background refresh failed:", e);
+  }
+};
+
+const getCachedDocs = (colRef: MockColRef): FallbackDoc[] => {
+  const base = collectionIndex.get(colRef.collectionName) || [];
+  if (!colRef.path.includes("/")) {
+    return base;
+  }
+  const prefix = colRef.path + "/";
+  return base.filter(d => d.path.startsWith(prefix));
+};
+
+const listeners = new Set<{ cb: () => void; path: string }>();
+
+let notifyTimer: any = null;
+const notifyPending = new Set<{ cb: () => void; path: string }>();
+const notifyListeners = (writtenPath?: string | string[]) => {
+  const paths = Array.isArray(writtenPath) ? writtenPath : writtenPath ? [writtenPath] : null;
+  listeners.forEach(l => {
+    if (!paths) {
+      notifyPending.add(l);
+    } else if (paths.some(p =>
+      l.path === p ||
+      p.startsWith(l.path + "/") ||
+      l.path.startsWith(p + "/")
+    )) {
+      notifyPending.add(l);
+    }
+  });
+
+  if (notifyTimer) return;
+  notifyTimer = setTimeout(() => {
+    notifyTimer = null;
+    const batch = Array.from(notifyPending);
+    notifyPending.clear();
+    batch.forEach(l => {
+      try {
+        l.cb();
+      } catch (e) {
+        console.error("Error in onSnapshot listener callback:", e);
+      }
+    });
+  }, 80);
 };
 
 // 2. Firestore Sentinel FieldValues Mock
@@ -189,26 +332,19 @@ export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
       return new MockDocSnapshot(true, docRef.id, local.data, docRef);
   }
 
-  try {
-    const { data, error } = await supabase
-      .from("documents")
-      .select("data")
-      .eq("path", docRef.path)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) {
-      return new MockDocSnapshot(false, docRef.id, null, docRef);
-    }
-    return new MockDocSnapshot(true, docRef.id, data.data, docRef);
-  } catch (err) {
-    console.warn(`[Supabase Compatibility] getDoc failed on ${docRef.path}, falling back to local DB:`, err);
-    const local = getLocalDocs().find(d => d.path === docRef.path);
-    if (!local) {
-      return new MockDocSnapshot(false, docRef.id, null, docRef);
-    }
-      return new MockDocSnapshot(true, docRef.id, local.data, docRef);
+  await ensureHydrated();
+  const cached = memoryDb.get(docRef.path);
+  if (cached) {
+    return new MockDocSnapshot(true, docRef.id, cached.data, docRef);
   }
+  if (memoryHydrated) {
+    return new MockDocSnapshot(false, docRef.id, null, docRef);
+  }
+  const local = getLocalDocs().find(d => d.path === docRef.path);
+  if (!local) {
+    return new MockDocSnapshot(false, docRef.id, null, docRef);
+  }
+    return new MockDocSnapshot(true, docRef.id, local.data, docRef);
 };
 
 export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQuerySnapshot> => {
@@ -278,73 +414,11 @@ export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQ
     return runInMemoryFilter(getLocalDocs());
   }
 
-  try {
-    // Query documents belonging to this collection
-    let builder = supabase
-      .from("documents")
-      .select("id, data, path")
-      .eq("collection", colRef.collectionName);
-
-    // If query is for a subcollection, match path
-    if (colRef.path.includes("/")) {
-      builder = builder.like("path", `${colRef.path}/%`);
-    }
-
-    const { data, error } = await builder;
-    if (error) throw error;
-
-    let documents = (data || []).map(row => ({
-      id: row.id,
-      data: row.data,
-      path: row.path
-    }));
-
-    // Apply where, orderBy, limit in memory for 100% flexible compatibility
-    for (const constraint of constraints) {
-      if (constraint.type === "where") {
-        const { field, op, value } = constraint;
-        documents = documents.filter(doc => {
-          const docVal = field === "__documentId__" ? doc.id : (doc.data ? doc.data[field] : undefined);
-          if (op === "==") return docVal === value;
-          if (op === "!=") return docVal !== value;
-          if (op === ">") return docVal > value;
-          if (op === "<") return docVal < value;
-          if (op === ">=") return docVal >= value;
-          if (op === "<=") return docVal <= value;
-          if (op === "array-contains") return Array.isArray(docVal) && docVal.includes(value);
-          if (op === "in") return Array.isArray(value) && value.includes(docVal);
-          return true;
-        });
-      }
-    }
-
-    // Apply ordering constraints
-    const orderConstraint = constraints.find(c => c.type === "orderBy");
-    if (orderConstraint) {
-      const { field, direction } = orderConstraint;
-      documents.sort((a, b) => {
-        const valA = a.data ? a.data[field] : undefined;
-        const valB = b.data ? b.data[field] : undefined;
-        if (valA === valB) return 0;
-        if (valA === undefined) return 1;
-        if (valB === undefined) return -1;
-        const comp = valA > valB ? 1 : -1;
-        return direction === "asc" ? comp : -comp;
-      });
-    }
-
-    // Apply limit
-    const limitConstraint = constraints.find(c => c.type === "limit");
-    if (limitConstraint) {
-      documents = documents.slice(0, limitConstraint.n);
-    }
-
-    const snapshots = documents.map(d => new MockDocSnapshot(true, d.id, d.data, doc(colRef, d.id)));
-    return new MockQuerySnapshot(snapshots);
-  } catch (err) {
-    console.warn("[Supabase Compatibility] getDocs failed, falling back to local DB:", err);
-    return runInMemoryFilter(getLocalDocs());
+  await ensureHydrated();
+  if (memoryHydrated) {
+    return runInMemoryFilter(getCachedDocs(colRef));
   }
+  return runInMemoryFilter(getLocalDocs());
 };
 
 export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: boolean }): Promise<void> => {
@@ -379,16 +453,27 @@ export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: 
     return;
   }
 
-  try {
-    let finalData = data;
-    if (options?.merge) {
-      const currentSnap = await getDoc(docRef);
-      const currentData = currentSnap.data() || {};
-      finalData = applyFieldValues(currentData, data);
-    } else {
-      finalData = applyFieldValues({}, data);
-    }
+  await ensureHydrated();
 
+  let finalData = data;
+  if (options?.merge) {
+    const current = memoryDb.get(docRef.path);
+    finalData = applyFieldValues(current?.data || {}, data);
+  } else {
+    finalData = applyFieldValues({}, data);
+  }
+
+  // Optimistic commit: update UI instantly, persist to network in the background
+  setCached({
+    path: docRef.path,
+    collection: docRef.collectionName,
+    id: docRef.id,
+    data: finalData,
+    updated_at: new Date().toISOString()
+  });
+  notifyListeners(docRef.path);
+
+  try {
     const { error } = await supabase
       .from("documents")
       .upsert({
@@ -400,9 +485,6 @@ export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: 
       }, { onConflict: "path" });
 
     if (error) throw error;
-
-    // Notify client-side listeners immediately of successful write
-    notifyListeners();
   } catch (err) {
     console.warn(`[Supabase Compatibility] setDoc failed on ${docRef.path}, storing locally:`, err);
     applyLocalSet();
@@ -437,11 +519,23 @@ export const updateDoc = async (docRef: MockDocRef, updates: any): Promise<void>
     return;
   }
 
-  try {
-    const currentSnap = await getDoc(docRef);
-    const currentData = currentSnap.data() || {};
-    const finalData = applyFieldValues(currentData, updates);
+  await ensureHydrated();
 
+  const current = memoryDb.get(docRef.path);
+  const currentData = current?.data || {};
+  const finalData = applyFieldValues(currentData, updates);
+
+  // Optimistic commit: update UI instantly, persist to network in the background
+  setCached({
+    path: docRef.path,
+    collection: docRef.collectionName,
+    id: docRef.id,
+    data: finalData,
+    updated_at: new Date().toISOString()
+  });
+  notifyListeners(docRef.path);
+
+  try {
     const { error } = await supabase
       .from("documents")
       .upsert({
@@ -453,9 +547,6 @@ export const updateDoc = async (docRef: MockDocRef, updates: any): Promise<void>
       }, { onConflict: "path" });
 
     if (error) throw error;
-
-    // Notify client-side listeners immediately of successful update
-    notifyListeners();
   } catch (err) {
     console.warn(`[Supabase Compatibility] updateDoc failed on ${docRef.path}, storing locally:`, err);
     applyLocalUpdate();
@@ -481,6 +572,17 @@ export const deleteDoc = async (docRef: MockDocRef): Promise<void> => {
     return;
   }
 
+  await ensureHydrated();
+
+  // Optimistic delete: update UI instantly, persist to network in the background
+  const existing = memoryDb.get(docRef.path);
+  if (existing) {
+    removeCached(existing);
+  } else {
+    memoryDb.delete(docRef.path);
+  }
+  notifyListeners(docRef.path);
+
   try {
     const { error } = await supabase
       .from("documents")
@@ -488,9 +590,6 @@ export const deleteDoc = async (docRef: MockDocRef): Promise<void> => {
       .eq("path", docRef.path);
 
     if (error) throw error;
-
-    // Notify client-side listeners immediately of successful deletion
-    notifyListeners();
   } catch (err) {
     console.warn(`[Supabase Compatibility] deleteDoc failed on ${docRef.path}, removing locally:`, err);
     applyLocalDelete();
@@ -498,6 +597,12 @@ export const deleteDoc = async (docRef: MockDocRef): Promise<void> => {
 };
 
 // Realtime-free snapshot listener with local event-pubsub and resource-friendly smart polling
+const getListenerPath = (queryOrDoc: MockDocRef | MockColRef | MockQuery): string => {
+  if (queryOrDoc instanceof MockDocRef) return queryOrDoc.path;
+  if (queryOrDoc instanceof MockColRef) return queryOrDoc.path;
+  return queryOrDoc.colRef.path;
+};
+
 export const onSnapshot = (
   queryOrDoc: MockDocRef | MockColRef | MockQuery,
   onNext: (snap: any) => void,
@@ -520,29 +625,25 @@ export const onSnapshot = (
       getDocs(queryOrDoc as MockColRef | MockQuery).then(onNext).catch(onError);
     }
   };
-  listeners.add(localCb);
-
-  let pollInterval: any = null;
-
-  if (isRealSupabase) {
-    // Highly gentle polling interval (15 seconds) to avoid database strain,
-    // only active when the browser window is in focus.
-    pollInterval = setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) {
-        return;
-      }
-      localCb();
-    }, 15000);
-  }
+  const listener = { cb: localCb, path: getListenerPath(queryOrDoc) };
+  listeners.add(listener);
 
   // Return unsubscribe handler
   return () => {
-    listeners.delete(localCb);
-    if (pollInterval) {
-      clearInterval(pollInterval);
-    }
+    listeners.delete(listener);
   };
 };
+
+// Global refresh: one gentle request every 30s (only while the window is focused)
+// catches remote changes for all listeners at once instead of polling per listener.
+if (isRealSupabase) {
+  setInterval(() => {
+    if (typeof document !== "undefined" && document.hidden) {
+      return;
+    }
+    refreshFromServer();
+  }, 30000);
+}
 
 // Transactions Support (Simple Lock-free execution wrapper)
 export const runTransaction = async (dbInstance: any, updateFunction: (transaction: any) => Promise<any>): Promise<any> => {

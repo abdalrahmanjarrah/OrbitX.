@@ -644,6 +644,8 @@ export interface Room {
   sharedNotes?: string;
   accumulatedFocusSeconds?: number;
   isChatLocked?: boolean;
+  isPrivate?: boolean;
+  joinCode?: string;
   isChallenge?: boolean;
   challengeId?: string;
   challengeDurationMinutes?: number;

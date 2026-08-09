@@ -255,6 +255,10 @@ export default function ChallengeModal({
       addDoc(collection(db, "users", friend.uid, "notifications"), {
         type: "challenge",
         content: `دعاك ${user.displayName} لتحدي دراسي لمدة ${duration} دقيقة!`,
+        challengeId: docRef.id,
+        senderId: user.uid,
+        senderName: user.displayName,
+        senderPhoto: user.photoURL,
         read: false,
         timestamp: serverTimestamp(),
       }).catch(console.error);

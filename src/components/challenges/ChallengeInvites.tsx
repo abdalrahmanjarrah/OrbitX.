@@ -69,6 +69,16 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         startTime: Date.now(),
         createdAt: Date.now()
       });
+      await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
+        type: "challenge_accepted",
+        content: `قبل ${currentUser.displayName} تحديك! انطلق إلى صفحة التحديات لبدء المبارزة. ⚔️`,
+        challengeId: challenge.id,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
+        read: false,
+        timestamp: serverTimestamp(),
+      }).catch(console.error);
       onRefresh();
     } catch (err) {
       console.error("Failed accepting challenge:", err);
@@ -80,6 +90,15 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       await updateDoc(doc(db, "challenges", challenge.id), {
         status: "declined"
       });
+      await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
+        type: "challenge_declined",
+        content: `رفض ${currentUser.displayName} تحديك هذه المرة. لا بأس، جرب مع شخص آخر!`,
+        challengeId: challenge.id,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        read: false,
+        timestamp: serverTimestamp(),
+      }).catch(console.error);
       onRefresh();
     } catch (err) {
       console.error("Failed declining challenge:", err);
@@ -110,6 +129,10 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       await addDoc(collection(db, "users", selectedFriend.uid, "notifications"), {
         type: "challenge",
         content: `دعاك ${currentUser.displayName} لتحدي تركيز درامي مدته ${duration} دقيقة! ⚔️`,
+        challengeId: docRef.id,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        senderPhoto: currentUser.photoURL,
         read: false,
         timestamp: serverTimestamp(),
       });

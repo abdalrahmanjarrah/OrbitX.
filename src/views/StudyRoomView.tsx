@@ -220,12 +220,23 @@ export default function StudyRoomView(props: {
             (data.participants && data.participants.includes(props.user.uid));
         }
 
+        // 1b. Private (Invite-Only) Station
+        if (data.isPrivate) {
+          allowed =
+            props.user.uid === data.creatorId ||
+            (data.participants && data.participants.includes(props.user.uid));
+        }
+
         if (!allowed) {
           if (props.user.role === "admin") {
             spectator = true;
             allowed = true;
           } else {
-            alert("هذا التحدي خاص. لا يمكنك الدخول.");
+            alert(
+              data.isPrivate
+                ? "هذه المحطة خاصة برمز سري. ادخل عبر رمز الانضمام."
+                : "هذا التحدي خاص. لا يمكنك الدخول.",
+            );
             setAuthStatus("rejected");
             props.onExit();
             return;

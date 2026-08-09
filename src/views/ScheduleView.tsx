@@ -120,6 +120,9 @@ export default function ScheduleView({ user }: { user: UserData }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState(
+    DAYS[new Date().getDay()],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -426,6 +429,65 @@ export default function ScheduleView({ user }: { user: UserData }) {
         </div>
       )}
 
+      {/* Week Strip */}
+      {!loading && !isCreating && (
+        <div className="grid grid-cols-7 gap-2 md:gap-3">
+          {DAYS.map((dayName) => {
+            const dayItems = items.filter((i) => i.day === dayName);
+            const done = dayItems.filter((i) => i.completed).length;
+            const total = dayItems.length;
+            const pct = total ? Math.round((done / total) * 100) : 0;
+            const isToday = dayName === currentDayName;
+            const isActive = filterMode === "today" && selectedDay === dayName;
+            return (
+              <button
+                key={dayName}
+                onClick={() => {
+                  setSelectedDay(dayName);
+                  setFilterMode("today");
+                }}
+                className={cn(
+                  "flex flex-col items-center gap-1 py-3 px-1 rounded-2xl border transition-all",
+                  isActive
+                    ? "bg-blue-500/15 border-blue-500/40 shadow-lg shadow-blue-500/10"
+                    : "bg-[#0a0b16]/70 border-white/5 hover:border-white/15 hover:bg-white/5",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-xs md:text-sm font-black tracking-wide",
+                    isToday ? "text-blue-400" : "text-gray-300",
+                  )}
+                >
+                  {dayName}
+                </span>
+                <div className="flex items-center gap-1 text-[10px] font-bold">
+                  <span className={total > 0 && done === total ? "text-green-400" : "text-gray-500"}>
+                    {done}/{total}
+                  </span>
+                </div>
+                {total > 0 && (
+                  <div className="w-full h-1 bg-black/50 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        done === total ? "bg-green-500" : "bg-blue-500",
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+                {isToday && (
+                  <span className="text-[9px] bg-blue-500 font-bold px-1.5 py-0.5 rounded-full text-white">
+                    اليوم
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Task Creation Modal / Dropdown */}
       <AnimatePresence mode="wait">
         {isCreating && (
@@ -564,7 +626,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
 
       {/* Main Board */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
           {DAYS.map((d) => (
             <div
               key={d}
@@ -576,9 +638,9 @@ export default function ScheduleView({ user }: { user: UserData }) {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 lg:gap-6 items-start pb-10">
+        <div className="flex flex-col gap-8 pb-10">
           {DAYS.filter((d) =>
-            filterMode === "today" ? d === currentDayName : true,
+            filterMode === "today" ? d === selectedDay : true,
           ).map((dayName) => {
             const dayItems = filteredItems.filter((i) => i.day === dayName);
             const dayCompletedCount = dayItems.filter(
@@ -586,49 +648,72 @@ export default function ScheduleView({ user }: { user: UserData }) {
             ).length;
             const dayTotal = dayItems.length;
             const isToday = dayName === currentDayName;
+            const dayPct = dayTotal
+              ? Math.round((dayCompletedCount / dayTotal) * 100)
+              : 0;
 
             return (
               <div
                 key={dayName}
                 className={cn(
-                  "flex flex-col gap-3 min-h-[150px] p-2 rounded-3xl transition-colors",
-                  isToday ? "bg-blue-500/5 ring-1 ring-blue-500/20" : "",
+                  "flex flex-col gap-3 p-4 md:p-5 rounded-3xl transition-colors border",
+                  isToday
+                    ? "bg-blue-500/5 border-blue-500/20"
+                    : "bg-[#0a0b16]/50 border-white/5",
                 )}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, dayName)}
               >
-                <div className="flex flex-col items-center gap-1.5 pb-2">
-                  <h3
-                    className={cn(
-                      "text-lg font-black tracking-wide text-center",
-                      isToday ? "text-blue-400" : "text-gray-300",
+                {/* Day Header Row */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                      <Calendar size={18} className="text-blue-400" />
+                    </div>
+                    <h3
+                      className={cn(
+                        "text-lg md:text-xl font-black tracking-wide",
+                        isToday ? "text-blue-400" : "text-gray-200",
+                      )}
+                    >
+                      {dayName}
+                    </h3>
+                    {isToday && (
+                      <span className="text-[10px] bg-blue-500 font-bold px-2 py-0.5 rounded-full text-white">
+                        اليوم
+                      </span>
                     )}
-                  >
-                    {dayName}
-                  </h3>
-                  {dayTotal > 0 && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-gray-400">
                       <span
-                        className={cn(
-                          dayCompletedCount === dayTotal
+                        className={
+                          dayTotal > 0 && dayCompletedCount === dayTotal
                             ? "text-green-400"
-                            : "text-blue-400",
-                        )}
+                            : "text-blue-400"
+                        }
                       >
                         {dayCompletedCount}
                       </span>
-                      <span>/</span>
-                      <span>{dayTotal}</span>
+                      /{dayTotal}
+                    </span>
+                    <div className="w-28 h-1.5 bg-black/50 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          dayTotal > 0 && dayCompletedCount === dayTotal
+                            ? "bg-green-500"
+                            : "bg-gradient-to-r from-blue-500 to-indigo-500",
+                        )}
+                        style={{ width: `${dayPct}%` }}
+                      />
                     </div>
-                  )}
-                  {isToday && (
-                    <div className="text-[10px] bg-blue-500 font-bold px-2 py-0.5 rounded-full text-white mt-1">
-                      اليوم
-                    </div>
-                  )}
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-3 flex-1 pb-10">
+                {/* Tasks */}
+                <div className="flex flex-col gap-2.5">
                   <AnimatePresence>
                     {dayItems.map((item) => {
                       const pInfo =
@@ -639,59 +724,56 @@ export default function ScheduleView({ user }: { user: UserData }) {
                         <motion.div
                           layoutId={item.id}
                           key={item.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
+                          initial={{ opacity: 0, scale: 0.97 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
                           draggable
                           onDragStart={(e) =>
                             handleDragStart(e as any, item.id)
                           }
                           className={cn(
-                            "p-4 rounded-2xl border shadow-lg relative group cursor-grab active:cursor-grabbing hover:shadow-xl transition-all",
+                            "p-3.5 md:p-4 rounded-2xl border relative group cursor-grab active:cursor-grabbing transition-all",
                             isCompleted
-                              ? "bg-[#0a0b16]/60 border-white/5 opacity-60"
+                              ? "bg-[#0a0b16]/50 border-white/5 opacity-60"
                               : `bg-[#0e1021] ${pInfo.border} ${pInfo.bg.replace("/10", "/5")}`,
                             draggedItemId === item.id
-                              ? "opacity-50 scale-95"
+                              ? "opacity-50 scale-[0.98]"
                               : "",
                           )}
                         >
-                          {/* Priority Indicator Stripe */}
-                          {!isCompleted && (
+                          <div className="flex items-center gap-3 md:gap-4">
+                            {/* Time Column */}
+                            <div className="shrink-0 w-14 md:w-16 text-center flex flex-col items-center">
+                              <span
+                                className={cn(
+                                  "text-sm md:text-base font-black",
+                                  isCompleted ? "text-gray-500" : "text-white",
+                                )}
+                                dir="ltr"
+                              >
+                                {item.time}
+                              </span>
+                              {(item.duration ? item.duration > 0 : false) && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
+                                  <Timer size={9} />
+                                  {item.duration}د
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Priority Accent Stripe */}
                             <div
                               className={cn(
-                                "absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1 rounded-r-lg",
-                                pInfo.bg.replace("/10", "/50"),
+                                "w-1 self-stretch rounded-full shrink-0",
+                                isCompleted ? "bg-gray-700" : pInfo.bg.replace("/10", "/60"),
                               )}
                             />
-                          )}
 
-                          <div className="flex items-start justify-between gap-2 flex-row-reverse relative z-10">
-                            <button
-                              onClick={() => toggleComplete(item)}
-                              className={cn(
-                                "p-1.5 rounded-full flex-shrink-0 transition-all border shadow-sm",
-                                isCompleted
-                                  ? "bg-green-500 border-green-400 text-white shadow-green-500/20"
-                                  : "bg-black/30 border-white/10 hover:border-blue-500 hover:bg-blue-500/10 text-gray-500 hover:text-blue-400",
-                              )}
-                            >
-                              <Check
-                                size={14}
-                                className={cn(
-                                  "transition-transform duration-300",
-                                  isCompleted ? "scale-100" : "scale-0",
-                                )}
-                              />
-                              {!isCompleted && (
-                                <div className="w-3.5 h-3.5 rounded-full" />
-                              )}
-                            </button>
-
-                            <div className="flex-1 text-right min-w-0 flex flex-col justify-center pt-0.5">
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
                               <p
                                 className={cn(
-                                  "font-bold text-sm truncate transition-colors",
+                                  "font-bold text-sm md:text-base truncate transition-colors",
                                   isCompleted
                                     ? "text-gray-500 line-through"
                                     : "text-white",
@@ -699,35 +781,58 @@ export default function ScheduleView({ user }: { user: UserData }) {
                               >
                                 {item.task}
                               </p>
-                              <div className="flex items-center gap-3 justify-end mt-2 flex-row-reverse opacity-70">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-blue-300 shrink-0">
-                                  <Clock size={10} />
-                                  <span dir="ltr">{item.time}</span>
-                                </div>
-                                {(item.duration
-                                  ? item.duration > 0
-                                  : false) && (
-                                  <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 shrink-0">
-                                    <Timer size={10} />
-                                    <span>{item.duration}د</span>
-                                  </div>
-                                )}
+                              <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300">
+                                  <Tag size={9} />
+                                  {item.category || "عام"}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                                    isCompleted
+                                      ? "bg-white/5 border-white/10 text-gray-500"
+                                      : `${pInfo.bg} ${pInfo.border} ${pInfo.color}`,
+                                  )}
+                                >
+                                  {pInfo.label}
+                                </span>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Hover Actions */}
-                          <div className="absolute -top-3 -right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-1 flex-col">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteItem(item.id);
-                              }}
-                              className="p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white shadow-lg border border-red-400/50 transition-transform hover:scale-110"
-                              title="حذف"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteItem(item.id);
+                                }}
+                                className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+                                title={isAr ? "حذف" : "Delete"}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => toggleComplete(item)}
+                                className={cn(
+                                  "p-2 rounded-xl transition-all border",
+                                  isCompleted
+                                    ? "bg-green-500 border-green-400 text-white shadow-green-500/20"
+                                    : "bg-black/30 border-white/10 hover:border-blue-500 hover:bg-blue-500/10 text-gray-500 hover:text-blue-400",
+                                )}
+                                title={isAr ? "إنجاز" : "Complete"}
+                              >
+                                <Check
+                                  size={15}
+                                  className={cn(
+                                    "transition-transform duration-300",
+                                    isCompleted ? "scale-100" : "scale-0",
+                                  )}
+                                />
+                                {!isCompleted && (
+                                  <div className="w-3.5 h-3.5 rounded-full" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </motion.div>
                       );
@@ -735,10 +840,10 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   </AnimatePresence>
 
                   {dayItems.length === 0 && (
-                    <div className="flex-1 border-2 border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center p-4 text-center opacity-50 group pointer-events-none min-h-[100px]">
+                    <div className="border-2 border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center opacity-50 pointer-events-none min-h-[90px]">
                       <GripVertical className="text-white/10 mb-2" size={20} />
-                      <p className="text-[10px] text-gray-500 font-bold">
-                        اسحب مهمة هنا
+                      <p className="text-xs text-gray-500 font-bold">
+                        {isAr ? "لا مهام لهذا اليوم — اسحب مهمة هنا" : "No tasks — drag a task here"}
                       </p>
                     </div>
                   )}

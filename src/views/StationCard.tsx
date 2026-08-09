@@ -194,11 +194,13 @@ export default function StationCard({
   activeUsers,
   onEnter,
   isAdmin,
+  listMode,
 }: {
   room: Room;
   activeUsers?: UserData[];
   onEnter: () => void;
   isAdmin?: boolean;
+  listMode?: boolean;
 }) {
   const { isAr, t } = useLanguage();
   const [uptime, setUptime] = useState("");
@@ -233,6 +235,73 @@ export default function StationCard({
   }, [room.accumulatedFocusSeconds, room.timerStatus, room.startTime, isAr]);
 
   const isFocusing = room.timerStatus === "focus";
+
+  if (listMode) {
+    return (
+      <motion.div
+        variants={bentoItem}
+        onClick={onEnter}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onEnter(); }}
+        className={cn(
+          "relative rounded-2xl px-4 py-3 md:px-5 md:py-4 flex items-center gap-3 md:gap-4 overflow-hidden group cursor-pointer border transition-all duration-500 hover:-translate-y-0.5 hover:border-cyan-500/30 hover:bg-[#0e0f22]",
+          isAr ? "text-right" : "text-left",
+          isFocusing
+            ? "bg-[#0b0c1b] border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.12)]"
+            : "bg-[#0a0b18] border-white/5"
+        )}
+        style={room.imageUrl ? { backgroundImage: `linear-gradient(120deg, rgba(8,9,20,0.94), rgba(15,17,35,0.7)), url(${room.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+      >
+        <div className={cn("shrink-0 px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 text-[10px] md:text-xs font-bold border", isFocusing ? "bg-indigo-500/20 text-indigo-200 border-indigo-400/30" : "bg-white/5 text-gray-400 border-white/10")}>
+          <div className={cn("w-1.5 h-1.5 rounded-full", isFocusing ? "bg-cyan-400 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" : "bg-gray-500")} />
+          {isFocusing ? (isAr ? "تدفق" : "Focus") : (isAr ? "مدار" : "Orbit")}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {room.isPrivate && (
+              <span className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-1.5 py-0.5 rounded-md text-[9px]">
+                <Lock size={9} /> {isAr ? "خاص" : "Private"}
+              </span>
+            )}
+            <h4 className="font-black font-display text-white text-sm md:text-base truncate">
+              {room.name}
+            </h4>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-bold text-indigo-300/80 mt-0.5">
+            <Timer size={12} className={isFocusing ? "text-cyan-400/80 animate-pulse" : "text-gray-500"} />
+            <span>{uptime}</span>
+          </div>
+        </div>
+
+        <div className="hidden sm:flex items-center shrink-0">
+          {room.participants.slice(0, 4).map((p, i) => {
+            const userMatch = activeUsers?.find((u) => u.uid === p);
+            return (
+              <div
+                key={i}
+                className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-[#090a16] bg-gray-800 overflow-hidden relative z-10", isAr ? "-ml-1.5 first:ml-0" : "-mr-1.5 first:mr-0")}
+                title={userMatch?.displayName || (isAr ? "رائد" : "Pilot")}
+              >
+                <img src={userMatch?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p}`} alt="user" className="w-full h-full object-cover" />
+              </div>
+            );
+          })}
+          {room.participants.length > 4 && (
+            <div className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 flex items-center justify-center text-[9px] font-black text-white", isAr ? "-ml-1.5" : "-mr-1.5")}>
+              +{room.participants.length - 4}
+            </div>
+          )}
+        </div>
+
+        <div className={cn("flex items-center gap-1 text-[10px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase shrink-0", isAr ? "flex-row" : "flex-row-reverse")}>
+          <span className="hidden md:inline">{isAr ? "استكشاف" : "Explore"}</span>
+          <ChevronLeft size={13} className="group-hover:-translate-x-1 transition-transform duration-300" />
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -289,6 +358,11 @@ export default function StationCard({
          {room.isChallenge && (
             <div className="inline-flex items-center gap-1 bg-fuchsia-600 font-bold text-white px-2 py-0.5 rounded-md text-[9px] mb-1.5 shadow-sm shadow-fuchsia-600/30">
                <Swords size={10} /> {isAr ? "تحدي خاص" : "Private Duel"}
+            </div>
+         )}
+         {room.isPrivate && (
+            <div className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-2 py-0.5 rounded-md text-[9px] mb-1.5 shadow-sm shadow-cyan-600/30">
+               <Lock size={10} /> {isAr ? "خاص برمز" : "Invite Only"}
             </div>
          )}
          <h4 className="text-xl sm:text-2xl font-black font-display text-white mb-1.5 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-l group-hover:from-white group-hover:to-cyan-300 transition-all duration-500 leading-tight">

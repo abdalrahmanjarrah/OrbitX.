@@ -30,13 +30,18 @@ let tabOpenCount = 1;
 const tabInstanceId = Math.random().toString(36).substring(2, 10);
 let multiTabConflictDetected = false;
 
+// Diagnostics watcher is only active in development or when explicitly enabled,
+// so production builds carry zero background monitoring overhead.
+const diagnosticsEnabled =
+  import.meta.env.DEV || import.meta.env.VITE_DEBUG_DIAGNOSTICS === "1";
+
 let isAuthorizedUser = false;
 let isInitialized = false;
 let diagnosticChannel: BroadcastChannel | null = null;
 
 export function authorizeDebugger(isAuthorized: boolean) {
-  isAuthorizedUser = isAuthorized;
-  if (isAuthorized) {
+  isAuthorizedUser = diagnosticsEnabled && isAuthorized;
+  if (isAuthorizedUser) {
     initializeDiagnostics();
   }
 

@@ -10,7 +10,6 @@ import {
   Trash2,
   Users,
   Flame,
-  Activity,
   Award,
   CheckCircle,
   Eye,
@@ -19,7 +18,6 @@ import {
   Target,
   Clock,
   Calendar,
-  BarChart3,
   Star,
   Shield,
   Swords,
@@ -47,7 +45,6 @@ import {
 } from "firebase/firestore";
 import { UserData, getAstronautRank, BADGES } from "../shared";
 import { cn } from "../lib/utils";
-import FocusHeatmap from "./FocusHeatmap";
 import FarmDisplay from "./FarmDisplay";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -118,6 +115,39 @@ export default function ProfileView({
       }
     };
     fetchFriends();
+  }, [user.uid]);
+
+  const [todayTasks, setTodayTasks] = useState<any[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+
+  useEffect(() => {
+    const DAY_NAMES = [
+      "الأحد",
+      "الأثنين",
+      "الثلاثاء",
+      "الأربعاء",
+      "الخميس",
+      "الجمعة",
+      "السبت",
+    ];
+    const todayName = DAY_NAMES[new Date().getDay()];
+    const fetchTodayTasks = async () => {
+      try {
+        const q = query(
+          collection(db, "users", user.uid, "schedule"),
+          where("day", "==", todayName),
+          orderBy("time", "asc"),
+          limit(5),
+        );
+        const snapshot = await getDocs(q);
+        setTodayTasks(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, `users/${user.uid}/schedule`);
+      } finally {
+        setTasksLoading(false);
+      }
+    };
+    fetchTodayTasks();
   }, [user.uid]);
 
   const handleUpdateBio = async () => {
@@ -249,13 +279,6 @@ export default function ProfileView({
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
-  };
-
-  // Helper logic for futuristic stats
-  const formatTime = (minutes: number = 0) => {
-    const h = Math.floor(minutes / 60);
-    const m = Math.floor(minutes % 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   const achievementCount = BADGES.filter((b) => user.xp >= b.minXp).length;
@@ -673,69 +696,165 @@ export default function ProfileView({
             </div>
           </div>
 
-          {/* Smart Analytics / Activity Box Placeholder (Futuristic layout)
-               We use FocusHeatmap and mock a tech-like timeline
-           */}
+          {/* Mission Progress + Today's Missions — powered by real data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative group">
-              <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/10 rounded-br-full -translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
-              <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6">
-                <BarChart3 className="text-blue-400" /> تحليل النشاط الأسبوعي
-              </h3>
-              <div className="relative z-10 w-full overflow-x-auto pb-4 custom-scrollbar">
-                <FocusHeatmap />
+              <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/10 rounded-br-full -translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-6 gap-3">
+                <h3 className="text-lg font-bold font-display text-white flex items-center gap-3">
+                  <Rocket className="text-amber-400" /> رحلتك إلى الرتبة القادمة
+                </h3>
+                <span
+                  className={`text-[11px] font-bold px-3 py-1 rounded-full border border-white/10 bg-white/5 ${userRank.color} whitespace-nowrap`}
+                >
+                  {userRank.icon} {userRank.title}
+                </span>
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-end justify-between mb-2">
+                  <p className="text-[12px] text-gray-400">
+                    التقدم نحو {userRank.nextRankTitle}
+                  </p>
+                  <p className="text-sm font-mono font-bold text-amber-400">
+                    {Math.round(userRank.progressPercentage)}%
+                  </p>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${userRank.progressPercentage}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-6">
+                  {[
+                    {
+                      label: "سلسلة الأيام",
+                      value: `${user.streak || 0}`,
+                      icon: <Flame size={16} />,
+                      color: "text-orange-400",
+                      bg: "bg-orange-500/10",
+                      border: "border-orange-500/20",
+                    },
+                    {
+                      label: "جلسات التركيز",
+                      value: `${user.focusSessions || user.totalFocusSessions || 0}`,
+                      icon: <Clock size={16} />,
+                      color: "text-blue-400",
+                      bg: "bg-blue-500/10",
+                      border: "border-blue-500/20",
+                    },
+                    {
+                      label: "تحديات مكسبة",
+                      value: `${user.challengeWins || 0}`,
+                      icon: <Swords size={16} />,
+                      color: "text-indigo-400",
+                      bg: "bg-indigo-500/10",
+                      border: "border-indigo-500/20",
+                    },
+                  ].map((m, i) => (
+                    <div
+                      key={i}
+                      className={`p-3 rounded-2xl bg-black/30 border ${m.border} backdrop-blur-sm`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${m.bg} ${m.color}`}
+                      >
+                        {m.icon}
+                      </div>
+                      <p className={`text-lg font-black font-mono ${m.color}`}>
+                        {m.value}
+                      </p>
+                      <p className="text-[10px] text-gray-500">{m.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
             <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-full translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
               <h3 className="text-lg font-bold font-display text-white flex items-center gap-3 mb-6">
-                <Activity className="text-fuchsia-400" /> سجل العمليات
+                <Calendar className="text-emerald-400" /> مهامك اليوم
               </h3>
-              <div className="space-y-4">
-                {/* Mock Activity nodes strictly visual based on data */}
-                <div className="flex gap-4 relative">
-                  <div className="w-px h-full bg-gradient-to-b from-fuchsia-500 to-transparent absolute right-3 top-6" />
-                  <div className="w-6 h-6 rounded-full bg-fuchsia-500/20 border border-fuchsia-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.fuchsia.500/30)]">
-                    <Zap size={12} className="text-fuchsia-400" />
-                  </div>
-                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                    <p className="text-[13px] font-bold text-white mb-0.5">
-                      ترقية الرتبة المحتملة
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      أنت في مستوى {userRank.title}. استمر لتحصل على{" "}
-                      {userRank.nextRankTitle}.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4 relative">
-                  <div className="w-px h-full bg-gradient-to-b from-indigo-500 to-transparent absolute right-3 top-6 opacity-50" />
-                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.indigo.500/30)]">
-                    <Clock size={12} className="text-indigo-400" />
-                  </div>
-                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                    <p className="text-[13px] font-bold text-white mb-0.5">
-                      إجمالي ساعات محركك
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      أكملت {formatTime(user.totalFocusTime)} من التركيز العميق.
+              <div className="relative z-10 space-y-3">
+                {tasksLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-14 rounded-2xl bg-white/5 animate-pulse"
+                    />
+                  ))
+                ) : todayTasks.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <CheckCircle
+                      className="mx-auto text-emerald-400/40 mb-3"
+                      size={36}
+                    />
+                    <p className="text-sm text-gray-400">لا مهام مجدولة لليوم</p>
+                    <p className="text-[11px] text-gray-600 mt-1">
+                      خطّط مهامك من صفحة الجدول
                     </p>
                   </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center shrink-0 z-10 shadow-[0_0_10px_theme(colors.emerald.500/30)]">
-                    <Award size={12} className="text-emerald-400" />
-                  </div>
-                  <div className="bg-black/30 border border-white/5 rounded-2xl p-3 flex-1 backdrop-blur-sm">
-                    <p className="text-[13px] font-bold text-white mb-0.5">
-                      الاستقرار المداري
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      محرك النبض نشط ومستقر. استمر في التدرب والدراسة للحفاظ على
-                      ريادتك في الفضاء.
-                    </p>
-                  </div>
-                </div>
+                ) : (
+                  todayTasks.map((task) => {
+                    const prioColor =
+                      task.priority === "high"
+                        ? "border-red-500/30 text-red-400"
+                        : task.priority === "medium"
+                          ? "border-amber-500/30 text-amber-400"
+                          : "border-emerald-500/30 text-emerald-400";
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-3 p-3.5 rounded-2xl bg-black/30 border border-white/5 backdrop-blur-sm hover:border-white/10 transition-colors"
+                      >
+                        <div
+                          className={`w-1.5 self-stretch rounded-full ${
+                            task.completed ? "bg-emerald-500/60" : "bg-white/15"
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-[13px] font-bold text-white truncate ${
+                              task.completed ? "line-through text-gray-500" : ""
+                            }`}
+                          >
+                            {task.task}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span
+                              className="text-[11px] font-mono text-gray-500"
+                              dir="ltr"
+                            >
+                              {task.time}
+                            </span>
+                            {task.priority && (
+                              <span
+                                className={`text-[9px] px-2 py-0.5 rounded-full border ${prioColor}`}
+                              >
+                                {task.priority === "high"
+                                  ? "عاجل"
+                                  : task.priority === "medium"
+                                    ? "متوسط"
+                                    : "عادي"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {task.completed ? (
+                          <CheckCircle
+                            size={18}
+                            className="text-emerald-400 shrink-0"
+                          />
+                        ) : (
+                          <span className="w-5 h-5 rounded-full border border-white/15 shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

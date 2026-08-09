@@ -12,7 +12,7 @@ import Markdown from "react-markdown";
  */
 
 import Globe from "react-globe.gl";
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect, useRef, Component, useMemo } from "react";
 import {
   Leaf,
   Swords,
@@ -78,6 +78,8 @@ import {
   Bell,
   BarChart3,
   Search, Globe2, UserCircle,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import {
   LineChart,
@@ -217,7 +219,13 @@ export default function HomeView({
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomTask, setNewRoomTask] = useState("");
   const [newRoomImageUrl, setNewRoomImageUrl] = useState("");
+  const [isPrivateRoom, setIsPrivateRoom] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joiningByCode, setJoiningByCode] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [stationFilter, setStationFilter] = useState<"all" | "mine" | "private" | "public">("all");
+  const [stationView, setStationView] = useState<"grid" | "list">("grid");
   const [greeting, setGreeting] = useState<{ text: string; subtext: string }>({
     text: "أهلاً بك في فضاء الإنجاز",
     subtext: "محطتك الفضائية بانتظارك للبدء."
@@ -248,6 +256,10 @@ export default function HomeView({
           // Filter out challenges completely from the stations view
           if (data && data.isChallenge) {
              return;
+          }
+          // Hide private stations the user isn't a member of
+          if (data && data.isPrivate && !data.participants?.includes(user.uid)) {
+            return;
           }
           if (data && data.participants?.length === 0 && data.emptyAt) {
             const emptyMs = data.emptyAt.toMillis
@@ -314,11 +326,50 @@ export default function HomeView({
     "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=600&auto=format&fit=crop",
   ];
 
+  const generateJoinCode = () => {
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  };
+
+  const handleJoinByCode = async () => {
+    const code = joinCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setJoiningByCode(true);
+    try {
+      const q = query(
+        collection(db, "rooms"),
+        where("joinCode", "==", code),
+        limit(1),
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        alert(isAr ? "رمز غير صحيح! تأكد من الرمز وجرب مجدداً." : "Invalid code!");
+        return;
+      }
+      const room = snap.docs[0];
+      const roomId = room.id;
+      await updateDoc(doc(db, "rooms", roomId), {
+        participants: arrayUnion(user.uid),
+        emptyAt: null,
+      });
+      onEnterStation(roomId);
+    } catch (e) {
+      alert(isAr ? "تعذر الانضمام. حاول مجدداً." : "Failed to join.");
+    } finally {
+      setJoiningByCode(false);
+    }
+  };
+
   const handleCreateRoom = async () => {
     if (!newRoomName) return;
     setIsCreating(true);
 
     try {
+      const joinCode = isPrivateRoom ? generateJoinCode() : null;
       const roomData = {
         name: newRoomName,
         task: "محطة مشتركة",
@@ -330,6 +381,8 @@ export default function HomeView({
         timerStatus: "idle",
         timerDuration: 25,
         breakDuration: 5,
+        isPrivate: isPrivateRoom || null,
+        joinCode: joinCode,
         createdAt: serverTimestamp(),
       };
 
@@ -338,6 +391,12 @@ export default function HomeView({
       setNewRoomName("");
       setNewRoomTask("");
       setNewRoomImageUrl("");
+      setIsPrivateRoom(false);
+      if (isPrivateRoom && joinCode) {
+        alert(
+          `🔒 محطتك الخاصة جاهزة!\n\nرمز الانضمام: ${joinCode}\n\nأرسله لأصدقائك ليدخلوا إلى محطتك.`,
+        );
+      }
       onEnterStation(roomRef.id);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "rooms");
@@ -345,6 +404,23 @@ export default function HomeView({
       setIsCreating(false);
     }
   };
+
+  const filteredRooms = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = rooms.filter((room) => {
+      if (stationFilter === "mine" && !room.participants?.includes(user.uid)) return false;
+      if (stationFilter === "private" && !room.isPrivate) return false;
+      if (stationFilter === "public" && room.isPrivate) return false;
+      if (term && !room.name.toLowerCase().includes(term)) return false;
+      return true;
+    });
+    return [...filtered].sort((a, b) => {
+      const aActive = a.timerStatus === "focus" ? 1 : 0;
+      const bActive = b.timerStatus === "focus" ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+      return (b.participants?.length || 0) - (a.participants?.length || 0);
+    });
+  }, [rooms, searchTerm, stationFilter, user.uid]);
 
   return (
     <div className="w-full relative min-h-screen pb-32">
@@ -379,6 +455,26 @@ export default function HomeView({
                   <span>{t("home.create_station", "برمجة محطة جديدة")}</span>
                 </div>
               </button>
+
+              <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 px-2 overflow-hidden">
+                <input
+                  value={joinCodeInput}
+                  onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
+                  placeholder={isAr ? "رمز المحطة" : "Station code"}
+                  className="w-28 bg-transparent outline-none text-white text-sm font-mono placeholder-gray-600 p-3"
+                  dir="ltr"
+                  maxLength={6}
+                />
+                <button
+                  onClick={handleJoinByCode}
+                  disabled={joiningByCode || !joinCodeInput.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold transition-colors disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <Lock size={14} />
+                  {joiningByCode ? "..." : isAr ? "انضم" : "Join"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -402,30 +498,107 @@ export default function HomeView({
         </motion.div>
 
         {/* Primary Content: Active Stations */}
-        <div className="flex flex-col gap-6">
-           <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-5">
+           <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-xl md:text-2xl font-black font-display text-white flex items-center gap-3">
                  <div className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
                  </div>
                  {t("home.active_stations", "المحطات المدارية النشطة")}
+                 <span className="text-sm font-bold text-cyan-400/70 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-2.5 py-0.5">
+                    {filteredRooms.length}
+                 </span>
               </h2>
            </div>
 
-           {rooms.length === 0 ? (
+           {/* Station Controls: Search + Filters + View Toggle */}
+           <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="relative flex-1 min-w-0">
+                 <Search size={16} className="absolute top-1/2 -translate-y-1/2 text-gray-500 ltr:left-4 rtl:right-4" />
+                 <input
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   placeholder={isAr ? "ابحث عن محطة بالاسم..." : "Search stations by name..."}
+                   className="w-full py-3 ltr:pl-11 ltr:pr-4 rtl:pr-11 rtl:pl-4 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 outline-none transition-all text-white text-sm placeholder-gray-600"
+                 />
+              </div>
+
+              <div className="flex items-center gap-1.5 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 p-1 overflow-x-auto">
+                 {([
+                    { key: "all", label: isAr ? "الكل" : "All", icon: Globe2 },
+                    { key: "mine", label: isAr ? "محطاتي" : "Mine", icon: UserCircle },
+                    { key: "public", label: isAr ? "عامة" : "Public", icon: Users },
+                    { key: "private", label: isAr ? "خاصة" : "Private", icon: Lock },
+                 ] as const).map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setStationFilter(f.key)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all",
+                        stationFilter === f.key
+                          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                          : "text-gray-400 hover:text-white border border-transparent",
+                      )}
+                    >
+                       <f.icon size={13} />
+                       {f.label}
+                    </button>
+                 ))}
+              </div>
+
+              <div className="flex items-center gap-1 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 p-1">
+                 <button
+                   onClick={() => setStationView("grid")}
+                   title={isAr ? "عرض شبكة" : "Grid view"}
+                   className={cn("p-2 rounded-xl transition-all", stationView === "grid" ? "bg-white/10 text-white" : "text-gray-500 hover:text-white")}
+                 >
+                    <LayoutGrid size={15} />
+                 </button>
+                 <button
+                   onClick={() => setStationView("list")}
+                   title={isAr ? "عرض قائمة" : "List view"}
+                   className={cn("p-2 rounded-xl transition-all", stationView === "list" ? "bg-white/10 text-white" : "text-gray-500 hover:text-white")}
+                 >
+                    <List size={15} />
+                 </button>
+              </div>
+           </div>
+
+           {filteredRooms.length === 0 ? (
               <motion.div variants={bentoItem} className="w-full flex flex-col items-center justify-center p-12 md:p-24 rounded-3xl bg-gradient-to-br from-[#0c0d1e]/50 to-[#050510]/50 backdrop-blur-xl border border-white/5 text-center">
                   <div className="w-24 h-24 mb-6 relative">
                       <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin opacity-50" style={{ animationDuration: '3s' }} />
                       <div className="absolute inset-2 rounded-full border-r-2 border-cyan-400 animate-spin opacity-30" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
                       <Rocket size={40} className="absolute inset-0 m-auto text-indigo-400 opacity-40" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{t("home.silent_orbit", "المدار هادئ تماماً")}</h3>
-                  <p className="text-indigo-200/50 max-w-sm">{t("home.silent_orbit_desc", "لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.")}</p>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                     {searchTerm || stationFilter !== "all"
+                        ? (isAr ? "لا توجد محطات مطابقة" : "No matching stations")
+                        : t("home.silent_orbit", "المدار هادئ تماماً")}
+                  </h3>
+                  <p className="text-indigo-200/50 max-w-sm">
+                     {searchTerm || stationFilter !== "all"
+                        ? (isAr ? "جرب تعديل البحث أو الفلاتر للعثور على محطات أخرى." : "Try adjusting your search or filters.")
+                        : t("home.silent_orbit_desc", "لا يوجد أحد في المدار حالياً. لتكن أنت أول من يطلق محطته ويبدأ جلسة تركيز عميقة.")}
+                  </p>
               </motion.div>
+            ) : stationView === "list" ? (
+              <div className="flex flex-col gap-3">
+                 {filteredRooms.map((room) => (
+                    <StationCard
+                      key={room.id}
+                      room={room}
+                      activeUsers={activeUsers}
+                      onEnter={() => onEnterStation(room.id)}
+                      isAdmin={user.role === 'admin'}
+                      listMode
+                    />
+                 ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {rooms.map((room) => (
+                 {filteredRooms.map((room) => (
                    <StationCard
                      key={room.id}
                      room={room}
@@ -476,7 +649,47 @@ export default function HomeView({
                     className="w-full p-4 rounded-2xl bg-[#060711] border border-white/10 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all text-white text-lg placeholder-gray-700"
                   />
                 </div>
-                
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivateRoom(!isPrivateRoom)}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-3 p-4 rounded-2xl border transition-all",
+                      isPrivateRoom
+                        ? "bg-cyan-500/10 border-cyan-400/40 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
+                        : "bg-[#060711] border-white/10 hover:border-white/25",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Lock size={20} className={isPrivateRoom ? "text-cyan-400" : "text-gray-500"} />
+                      <div className="text-right">
+                        <p className={cn("font-bold text-sm", isPrivateRoom ? "text-cyan-300" : "text-gray-300")}>
+                          {isAr ? "محطة خاصة (فقط برمز)" : "Private Station (Invite Only)"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {isAr
+                            ? "أصدقاؤك يدخلون برمز سري تصنعه أنت"
+                            : "Friends join with a secret code you generate"}
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "w-11 h-6 rounded-full p-0.5 transition-colors shrink-0",
+                        isPrivateRoom ? "bg-cyan-500" : "bg-white/10",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "w-5 h-5 rounded-full bg-white shadow transition-transform",
+                          isPrivateRoom && "translate-x-5",
+                        )}
+                      />
+                    </div>
+                  </button>
+                </div>
+
                 <div className="space-y-3">
                   <label className="text-sm font-bold text-gray-400 px-1">
                     {isAr ? "خلفية المحطة المدارية (اختياري)" : "Station Background Wall (Optional)"}

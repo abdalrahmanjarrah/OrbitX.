@@ -711,7 +711,12 @@ export default function Dashboard({
           </button>
 
           <div className="md:border-l md:border-white/10 md:pl-2">
-            <NotificationsDropdown userId={user.uid} />
+            <NotificationsDropdown
+              userId={user.uid}
+              userName={user.displayName}
+              userPhoto={user.photoURL}
+              onOpenChallenges={() => handleTabChange("challenges")}
+            />
           </div>
 
           {activeTab === "home" && (
