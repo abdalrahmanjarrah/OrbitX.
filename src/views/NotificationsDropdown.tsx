@@ -95,6 +95,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import {
   auth,
   db,
@@ -299,7 +300,7 @@ export default function NotificationsDropdown({
         }).catch(() => {});
       }
 
-      alert("تم قبول طلب الصداقة! أنتم الآن رفقاء فضاء.");
+      showToast("تم قبول طلب الصداقة! أنتم الآن رفقاء فضاء.", "success");
     } catch (e) {
       console.error(e);
     }
@@ -334,7 +335,7 @@ export default function NotificationsDropdown({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute left-0 mt-2 w-72 bg-[#0b0c16] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+            className="absolute left-0 mt-2 w-72 bg-space-dark border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
             dir={isAr ? "rtl" : "ltr"}
           >
             <div className="p-3 border-b border-white/10 flex items-center justify-between">

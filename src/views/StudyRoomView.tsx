@@ -97,6 +97,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import { Debugger } from "../firebaseDebug";
 import { requestXpGrant } from "../lib/xpSystem";
 import {
@@ -230,10 +231,11 @@ export default function StudyRoomView(props: {
             spectator = true;
             allowed = true;
           } else {
-            alert(
+            showToast(
               data.isPrivate
                 ? "هذه المحطة خاصة برمز سري. ادخل عبر رمز الانضمام."
                 : "هذا التحدي خاص. لا يمكنك الدخول.",
+              "warning",
             );
             setAuthStatus("rejected");
             props.onExit();
@@ -256,7 +258,7 @@ export default function StudyRoomView(props: {
             if (props.user.role === "admin") {
               spectator = true;
             } else {
-              alert("المحطة ممتلئة! لا يمكنك الدخول.");
+              showToast("المحطة ممتلئة! لا يمكنك الدخول.", "warning");
               setAuthStatus("rejected");
               props.onExit();
               return;
@@ -632,7 +634,7 @@ function StudyRoomContent({
 
       {/* Task Bar / Info Badge */}
       <div className="z-10 px-8 py-2 max-w-5xl mx-auto -mt-2 space-y-2">
-        <div className="w-full bg-space-dark/80 backdrop-blur-xl bg-[#0a0b16]/80 border border-white/5 rounded-full px-6 py-2 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+        <div className="w-full bg-space-dark/80 backdrop-blur-xl bg-space-dark/80 border border-white/5 rounded-full px-6 py-2 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-3 text-cyan-400">
             <div className="p-1 bg-cyan-500/20 rounded-full">
               <CheckCircle size={16} />
@@ -824,7 +826,7 @@ function StudyRoomContent({
                           timerDuration: parseInt(e.target.value) || 25,
                         })
                       }
-                      className="w-16 p-2 rounded-xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 text-center text-sm focus:border-orange-500 outline-none"
+                      className="w-16 p-2 rounded-xl bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 text-center text-sm focus:border-orange-500 outline-none"
                     />
                   </div>
                   <div className="flex flex-col items-center gap-1">
@@ -839,7 +841,7 @@ function StudyRoomContent({
                           breakDuration: parseInt(e.target.value) || 5,
                         })
                       }
-                      className="w-16 p-2 rounded-xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 text-center text-sm focus:border-blue-500 outline-none"
+                      className="w-16 p-2 rounded-xl bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 text-center text-sm focus:border-blue-500 outline-none"
                     />
                   </div>
                 </div>
@@ -862,14 +864,14 @@ function StudyRoomContent({
                     </button>
                     <button
                       onClick={() => setShowBetModal(true)}
-                      className="px-8 py-3 outline-none border border-transparent rounded-2xl bg-[#0a0b16] hover:bg-white/5 transition-all text-orange-500 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/20 group"
+                      className="px-8 py-3 outline-none border border-transparent rounded-2xl bg-space-dark hover:bg-white/5 transition-all text-orange-500 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/20 group"
                     >
                       <Flame size={18} className="group-hover:animate-pulse" />
                       التركيز بنظام الرهان (الضياع الكوني)
                     </button>
                     <button
                       onClick={() => setShowStudyLinkModal(true)}
-                      className="px-8 py-3 outline-none border border-white/10 rounded-2xl bg-[#0a0b16] hover:bg-white/5 transition-all text-indigo-400 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/20 group"
+                      className="px-8 py-3 outline-none border border-white/10 rounded-2xl bg-space-dark hover:bg-white/5 transition-all text-indigo-400 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/20 group"
                     >
                       <Target size={18} />
                       {studyLinkRef.current &&
@@ -879,7 +881,7 @@ function StudyRoomContent({
                     </button>
                   </div>
                 ) : (
-                  <div className="px-8 py-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 flex items-center gap-3 font-bold text-xl text-gray-500 cursor-not-allowed">
+                  <div className="px-8 py-4 rounded-2xl bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 flex items-center gap-3 font-bold text-xl text-gray-500 cursor-not-allowed">
                     <Lock size={24} />
                     المحطة في المدار
                   </div>
@@ -895,7 +897,7 @@ function StudyRoomContent({
                         startTime: deleteField(),
                       });
                     }}
-                    className="px-4 py-2 rounded-xl bg-[#0a0b16] border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all text-xs font-bold flex items-center gap-2"
+                    className="px-4 py-2 rounded-xl bg-space-dark border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all text-xs font-bold flex items-center gap-2"
                   >
                     <Square size={14} fill="currentColor" />
                     إيقاف العداد

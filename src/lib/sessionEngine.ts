@@ -26,6 +26,7 @@ import {
   runTransaction
 } from "../firebase";
 import { requestXpGrant } from "./xpSystem";
+import { showToast } from "./cosmicUI";
 import { Debugger } from "../firebaseDebug";
 import { Room, Challenge, Message, UserData } from "../shared";
 import { playSound } from "./sound";
@@ -1449,11 +1450,11 @@ export function useSessionEngine(
     const textToSend = typeof customText === "string" ? customText : newMessage;
     if (!textToSend.trim()) return false;
     if (textToSend.length > 500) {
-      alert("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.");
+      showToast("الرسالة طويلة جداً! الحد الأقصى هو 500 حرف.", "warning");
       return false;
     }
     if (roomSnapshotRef.current?.isChatLocked && !isHost) {
-      alert("الدردشة مغلقة من قبل المشرف.");
+      showToast("الدردشة مغلقة من قبل المشرف.", "warning");
       return false;
     }
 
@@ -1461,7 +1462,7 @@ export function useSessionEngine(
       const now = Date.now();
       if (now - lastMessageTime.current < 5 * 60 * 1000) {
         const remainingMinutes = Math.ceil((5 * 60 * 1000 - (now - lastMessageTime.current)) / 60000);
-        alert(`التايمر يعمل بوضع الدراسة! يمكنك إرسال رسالة واحدة فقط كل 5 دقائق. يرجى الانتظار ${remainingMinutes} دقيقة.`);
+        showToast(`التايمر يعمل بوضع الدراسة! يمكنك إرسال رسالة واحدة فقط كل 5 دقائق. يرجى الانتظار ${remainingMinutes} دقيقة.`, "warning");
         return false;
       }
       lastMessageTime.current = now;

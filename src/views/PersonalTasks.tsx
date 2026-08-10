@@ -240,10 +240,10 @@ export default function PersonalTasks() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-6 left-6 z-40 w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl",
+          "fixed bottom-6 ltr:left-6 rtl:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl",
           isOpen
             ? "bg-green-600 text-white shadow-green-900/50"
-            : "bg-[#0a0b16] border border-white/10 hover:bg-white/5 shadow-black/50",
+            : "bg-space-dark border border-white/10 hover:bg-white/5 shadow-black/50",
         )}
         title={isAr ? "المهام الجانبية" : "Side Quests"}
       >
@@ -267,7 +267,7 @@ export default function PersonalTasks() {
             initial={{ opacity: 0, scale: 0.9, x: -20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, x: -20 }}
-            className="fixed bottom-[88px] left-6 z-50 w-96 bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-green-900/20 max-h-[500px] flex flex-col"
+            className="fixed bottom-[88px] ltr:left-6 rtl:right-6 z-50 w-96 max-w-[calc(100vw-2rem)] bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-green-900/20 max-h-[500px] flex flex-col"
             dir={isAr ? "rtl" : "ltr"}
           >
             {/* Header */}
@@ -351,7 +351,7 @@ export default function PersonalTasks() {
                   onChange={(e) => setNewTask(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addTask()}
                   placeholder={isAr ? "مهمة جديدة لغزوها..." : "New quest to conquer..."}
-                  className={cn("flex-1 bg-[#050510] shadow-inner border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500/50 focus:bg-[#0a0b16] text-white transition-colors placeholder:text-gray-600", isAr ? "text-right" : "text-left")}
+                  className={cn("flex-1 bg-space-dark shadow-inner border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500/50 focus:bg-space-dark text-white transition-colors placeholder:text-gray-600", isAr ? "text-right" : "text-left")}
                   dir={isAr ? "rtl" : "ltr"}
                 />
                 <button

@@ -56,6 +56,7 @@ import {
 } from "firebase/firestore";
 import { UserData, Discussion } from "../shared";
 import { adminSetXP } from "../lib/xpSystem";
+import { showToast, confirmDialog } from "../lib/cosmicUI";
 
 // In-memory module cache to prevent aggressive Firestore read billing on Admin tab swaps / re-renders
 let lastAdminFetchTime = 0;
@@ -111,7 +112,7 @@ export default function AdminView({ user }: { user: UserData }) {
         adminId: user.uid,
       });
       setAnnouncementText("");
-      alert(isAr ? "تم إرسال الإعلان لجميع المستخدمين." : "Announcement dispatched to all users.");
+      showToast(isAr ? "تم إرسال الإعلان لجميع المستخدمين." : "Announcement dispatched to all users.", "success");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "global_notifications");
     }
@@ -120,11 +121,12 @@ export default function AdminView({ user }: { user: UserData }) {
   const handleEmergencyAlert = async () => {
     if (!announcementText.trim()) return;
     if (
-      !confirm(
+      !(await confirmDialog(
         isAr
           ? "هل أنت متأكد من إطلاق تنبيه طوارئ عام؟ سيتم مقاطعة الجميع!"
           : "Are you sure you want to trigger a GLOBAL EMERGENCY ALERT? This will interrupt everyone!",
-      )
+        { title: isAr ? "تنبيه طوارئ" : "Emergency alert", danger: true },
+      ))
     )
       return;
     try {
@@ -134,7 +136,7 @@ export default function AdminView({ user }: { user: UserData }) {
         adminId: user.uid,
       });
       setAnnouncementText("");
-      alert(isAr ? "تم إطلاق تنبيه الطوارئ!" : "EMERGENCY ALERT dispatched!");
+      showToast(isAr ? "تم إطلاق تنبيه الطوارئ!" : "EMERGENCY ALERT dispatched!", "warning");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "admin_alerts");
     }
@@ -142,7 +144,7 @@ export default function AdminView({ user }: { user: UserData }) {
 
   const handlePublishUpdate = async () => {
     if (!updateTitle.trim() || !updateDescription.trim()) {
-      alert("الرجاء إدخال عنوان التحديث والوصف لمتابعة النشر!");
+      showToast("الرجاء إدخال عنوان التحديث والوصف لمتابعة النشر!", "warning");
       return;
     }
     try {
@@ -156,7 +158,7 @@ export default function AdminView({ user }: { user: UserData }) {
       setUpdateTitle("");
       setUpdateVersion("");
       setUpdateDescription("");
-      alert("🎉 تم نشر وتعميم التحديث الجديد بنجاح على جميع الأعضاء!");
+      showToast("🎉 تم نشر وتعميم التحديث الجديد بنجاح على جميع الأعضاء!", "success");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "app_updates");
     }
@@ -626,7 +628,7 @@ export default function AdminView({ user }: { user: UserData }) {
                   <div>
                     <div className="font-bold text-cyan-100 flex items-center gap-2">
                       {u.displayName}
-                      <span className="text-[9px] px-1.5 py-0.5 border border-cyan-800 rounded bg-cyan-950 text-cyan-400">
+                      <span className="text-[11px] px-1.5 py-0.5 border border-cyan-800 rounded bg-cyan-950 text-cyan-400">
                         LVL {u.level}
                       </span>
                     </div>

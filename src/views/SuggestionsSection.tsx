@@ -276,7 +276,7 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
           value={newSuggestion}
           onChange={(e) => setNewSuggestion(e.target.value)}
           placeholder={isAr ? "لديك فكرة؟ شاركنا بها..." : "Have an idea? Share it with us..."}
-          className={cn("w-full bg-white/5/80 shadow-inner border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all min-h-[100px]", isAr ? "text-right" : "text-left")}
+          className={cn("w-full bg-white/5 shadow-inner border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all min-h-[100px]", isAr ? "text-right" : "text-left")}
           dir={isAr ? "rtl" : "ltr"}
         />
         <button
@@ -291,7 +291,7 @@ export default function SuggestionsSection({ user }: { user: UserData }) {
         {suggestions.map((s) => (
           <div
             key={s.id}
-            className={cn("p-4 rounded-2xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10", isAr ? "text-right" : "text-left")}
+            className={cn("p-4 rounded-2xl bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10", isAr ? "text-right" : "text-left")}
           >
             <div className="flex flex-col mb-2 gap-2">
               <div className="flex items-center justify-between">

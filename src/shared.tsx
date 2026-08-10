@@ -722,7 +722,7 @@ export class ErrorBoundary extends Component<any, any> {
             إعادة تحميل الصفحة
           </button>
           {process.env.NODE_ENV !== "production" && (
-            <pre className="mt-8 p-4 bg-white/5/80 shadow-inner rounded-xl text-left text-[10px] text-red-400 overflow-auto max-w-full">
+            <pre className="mt-8 p-4 bg-white/5 shadow-inner rounded-xl text-left text-[10px] text-red-400 overflow-auto max-w-full">
               {this.state.error?.message}
             </pre>
           )}

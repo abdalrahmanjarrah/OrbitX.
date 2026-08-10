@@ -224,7 +224,7 @@ export default function AnalyticsView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#0a0b16] rounded-3xl p-6 border border-white/10 shadow-xl shadow-indigo-900/10 text-right">
+        <div className="bg-space-dark rounded-3xl p-6 border border-white/10 shadow-xl shadow-indigo-900/10 text-right">
           <h3 className="text-xl font-bold mb-6 text-white flex items-center justify-end gap-2">
             ساعات التركيز <BarChart3 className="text-indigo-400" />
           </h3>
@@ -271,7 +271,7 @@ export default function AnalyticsView({
           </div>
         </div>
 
-        <div className="bg-[#0a0b16] rounded-3xl p-6 border border-white/10 shadow-xl shadow-fuchsia-900/10 text-right">
+        <div className="bg-space-dark rounded-3xl p-6 border border-white/10 shadow-xl shadow-fuchsia-900/10 text-right">
           <h3 className="text-xl font-bold mb-6 text-white flex items-center justify-end gap-2">
             تصنيفك بين الأصدقاء <Users className="text-fuchsia-400" />
           </h3>

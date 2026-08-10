@@ -360,7 +360,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
 
       {/* Header section */}
       {!selectedDiscussion && (
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-[#0a0b16]/80 backdrop-blur-md p-4 rounded-3xl shadow-xl shadow-black/5 border border-white/5">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-20 bg-space-dark/80 backdrop-blur-md p-4 rounded-3xl shadow-xl shadow-black/5 border border-white/5">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <h2 className="text-3xl font-black flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
               <MessageCircle className="w-8 h-8 text-indigo-400" />
@@ -425,13 +425,13 @@ export default function DiscussionsView({ user }: { user: UserData }) {
             initial={{ opacity: 0, height: 0, y: -20 }}
             animate={{ opacity: 1, height: "auto", y: 0 }}
             exit={{ opacity: 0, height: 0, y: -20 }}
-            className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#101223] to-[#0a0b16] shadow-xl shadow-indigo-900/10 border border-indigo-500/20 space-y-5 overflow-hidden"
+            className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#101223] to-space-dark shadow-xl shadow-indigo-900/10 border border-indigo-500/20 space-y-5 overflow-hidden"
           >
             <h3 className={cn("text-xl font-bold text-indigo-300", isAr ? "text-right" : "text-left")}>
               {isAr ? "بدء موضوع جديد" : "Start a new post"}
             </h3>
 
-            <div className={cn("flex gap-4", isAr ? "flex-row-reverse" : "flex-row")}>
+            <div className={cn("flex gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
               <input
                 type="text"
                 placeholder={isAr ? "عنوان الموضوع..." : "Discussion subject..."}
@@ -485,7 +485,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
           >
             <button
               onClick={() => setSelectedDiscussion(null)}
-              className={cn("text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors bg-[#0a0b16] px-4 py-2 rounded-xl border border-white/5 w-max", isAr ? "flex-row" : "flex-row-reverse")}
+              className={cn("text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors bg-space-dark px-4 py-2 rounded-xl border border-white/5 w-max", isAr ? "flex-row" : "flex-row-reverse")}
             >
               {isAr ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
               {isAr ? "العودة للساحة" : "Back to Forum"}
@@ -495,8 +495,8 @@ export default function DiscussionsView({ user }: { user: UserData }) {
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
 
-              <div className={cn("flex items-start justify-between relative z-10", isAr ? "flex-row-reverse text-right" : "flex-row text-left")}>
-                <div className={cn("flex items-center gap-4", isAr ? "flex-row-reverse" : "flex-row")}>
+              <div className={cn("flex items-start justify-between relative z-10", isAr ? "flex-row text-right" : "flex-row-reverse text-left")}>
+                <div className={cn("flex items-center gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
                   <img
                     src={
                       selectedDiscussion.userPhoto ||
@@ -608,7 +608,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="p-5 rounded-2xl bg-[#0a0b16]/50 animate-pulse border border-white/5 h-20"
+                      className="p-5 rounded-2xl bg-space-dark/50 animate-pulse border border-white/5 h-20"
                     />
                   ))}
                 </div>
@@ -620,8 +620,8 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                     key={reply.id}
                     className="p-5 rounded-3xl bg-[#0e1021]/80 shadow-md border border-white/5 space-y-3 ms-auto max-w-[95%] relative before:content-[''] before:absolute before:-right-4 md:before:-right-12 before:top-8 before:w-4 md:before:w-12 before:h-0.5 before:bg-indigo-500/30"
                   >
-                    <div className={cn("flex items-center justify-between", isAr ? "flex-row-reverse" : "flex-row")}>
-                      <div className={cn("flex items-center gap-3", isAr ? "flex-row-reverse" : "flex-row")}>
+                    <div className={cn("flex items-center justify-between", isAr ? "flex-row" : "flex-row-reverse")}>
+                      <div className={cn("flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
                         <img
                           src={
                             reply.userPhoto ||
@@ -634,7 +634,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                           {reply.userName}
                         </span>
                       </div>
-                      <div className={cn("flex items-center gap-3", isAr ? "flex-row-reverse" : "flex-row")}>
+                      <div className={cn("flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
                         <span className="text-xs text-gray-500 font-mono">
                           {reply.timestamp &&
                           typeof (reply.timestamp as any).toDate === "function"
@@ -698,12 +698,12 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className="h-32 rounded-3xl bg-[#0a0b16] animate-pulse border border-white/5"
+                    className="h-32 rounded-3xl bg-space-dark animate-pulse border border-white/5"
                   />
                 ))}
               </div>
             ) : filteredDiscussions.length === 0 ? (
-              <div className="py-24 text-center flex flex-col items-center justify-center gap-4 bg-[#0a0b16]/50 rounded-3xl border border-dashed border-white/10 mx-auto max-w-lg">
+              <div className="py-24 text-center flex flex-col items-center justify-center gap-4 bg-space-dark/50 rounded-3xl border border-dashed border-white/10 mx-auto max-w-lg">
                 <MessageCircle className="w-16 h-16 text-gray-600" />
                 <p className="text-xl text-gray-400 font-bold">
                   {isAr ? "الساحة صامتة اليوم" : "The forum is quiet today"}
@@ -730,9 +730,9 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-l-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  <div className={cn("flex flex-col items-start justify-between gap-4", isAr ? "md:flex-row-reverse" : "md:flex-row")}>
+                  <div className={cn("flex flex-col items-start justify-between gap-4", isAr ? "md:flex-row" : "md:flex-row-reverse")}>
                     {/* User Info & Category */}
-                    <div className={cn("flex items-center gap-3 w-full md:w-auto", isAr ? "flex-row-reverse justify-end" : "flex-row justify-start")}>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
                       <img
                         src={
                           disc.userPhoto ||
@@ -742,7 +742,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                         referrerPolicy="no-referrer"
                       />
                       <div className={isAr ? "text-right" : "text-left"}>
-                        <div className={cn("flex items-center gap-2", isAr ? "justify-end" : "justify-start")}>
+                        <div className={cn("flex items-center gap-2", isAr ? "justify-start" : "justify-start")}>
                           <p className="font-bold text-sm text-gray-200">
                             {disc.userName}
                           </p>
@@ -779,7 +779,7 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                         {disc.content}
                       </p>
 
-                      <div className={cn("flex gap-4 items-center w-full justify-between md:justify-start", isAr ? "flex-row-reverse" : "flex-row")}>
+                      <div className={cn("flex gap-4 items-center w-full justify-between md:justify-start", isAr ? "flex-row" : "flex-row-reverse")}>
                         <div className="flex gap-4 items-center">
                           {/* Replies display */}
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400">

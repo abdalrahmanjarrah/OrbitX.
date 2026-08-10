@@ -91,6 +91,7 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
+import { confirmDialog } from "../lib/cosmicUI";
 
 import { cn } from "../lib/utils";
 import {
@@ -245,7 +246,7 @@ export default function StationCard({
           "relative rounded-2xl px-4 py-3 md:px-5 md:py-4 flex items-center gap-3 md:gap-4 overflow-hidden group cursor-pointer border transition-all duration-500 hover:-translate-y-0.5 hover:border-cyan-500/30 hover:bg-[#0e0f22]",
           isAr ? "text-right" : "text-left",
           isFocusing
-            ? "bg-[#0b0c1b] border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.12)]"
+            ? "bg-space-dark border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.12)]"
             : "bg-[#0a0b18] border-white/5"
         )}
         style={room.imageUrl ? { backgroundImage: `linear-gradient(120deg, rgba(8,9,20,0.94), rgba(15,17,35,0.7)), url(${room.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
@@ -258,7 +259,7 @@ export default function StationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {room.isPrivate && (
-              <span className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-1.5 py-0.5 rounded-md text-[9px]">
+              <span className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-1.5 py-0.5 rounded-md text-[11px]">
                 <Lock size={9} /> {isAr ? "خاص" : "Private"}
               </span>
             )}
@@ -286,15 +287,15 @@ export default function StationCard({
             );
           })}
           {room.participants.length > 4 && (
-            <div className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 flex items-center justify-center text-[9px] font-black text-white", isAr ? "-ml-1.5" : "-mr-1.5")}>
+            <div className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 flex items-center justify-center text-[11px] font-black text-white", isAr ? "-ml-1.5" : "-mr-1.5")}>
               +{room.participants.length - 4}
             </div>
           )}
         </div>
 
-        <div className={cn("flex items-center gap-1 text-[10px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase shrink-0", isAr ? "flex-row" : "flex-row-reverse")}>
+        <div className={cn("flex items-center gap-1 text-[11px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase shrink-0", isAr ? "flex-row" : "flex-row-reverse")}>
           <span className="hidden md:inline">{isAr ? "استكشاف" : "Explore"}</span>
-          <ChevronLeft size={13} className="group-hover:-translate-x-1 transition-transform duration-300" />
+          <ChevronLeft size={13} className={cn("transition-transform duration-300", isAr ? "group-hover:-translate-x-1" : "group-hover:translate-x-1 rotate-180")} />
         </div>
       </motion.div>
     );
@@ -310,7 +311,7 @@ export default function StationCard({
       className={cn(
         "relative rounded-[1.75rem] p-5 flex flex-col justify-between aspect-[1.12/1] sm:aspect-square md:aspect-[1.08/1] overflow-hidden group cursor-pointer border transition-all duration-700 hover:-translate-y-2",
         isAr ? "text-right" : "text-left",
-        room.imageUrl ? "border-transparent" : (isFocusing ? "bg-[#0b0c1b] border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]" : "bg-[#080914] border-white/5 hover:border-white/10")
+        room.imageUrl ? "border-transparent" : (isFocusing ? "bg-space-dark border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]" : "bg-space-dark border-white/5 hover:border-white/10")
       )}
       style={
         room.imageUrl
@@ -342,7 +343,7 @@ export default function StationCard({
          </div>
          {isAdmin && (
             <button
-               onClick={async (e) => { e.stopPropagation(); if(window.confirm(isAr ? 'حذف المحطة؟' : 'Delete station?')) await deleteDoc(doc(db, "rooms", room.id)).catch(()=>{}); }}
+               onClick={async (e) => { e.stopPropagation(); if(await confirmDialog(isAr ? 'حذف المحطة؟' : 'Delete station?', { title: isAr ? 'حذف المحطة' : 'Delete station', danger: true })) await deleteDoc(doc(db, "rooms", room.id)).catch(()=>{}); }}
                className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-colors backdrop-blur-md"
             >
                <Trash2 size={13} />
@@ -353,12 +354,12 @@ export default function StationCard({
       {/* Main Content */}
       <div className="relative z-10 mt-auto pb-3 md:pb-4">
          {room.isChallenge && (
-            <div className="inline-flex items-center gap-1 bg-fuchsia-600 font-bold text-white px-2 py-0.5 rounded-md text-[9px] mb-1.5 shadow-sm shadow-fuchsia-600/30">
+            <div className="inline-flex items-center gap-1 bg-fuchsia-600 font-bold text-white px-2 py-0.5 rounded-md text-[11px] mb-1.5 shadow-sm shadow-fuchsia-600/30">
                <Swords size={10} /> {isAr ? "تحدي خاص" : "Private Duel"}
             </div>
          )}
          {room.isPrivate && (
-            <div className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-2 py-0.5 rounded-md text-[9px] mb-1.5 shadow-sm shadow-cyan-600/30">
+            <div className="inline-flex items-center gap-1 bg-cyan-600/90 font-bold text-white px-2 py-0.5 rounded-md text-[11px] mb-1.5 shadow-sm shadow-cyan-600/30">
                <Lock size={10} /> {isAr ? "خاص برمز" : "Invite Only"}
             </div>
          )}
@@ -386,14 +387,14 @@ export default function StationCard({
               );
             })}
             {room.participants.length > 4 && (
-              <div className="w-7 h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 backdrop-blur-sm flex items-center justify-center text-[9px] font-black text-white relative z-10 shadow-lg">
+              <div className="w-7 h-7 rounded-full border-2 border-[#090a16] bg-indigo-600/80 backdrop-blur-sm flex items-center justify-center text-[11px] font-black text-white relative z-10 shadow-lg">
                 +{room.participants.length - 4}
               </div>
             )}
          </div>
-         <div className={cn("flex items-center gap-1 text-[10px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase", isAr ? "flex-row" : "flex-row-reverse")}>
+         <div className={cn("flex items-center gap-1 text-[11px] font-black tracking-wide text-indigo-400/80 group-hover:text-cyan-300 transition-colors uppercase", isAr ? "flex-row" : "flex-row-reverse")}>
             <span>{isAr ? "استكشاف" : "Explore"}</span> 
-            <ChevronLeft size={13} className="group-hover:-translate-x-1 transition-transform duration-300" />
+            <ChevronLeft size={13} className={cn("transition-transform duration-300", isAr ? "group-hover:-translate-x-1" : "group-hover:translate-x-1 rotate-180")} />
          </div>
       </div>
     </motion.div>

@@ -513,7 +513,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div
-      className="min-h-screen bg-[#030308] text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative"
+      className="min-h-screen bg-space-dark text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative"
       dir={isAr ? "rtl" : "ltr"}
     >
       {/* Star Field Background Rendering Layer */}
@@ -544,7 +544,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
       `}</style>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[#030308]/60 border-b border-indigo-500/10 transition-all select-none">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-space-dark/60 border-b border-indigo-500/10 transition-all select-none">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo Brand with animated ring */}
           <a href="#" className="flex items-center gap-3" dir="ltr">
@@ -685,7 +685,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
           STATS STRIP
          ============================================================= */}
       <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-[#050510]/80 backdrop-blur-3xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-3xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center ${s.color} mb-4 shadow-[0_0_15px_rgba(99,102,241,0.1)]`}>
@@ -757,7 +757,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.55, delay: (i % 3) * 0.08 }}
-                className="group rounded-3xl border border-white/5 bg-[#060713]/70 p-7 hover:border-indigo-500/30 hover:bg-[#08091c]/80 transition-all duration-300"
+                className="group rounded-3xl border border-white/5 bg-space-dark/70 p-7 hover:border-indigo-500/30 hover:bg-[#08091c]/80 transition-all duration-300"
               >
                 <div className={`w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center ${f.color} mb-5`}>
                   <f.icon className="w-5 h-5" />
@@ -829,7 +829,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.55, delay: i * 0.1 }}
-                className="relative rounded-3xl border border-white/5 bg-[#060713]/70 p-7"
+                className="relative rounded-3xl border border-white/5 bg-space-dark/70 p-7"
               >
                 <div className="text-[11px] font-mono text-indigo-400 tracking-widest mb-4">STEP_0{i + 1}</div>
                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-5">
@@ -901,7 +901,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 ].map((guard, idx) => (
                   <div key={idx} className="bg-black/40 border border-white/5 p-4 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2 font-mono text-[10px]">
-                      <span className={cn("px-2 py-0.5 rounded border border-white/5 inline-block text-[9px] uppercase", guard.color)}>
+                      <span className={cn("px-2 py-0.5 rounded border border-white/5 inline-block text-[11px] uppercase", guard.color)}>
                         {guard.status}
                       </span>
                       <span className="text-gray-400 font-bold">{guard.percent}</span>
@@ -1005,7 +1005,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                     <Atom className="w-5 h-5 animate-[spin_6s_linear_infinite]" />
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] font-mono text-cyan-400 font-bold tracking-widest block uppercase">
+                    <span className="text-[11px] font-mono text-cyan-400 font-bold tracking-widest block uppercase">
                       ACTIVE SIMULATED SECTOR
                     </span>
                     <span className="text-sm font-black text-white">
@@ -1043,12 +1043,12 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
 
                 <div className="inline-flex items-center gap-6 bg-black/40 border border-white/5 p-4 rounded-2xl mb-8">
                   <div className="text-right">
-                    <div className="text-[9px] text-[#818cf8] font-mono leading-none mb-1">XP ENERGY BANK</div>
+                    <div className="text-[11px] text-[#818cf8] font-mono leading-none mb-1">XP ENERGY BANK</div>
                     <div className="text-lg font-black font-mono text-emerald-400">{simXp} XP</div>
                   </div>
                   <div className="w-px h-8 bg-white/10" />
                   <div className="text-right">
-                    <div className="text-[9px] text-[#818cf8] font-mono leading-none mb-1">XP MULTIPLIER</div>
+                    <div className="text-[11px] text-[#818cf8] font-mono leading-none mb-1">XP MULTIPLIER</div>
                     <div className="text-sm font-bold font-mono text-white">1.0x NORMAL</div>
                   </div>
                 </div>
@@ -1214,7 +1214,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
             {faqs.map((item, i) => (
               <details
                 key={i}
-                className="group rounded-2xl border border-white/5 bg-[#060713]/60 overflow-hidden"
+                className="group rounded-2xl border border-white/5 bg-space-dark/60 overflow-hidden"
               >
                 <summary className="flex items-center justify-between gap-4 cursor-pointer list-none p-5 md:p-6 text-sm md:text-base font-bold text-white hover:bg-white/[0.03] transition-colors">
                   {item.q}
@@ -1379,7 +1379,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 </button>
               </div>
 
-              <div className={cn("relative border border-white/5 bg-[#0a0b16]/70 rounded-2.5xl p-5 flex items-center gap-4 mb-6 overflow-hidden group", isAr ? "" : "flex-row-reverse")}>
+              <div className={cn("relative border border-white/5 bg-space-dark/70 rounded-2xl p-5 flex items-center gap-4 mb-6 overflow-hidden group", isAr ? "" : "flex-row-reverse")}>
                 <motion.div
                   animate={{ y: [0, 80, 0] }}
                   transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}

@@ -14,7 +14,7 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
   friendsCount,
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0b16] p-8 shadow-xl">
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-space-dark p-8 shadow-xl">
       {/* نجوم الخلفية */}
       {Array.from({ length: 40 }).map((_, i) => (
         <div

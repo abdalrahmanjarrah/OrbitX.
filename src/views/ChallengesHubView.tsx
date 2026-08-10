@@ -11,6 +11,7 @@ import { ChallengeHistory } from "../components/challenges/ChallengeHistory";
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../context/LanguageContext";
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 
 interface ChallengesHubViewProps {
   user: UserData;
@@ -85,10 +86,11 @@ export default function ChallengesHubView({
             element.click();
           } else {
             // General support guidance
-            alert(
+            showToast(
               isAr
                 ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
-                : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!"
+                : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!",
+              "info",
             );
           }
         }}
@@ -196,10 +198,11 @@ export default function ChallengesHubView({
                     if (element) {
                       element.click();
                     } else {
-                      alert(
+                      showToast(
                         isAr 
                           ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
-                          : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!"
+                          : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!",
+                        "info",
                       );
                     }
                   }}

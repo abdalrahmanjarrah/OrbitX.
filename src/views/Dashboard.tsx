@@ -287,7 +287,7 @@ export default function Dashboard({
   if (activeStation) {
     return (
       <React.Suspense fallback={
-        <div className="min-h-screen bg-[#03040B] flex flex-col items-center justify-center relative">
+        <div className="min-h-screen bg-space-dark flex flex-col items-center justify-center relative">
           <Rocket className="w-12 h-12 text-indigo-400 animate-bounce" />
           <p className="text-xs text-indigo-300 font-mono tracking-widest mt-4 animate-pulse">
             {isAr ? "بروتوكول تهيئة المحطة..." : "INITIALIZING SECTOR PORTAL..."}
@@ -351,7 +351,7 @@ export default function Dashboard({
   return (
     <div className="min-h-screen relative flex flex-col font-sans overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200" dir={isAr ? "rtl" : "ltr"}>
       {/* Background Ambience */}
-      <div className="fixed inset-0 bg-[#03040B] z-[-2]" />
+      <div className="fixed inset-0 bg-space-dark z-[-2]" />
       <StarBackground />
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay z-[-1]" />
       
@@ -383,7 +383,7 @@ export default function Dashboard({
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-[#0b0c16]/95 border border-indigo-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-xl shadow-[0_0_100px_rgba(99,102,241,0.25)] text-center relative overflow-hidden"
+              className="bg-space-dark/95 border border-indigo-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-xl shadow-[0_0_100px_rgba(99,102,241,0.25)] text-center relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
                 <Rocket size={240} className="text-indigo-500" />
@@ -418,7 +418,7 @@ export default function Dashboard({
                     {t("onboarding.desc", "تم رصد تفويضك بنجاح. يستعد البروتوكول المداري لإعداد وحدة التحكم الخاصة بك وعزل المؤثرات الحركية المحيطة لضمان أقصى مستويات التركيز البشري.")}
                   </p>
 
-                  <div className="bg-[#060711] border border-white/5 rounded-2.5xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden">
+                  <div className="bg-space-dark border border-white/5 rounded-2xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden">
                     <img 
                       src={user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"} 
                       className="w-16 h-16 rounded-2xl border border-indigo-500/30 object-cover shadow-[0_0_15px_rgba(99,102,241,0.2)]"
@@ -495,7 +495,7 @@ export default function Dashboard({
                       value={customRole}
                       onChange={(e) => setCustomRole(e.target.value)}
                       placeholder={t("onboarding.custom_placeholder", "أو اكتب تخصصاً مخصصاً بنفسك...")}
-                      className="flex-1 bg-[#060711] border border-white/10 rounded-2xl px-5 py-4 text-right ltr:text-left focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
+                      className="flex-1 bg-space-dark border border-white/10 rounded-2xl px-5 py-4 text-right ltr:text-left focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
                     />
                   </div>
 
@@ -557,7 +557,7 @@ export default function Dashboard({
                           playSound("message");
                         }}
                         className={cn(
-                          "w-full p-4 rounded-2.5xl border transition-all flex items-center justify-between text-xs font-bold font-sans rtl:text-right ltr:text-left",
+                          "w-full p-4 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold font-sans rtl:text-right ltr:text-left",
                           dailyFocusTarget === target.rate
                             ? "bg-indigo-500/10 border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]"
                             : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200"
@@ -609,8 +609,8 @@ export default function Dashboard({
         className={cn(
            "fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl rounded-full transition-all duration-500 px-2 py-2 flex items-center justify-between border",
            scrolled 
-             ? "bg-[#0b0c16]/80 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-white/10"
-             : "bg-[#0b0c16]/40 backdrop-blur-md border-transparent shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+             ? "bg-space-dark/80 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-white/10"
+             : "bg-space-dark/40 backdrop-blur-md border-transparent shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         )}
       >
         <div className="flex items-center">
@@ -831,7 +831,7 @@ export default function Dashboard({
 
       {/* Floating Bottom Dock */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <div className="flex items-center gap-2 bg-[#060713]/80 backdrop-blur-3xl p-2 rounded-full border border-white/12 shadow-[0_25px_65px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.06)] hover:border-white/20 transition-all duration-300 relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-gradient-to-t before:from-white/[0.04] before:to-transparent before:shadow-[inset_y_1px_rgba(255,255,255,0.15)]">
+        <div className="flex items-center gap-2 bg-space-dark/80 backdrop-blur-3xl p-2 rounded-full border border-white/12 shadow-[0_25px_65px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.06)] hover:border-white/20 transition-all duration-300 relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-gradient-to-t before:from-white/[0.04] before:to-transparent before:shadow-[inset_y_1px_rgba(255,255,255,0.15)]">
           <DockButton
             icon={<Rocket size={20} />}
             label={t("cat.focus", "التركيز")}

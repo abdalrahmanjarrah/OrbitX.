@@ -93,6 +93,7 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
+import { showToast } from "../lib/cosmicUI";
 
 import { cn } from "../lib/utils";
 import {
@@ -344,7 +345,7 @@ export default function HomeView({
       );
       const snap = await getDocs(q);
       if (snap.empty) {
-        alert(isAr ? "رمز غير صحيح! تأكد من الرمز وجرب مجدداً." : "Invalid code!");
+        showToast(isAr ? "رمز غير صحيح! تأكد من الرمز وجرب مجدداً." : "Invalid code!", "error");
         return;
       }
       const room = snap.docs[0];
@@ -355,7 +356,7 @@ export default function HomeView({
       });
       onEnterStation(roomId);
     } catch (e) {
-      alert(isAr ? "تعذر الانضمام. حاول مجدداً." : "Failed to join.");
+      showToast(isAr ? "تعذر الانضمام. حاول مجدداً." : "Failed to join.", "error");
     } finally {
       setJoiningByCode(false);
     }
@@ -390,8 +391,12 @@ export default function HomeView({
       setNewRoomImageUrl("");
       setIsPrivateRoom(false);
       if (isPrivateRoom && joinCode) {
-        alert(
-          `🔒 محطتك الخاصة جاهزة!\n\nرمز الانضمام: ${joinCode}\n\nأرسله لأصدقائك ليدخلوا إلى محطتك.`,
+        showToast(
+          isAr
+            ? `🔒 محطتك الخاصة جاهزة! رمز الانضمام: ${joinCode} — أرسله لأصدقائك ليدخلوا إلى محطتك.`
+            : `🔒 Your private station is ready! Join code: ${joinCode} — share it with friends to let them in.`,
+          "success",
+          6000,
         );
       }
       onEnterStation(roomRef.id);
@@ -476,7 +481,7 @@ export default function HomeView({
           </div>
 
           <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 shrink-0">
-             <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
+             <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-space-dark/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                   <Timer size={12} className="text-cyan-400" /> {t("home.focus_hours", "ساعات التركيز")}
@@ -484,7 +489,7 @@ export default function HomeView({
                 <div className="text-3xl font-black text-white">{Math.round((user.xp / 60) * 10) / 10} <span className="text-xs font-semibold text-gray-500">{isAr ? "ساعة" : "hrs"}</span></div>
              </div>
              
-             <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-[#0b0c1b]/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
+             <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-space-dark/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                   <Star size={12} className="text-fuchsia-400" /> {t("home.space_rank", "رتبة الفضاء")}
@@ -618,7 +623,7 @@ export default function HomeView({
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className={cn("w-full max-w-md p-8 rounded-[2rem] bg-[#0c0d1e] border border-indigo-500/30 shadow-[0_0_80px_rgba(99,102,241,0.2)] relative z-10", isAr ? "text-right" : "text-left")}
+              className={cn("w-full max-w-md p-8 rounded-[2rem] bg-space-dark border border-indigo-500/30 shadow-[0_0_80px_rgba(99,102,241,0.2)] relative z-10", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             >
               <div className="flex items-center justify-between mb-8">
@@ -643,7 +648,7 @@ export default function HomeView({
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
                     placeholder={isAr ? "مثال: مدار التركيز العميق..." : "e.g. Deep Coding Chambers, Science Lab..."}
-                    className="w-full p-4 rounded-2xl bg-[#060711] border border-white/10 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all text-white text-lg placeholder-gray-700"
+                    className="w-full p-4 rounded-2xl bg-space-dark border border-white/10 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all text-white text-lg placeholder-gray-700"
                   />
                 </div>
 
@@ -655,7 +660,7 @@ export default function HomeView({
                       "w-full flex items-center justify-between gap-3 p-4 rounded-2xl border transition-all",
                       isPrivateRoom
                         ? "bg-cyan-500/10 border-cyan-400/40 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-                        : "bg-[#060711] border-white/10 hover:border-white/25",
+                        : "bg-space-dark border-white/10 hover:border-white/25",
                     )}
                   >
                     <div className="flex items-center gap-3">

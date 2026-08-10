@@ -39,7 +39,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
     <div className="space-y-6">
       {/* Derived Statistics Header widgets */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-[#0b0c16]/50 border border-white/5 flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
           <span className="text-xs text-gray-400 font-medium">معدل الفوز</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-emerald-400">{winRate}%</span>
@@ -47,7 +47,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c16]/50 border border-white/5 flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
           <span className="text-xs text-gray-400 font-medium">أعلى نتيجة فوز</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-indigo-400">+{maxVictoriousXp} XP</span>
@@ -55,7 +55,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c16]/50 border border-white/5 flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
           <span className="text-xs text-gray-400 font-medium">إجمالي الهزائم</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-rose-400">{losses}</span>
@@ -63,7 +63,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c16]/50 border border-white/5 flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
           <span className="text-xs text-gray-400 font-medium">التعادلات</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-gray-300">{draws}</span>
@@ -73,7 +73,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
       </div>
 
       {/* Ledger history listing */}
-      <div className="p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/30">
+      <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
         <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
           <Trophy size={15} className="text-indigo-400" />
           <span>سجل السباقات السابقة</span>

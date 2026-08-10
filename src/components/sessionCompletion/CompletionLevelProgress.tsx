@@ -43,7 +43,7 @@ export const CompletionLevelProgress: React.FC<CompletionLevelProgressProps> = (
       </div>
 
       {/* Footer Indicators */}
-      <div className="flex items-center justify-between mt-1 text-[9px] text-gray-600 font-mono">
+      <div className="flex items-center justify-between mt-1 text-[11px] text-gray-600 font-mono">
         <span>{level + 1}</span>
         <span>{xpInCurrentLevel} / 1000 XP</span>
         <span>{level}</span>

@@ -189,7 +189,7 @@ export default function BadgeCard({ icon, title, xp, active = false }: BadgeCard
         "p-4 rounded-3xl border flex flex-col items-center text-center gap-2 transition-all",
         active
           ? "bg-indigo-500/20 border-indigo-400/50"
-          : "bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border-white/10 opacity-40 grayscale",
+          : "bg-space-dark shadow-lg shadow-indigo-900/10 border-white/10 opacity-40 grayscale",
       )}
     >
       <span className="text-3xl mb-1">{icon}</span>

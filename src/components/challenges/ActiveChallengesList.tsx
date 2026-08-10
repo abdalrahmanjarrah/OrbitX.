@@ -4,6 +4,7 @@ import { Challenge, UserData } from "../../shared";
 import { db } from "../../firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { motion } from "motion/react";
+import { showToast } from "../../lib/cosmicUI";
 
 interface ActiveChallengesListProps {
   challenges: Challenge[];
@@ -37,7 +38,7 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
   const handleFinishChallengeEarly = async (challenge: Challenge) => {
     // Prevent double-claim: only an active battle can be settled
     if (challenge.status !== "active") {
-      alert("هذا السباق لم يبدأ بعد أو تم احتسابه سابقاً.");
+      showToast("هذا السباق لم يبدأ بعد أو تم احتسابه سابقاً.", "warning");
       return;
     }
 
@@ -110,7 +111,7 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
 
   if (activeOnly.length === 0) {
     return (
-      <div className="rounded-3xl border border-white/5 bg-[#0b0c16]/30 backdrop-blur-md p-12 text-center max-w-2xl mx-auto">
+      <div className="rounded-3xl border border-white/5 bg-space-dark/30 backdrop-blur-md p-12 text-center max-w-2xl mx-auto">
         <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6 shadow-[0_0_30px_rgba(99,102,241,0.05)]">
           🚀
         </div>

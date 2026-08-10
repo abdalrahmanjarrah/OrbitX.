@@ -95,6 +95,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import {
   auth,
   db,
@@ -402,7 +403,7 @@ export default function FleetsView({ user }: { user: UserData }) {
       setActiveFleet(null);
       setIsConfirmingDisband(false);
     } catch (e) {
-      alert("حدث خطأ أثناء تفكيك الأسطول.");
+      showToast("حدث خطأ أثناء تفكيك الأسطول.", "error");
     }
   };
 
@@ -457,7 +458,7 @@ export default function FleetsView({ user }: { user: UserData }) {
       setActiveFleet(null);
       setIsConfirmingLeave(false);
     } catch (e) {
-      alert("حدث خطأ أثناء المغادرة.");
+      showToast("حدث خطأ أثناء المغادرة.", "error");
     }
   };
 
@@ -504,7 +505,7 @@ export default function FleetsView({ user }: { user: UserData }) {
         `}</style>
 
         {/* Ambient Space Alliance Header Card */}
-        <div className="relative bg-[#060713]/85 rounded-3xl p-8 md:p-10 border border-white/10 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col lg:flex-row items-center justify-between gap-8 mb-10 z-10 select-none bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]">
+        <div className="relative bg-space-dark/85 rounded-3xl p-8 md:p-10 border border-white/10 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col lg:flex-row items-center justify-between gap-8 mb-10 z-10 select-none bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]">
           {/* Nebula Glow Backdrops */}
           <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none animate-[glow-pulse_8s_infinite_ease-in-out]" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-[140px] pointer-events-none animate-[glow-pulse_12s_infinite_ease-in-out]" />
@@ -609,7 +610,7 @@ export default function FleetsView({ user }: { user: UserData }) {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0a0b16]/95 backdrop-blur-xl p-8 rounded-3xl border border-indigo-500/30 shadow-2xl mb-8 relative"
+            className="bg-space-dark/95 backdrop-blur-xl p-8 rounded-3xl border border-indigo-500/30 shadow-2xl mb-8 relative"
           >
             <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <span>تأسيس أسطول جديد ✨</span>
@@ -714,7 +715,7 @@ export default function FleetsView({ user }: { user: UserData }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-[#0a0b16]/85 backdrop-blur-xl rounded-3xl p-6 border border-white/10 hover:border-indigo-500/40 hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] transition-all duration-350 relative overflow-hidden group shadow-md hover:-translate-y-1"
+              className="bg-space-dark/85 backdrop-blur-xl rounded-3xl p-6 border border-white/10 hover:border-indigo-500/40 hover:shadow-[0_15px_30px_rgba(99,102,241,0.15)] transition-all duration-300 relative overflow-hidden group shadow-md hover:-translate-y-1"
             >
               <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
 
@@ -756,14 +757,14 @@ export default function FleetsView({ user }: { user: UserData }) {
               <button
                 onClick={() => handleJoinFleet(fleet.id)}
                 disabled={fleet.members?.length >= 10}
-                className="w-full relative z-10 py-3 rounded-xl bg-[#0c0d1e] hover:bg-indigo-500 hover:text-white border border-indigo-500/20 hover:border-indigo-500 transition-all font-bold duration-300 disabled:bg-[#0c0d1e]/50 disabled:text-gray-500 disabled:border-transparent disabled:cursor-not-allowed"
+                className="w-full relative z-10 py-3 rounded-xl bg-space-dark hover:bg-indigo-500 hover:text-white border border-indigo-500/20 hover:border-indigo-500 transition-all font-bold duration-300 disabled:bg-space-dark/50 disabled:text-gray-500 disabled:border-transparent disabled:cursor-not-allowed"
               >
                 {fleet.members?.length >= 10 ? "الأسطول ممتلئ" : "انضم للأسطول"}
               </button>
             </motion.div>
           ))}
           {allFleets.length === 0 && !isCreating && (
-            <div className="col-span-full py-24 bg-[#0a0b16]/70 rounded-3xl border border-transparent flex flex-col items-center justify-center text-center relative overflow-hidden select-none">
+            <div className="col-span-full py-24 bg-space-dark/70 rounded-3xl border border-transparent flex flex-col items-center justify-center text-center relative overflow-hidden select-none">
               {/* Subtle background circles */}
               <div className="absolute w-72 h-72 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute w-[400px] h-[400px] border border-dashed border-white/[0.02] rounded-full pointer-events-none animate-[spin_60s_linear_infinite]" />
@@ -781,7 +782,7 @@ export default function FleetsView({ user }: { user: UserData }) {
                 </p>
                 <button
                   onClick={() => setIsCreating(true)}
-                  className="px-6 py-3 bg-[#0c0d1e] hover:bg-indigo-600 hover:text-white text-indigo-400 border border-indigo-500/20 hover:border-indigo-500 font-bold rounded-xl transition-all duration-300"
+                  className="px-6 py-3 bg-space-dark hover:bg-indigo-600 hover:text-white text-indigo-400 border border-indigo-500/20 hover:border-indigo-500 font-bold rounded-xl transition-all duration-300"
                 >
                   تأسيس الأسطول الأول 🚀
                 </button>
@@ -798,7 +799,7 @@ export default function FleetsView({ user }: { user: UserData }) {
       className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
       dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="bg-[#060713]/85 backdrop-blur-3xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
+      <div className="bg-space-dark/85 backdrop-blur-3xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
         <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
 
@@ -918,7 +919,7 @@ export default function FleetsView({ user }: { user: UserData }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[600px] items-start">
-        <div className="lg:col-span-2 bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col min-h-[400px] lg:h-full overflow-hidden shadow-xl">
+        <div className="lg:col-span-2 bg-space-dark/90 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col min-h-[400px] lg:h-full overflow-hidden shadow-xl">
           <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <MessageCircle size={20} className="text-fuchsia-400" /> غرفة
@@ -986,7 +987,7 @@ export default function FleetsView({ user }: { user: UserData }) {
           </div>
         </div>
 
-        <div className="bg-[#0a0b16]/90 backdrop-blur-xl rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col min-h-[300px] lg:h-full">
+        <div className="bg-space-dark/90 backdrop-blur-xl rounded-3xl border border-white/10 p-6 shadow-xl flex flex-col min-h-[300px] lg:h-full">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Shield size={20} className="text-indigo-400" /> طاقم الأسطول
@@ -1054,16 +1055,16 @@ export default function FleetsView({ user }: { user: UserData }) {
                     )}
                     {kickingMemberId === m.uid ? (
                       <div className="flex items-center gap-1.5 bg-red-500/10 px-1 py-1 rounded-md border border-red-500/30">
-                        <span className="text-[9px] text-red-500">طرد؟</span>
+                        <span className="text-[11px] text-red-500">طرد؟</span>
                         <button
                           onClick={() => handleKickMember(m.uid)}
-                          className="text-[9px] text-white bg-red-500 px-1.5 py-0.5 rounded"
+                          className="text-[11px] text-white bg-red-500 px-1.5 py-0.5 rounded"
                         >
                           نعم
                         </button>
                         <button
                           onClick={() => setKickingMemberId(null)}
-                          className="text-[9px] text-gray-400 px-1.5 py-0.5"
+                          className="text-[11px] text-gray-400 px-1.5 py-0.5"
                         >
                           لا
                         </button>

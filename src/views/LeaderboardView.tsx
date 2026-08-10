@@ -219,12 +219,12 @@ export default function LeaderboardView({
           <Trophy className="text-yellow-400" size={32} />
           {isAr ? "قائمة المتصدرين" : "Cosmic Leaderboard"}
         </h2>
-        <div className="px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-sm text-gray-400">
+        <div className="px-4 py-2 bg-space-dark shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-sm text-gray-400">
           {isAr ? "أفضل 50 رائد فضاء" : "Top 50 Astronauts"}
         </div>
       </div>
 
-      <div className="bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-lg bg-[#0a0b16]/60">
+      <div className="bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-lg bg-space-dark/60">
         <div className={cn("grid grid-cols-12 gap-2 md:gap-4 p-4 border-b border-white/10 text-sm font-bold text-gray-400", isAr ? "text-right" : "text-left")}>
           <div className="col-span-2 md:col-span-1 text-center">{isAr ? "المركز" : "Rank"}</div>
           <div className="col-span-5 md:col-span-6">{isAr ? "الرائد" : "Astronaut"}</div>
@@ -241,7 +241,7 @@ export default function LeaderboardView({
                   ? "bg-gray-300/20 text-gray-300 border-gray-300/30"
                   : index === 2
                     ? "bg-amber-700/20 text-amber-600 border-amber-700/30"
-                    : "bg-[#0a0b16] shadow-lg shadow-indigo-900/10 text-gray-400 border-white/10";
+                    : "bg-space-dark shadow-lg shadow-indigo-900/10 text-gray-400 border-white/10";
 
             return (
               <motion.div
@@ -250,7 +250,7 @@ export default function LeaderboardView({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={cn(
-                  "grid grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-[#0a0b16] shadow-lg shadow-indigo-900/10",
+                  "grid grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-space-dark shadow-lg shadow-indigo-900/10",
                   leader.uid === user.uid && "bg-indigo-500/10",
                 )}
               >
@@ -300,7 +300,7 @@ export default function LeaderboardView({
                 </div>
 
                 <div className="col-span-2 flex justify-center">
-                  <div className="px-2 md:px-3 py-1 bg-[#0a0b16]/80 shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500 text-[10px] md:text-sm">
+                  <div className="px-2 md:px-3 py-1 bg-space-dark/80 shadow-lg shadow-indigo-900/10 rounded-lg font-mono font-bold text-indigo-500 text-[10px] md:text-sm">
                     {leader.level}
                   </div>
                 </div>

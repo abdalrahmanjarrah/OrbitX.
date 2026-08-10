@@ -209,7 +209,7 @@ export default function InteractiveSecretGlobe() {
                   <span className="text-[10px] font-mono font-black text-cyan-400 tracking-wider uppercase">
                     أرشيف الوعي الكوني
                   </span>
-                  <div className="flex items-center gap-1.5 text-[9px] font-black bg-red-500/10 text-red-400 px-2.5 py-0.5 rounded-full border border-red-500/20">
+                  <div className="flex items-center gap-1.5 text-[11px] font-black bg-red-500/10 text-red-400 px-2.5 py-0.5 rounded-full border border-red-500/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                     <span>{currentSecret.securityLevel}</span>
                   </div>
@@ -234,7 +234,7 @@ export default function InteractiveSecretGlobe() {
                 </p>
 
                 {/* Inner stats */}
-                <div className="flex items-center justify-center gap-4 mt-5.5 pt-3 border-t border-white/5 font-mono text-[9px] text-gray-500">
+                <div className="flex items-center justify-center gap-4 mt-5.5 pt-3 border-t border-white/5 font-mono text-[11px] text-gray-500">
                   <div>
                     <span>معدل الأثر: </span>
                     <span className="text-emerald-400 font-bold">

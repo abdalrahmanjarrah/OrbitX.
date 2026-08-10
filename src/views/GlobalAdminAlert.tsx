@@ -50,7 +50,7 @@ export default function GlobalAdminAlert() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -100, opacity: 0 }}
-        className="fixed top-10 left-1/2 -translate-x-1/2 w-full max-w-lg z-[99999] px-4"
+        className="fixed top-10 left-1/2 -translate-x-1/2 w-full max-w-lg z-[950] px-4"
         dir={isAr ? "rtl" : "ltr"}
       >
         <div className="bg-red-600/95 backdrop-blur-xl border-2 border-red-400 p-4 rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.5)] flex items-start gap-4">

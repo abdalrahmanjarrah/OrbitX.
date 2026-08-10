@@ -93,6 +93,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import {
   auth,
   db,
@@ -215,7 +216,7 @@ export default function UserModal({
       await updateDoc(doc(db, "users", userId), {
         fleetInvites: arrayUnion(myFleet.id),
       });
-      alert("تم إرسال دعوة الانضمام للأسطول!");
+      showToast("تم إرسال دعوة الانضمام للأسطول!", "success");
     } catch (e) {}
   };
 
@@ -310,7 +311,7 @@ export default function UserModal({
         timestamp: serverTimestamp(),
       }).catch(console.error);
       setShowChallengeModal(false);
-      alert(`صفخة التحدي مرسلة! ${userData.displayName} سيتلقى إشعاراً بدعوتك.`);
+      showToast(`صفخة التحدي مرسلة! ${userData.displayName} سيتلقى إشعاراً بدعوتك.`, "success");
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "challenges");
     }
@@ -329,7 +330,7 @@ export default function UserModal({
         });
         batch.update(doc(db, "users", userId), { friendsCount: increment(-1) });
         await batch.commit();
-        alert("تم إلغاء الصداقة");
+        showToast("تم إلغاء الصداقة", "info");
       } else {
         await addDoc(collection(db, "users", userId, "notifications"), {
           type: "friend_request",
@@ -340,7 +341,7 @@ export default function UserModal({
           read: false,
           timestamp: serverTimestamp(),
         });
-        alert("تم إرسال طلب الصداقة بنجاح!");
+        showToast("تم إرسال طلب الصداقة بنجاح!", "success");
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "friend_request");
@@ -382,7 +383,7 @@ export default function UserModal({
                     )}
                   ></div>
 
-                  <div className="w-32 h-32 rounded-full border-4 border-indigo-400 p-1 relative overflow-hidden z-10 bg-[#0a0b16]">
+                  <div className="w-32 h-32 rounded-full border-4 border-indigo-400 p-1 relative overflow-hidden z-10 bg-space-dark">
                     <img
                       src={userData.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${userData.uid}`}
                       className="w-full h-full rounded-full object-cover"
@@ -460,27 +461,27 @@ export default function UserModal({
                 </div>
 
                 <div className="flex flex-wrap justify-center md:justify-end gap-3 text-xs">
-                  <div className="text-center px-6 py-3 bg-[#0a0b16] rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
+                  <div className="text-center px-6 py-3 bg-space-dark rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
                     <span className="block font-black text-2xl text-indigo-400">
                       {exhibitions.length}
                     </span>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
+                    <span className="text-gray-400 text-[11px] uppercase font-bold tracking-wider">
                       منشور
                     </span>
                   </div>
-                  <div className="text-center px-6 py-3 bg-[#0a0b16] rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
+                  <div className="text-center px-6 py-3 bg-space-dark rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
                     <span className="block font-black text-2xl text-blue-400">
                       {userData.xp}
                     </span>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
+                    <span className="text-gray-400 text-[11px] uppercase font-bold tracking-wider">
                       XP
                     </span>
                   </div>
-                  <div className="text-center px-6 py-3 bg-[#0a0b16] rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
+                  <div className="text-center px-6 py-3 bg-space-dark rounded-2xl border border-white/5 backdrop-blur-md shadow-inner shadow-black/20">
                     <span className="block font-black text-2xl text-fuchsia-400">
                       {friends.length}
                     </span>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
+                    <span className="text-gray-400 text-[11px] uppercase font-bold tracking-wider">
                       صديق
                     </span>
                   </div>
@@ -509,10 +510,10 @@ export default function UserModal({
                         const badge = BADGES.find((b) => b.id === badgeId);
                         return badge ? (
                           <div key={badgeId} className="group relative">
-                            <div className="w-10 h-10 rounded-xl bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all cursor-help">
+                            <div className="w-10 h-10 rounded-xl bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 flex items-center justify-center text-xl hover:bg-white/5 transition-all cursor-help">
                               {badge.icon}
                             </div>
-                            <div className="absolute bottom-full right-0 mb-2 w-32 p-2 bg-[#0a0b16] border border-white/10 rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            <div className="absolute bottom-full right-0 mb-2 w-32 p-2 bg-space-dark border border-white/10 rounded-lg text-[11px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                               <p className="font-bold text-indigo-500">
                                 {badge.title}
                               </p>
@@ -542,7 +543,7 @@ export default function UserModal({
                 <span>التقدم للرتبة التالية</span>
                 <span>{getAstronautRank(userData.xp).nextRankTitle}</span>
               </div>
-              <div className="h-6 bg-[#0a0b16] shadow-inner shadow-black/80 rounded-full overflow-hidden border border-white/10 relative">
+              <div className="h-6 bg-space-dark shadow-inner shadow-black/80 rounded-full overflow-hidden border border-white/10 relative">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
@@ -591,13 +592,13 @@ export default function UserModal({
                           title="متصل الآن"
                         />
                       )}
-                    <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 px-2 py-1 bg-[#0a0b16] border border-white/10 rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
+                    <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 px-2 py-1 bg-space-dark border border-white/10 rounded-lg text-[11px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
                       {friend.displayName}
                     </div>
                   </div>
                 ))}
                 {friends.length > 8 && (
-                  <div className="w-10 h-10 rounded-full border-2 border-[#0a0b16] bg-[#0a0b16] text-blue-400 flex items-center justify-center text-xs font-bold relative z-0 shadow-inner">
+                  <div className="w-10 h-10 rounded-full border-2 border-[#0a0b16] bg-space-dark text-blue-400 flex items-center justify-center text-xs font-bold relative z-0 shadow-inner">
                     +{friends.length - 8}
                   </div>
                 )}
@@ -634,7 +635,7 @@ export default function UserModal({
                 {exhibitions.map((ex, i) => (
                   <div
                     key={ex.id}
-                    className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 group relative"
+                    className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-space-dark shadow-lg shadow-indigo-900/10 group relative"
                   >
                     {ex.url ? (
                       <img
@@ -643,7 +644,7 @@ export default function UserModal({
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">LOADING</div>
+                      <div className="w-full h-full bg-space-dark flex items-center justify-center text-[10px] text-gray-500 font-mono">LOADING</div>
                     )}
                     <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <span className="text-xs font-bold">

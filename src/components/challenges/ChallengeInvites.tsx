@@ -164,7 +164,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Quick Invite Form */}
-      <div className="lg:col-span-5 p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/50 backdrop-blur-md">
+      <div className="lg:col-span-5 p-6 rounded-3xl border border-white/5 bg-space-dark/50 backdrop-blur-md">
         <h3 className="text-md font-bold text-white flex items-center gap-2 mb-4">
           <Swords size={16} className="text-indigo-400" />
           <span>سباق تركيز سريع</span>
@@ -268,7 +268,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       {/* Invites Lists View */}
       <div className="lg:col-span-7 space-y-6">
         {/* Incoming challenges */}
-        <div className="p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/30">
+        <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
             <Mail size={15} className="text-fuchsia-400" />
             <span>الدعوات الواردة ({incomingInvites.length})</span>
@@ -321,7 +321,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         </div>
 
         {/* Outgoing challenges */}
-        <div className="p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/30">
+        <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
             <Send size={15} className="text-indigo-400" />
             <span>الدعوات المرسلة المعلقة ({outgoingInvites.length})</span>

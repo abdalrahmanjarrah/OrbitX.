@@ -193,7 +193,7 @@ export default function FarmDisplay({
     <>
       {show3DFarm && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-           <div className="bg-[#050510] border border-cyan-800 p-8 rounded-2xl text-center">
+           <div className="bg-space-dark border border-cyan-800 p-8 rounded-2xl text-center">
              <h2 className="text-xl text-cyan-300 mb-4">
                {isAr ? "قسم العوالم ثلاثية الأبعاد قيد التطوير والبرمجة" : "Farm 3D is under construction"}
              </h2>
@@ -204,10 +204,10 @@ export default function FarmDisplay({
         </div>
       )}
 
-      <div className={cn("bg-[#0b0c16] border border-white/5 rounded-3xl p-8 shadow-2xl relative mb-8 overflow-hidden", isAr ? "text-right" : "text-left")}>
+      <div className={cn("bg-space-dark border border-white/5 rounded-3xl p-8 shadow-2xl relative mb-8 overflow-hidden", isAr ? "text-right" : "text-left")}>
         {/* Work In Progress Lock Overlay */}
-        <div className="absolute inset-0 z-50 bg-[#0a0b16]/70 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-            <div className="p-4 bg-[#0a0b16] rounded-full shadow-2xl shadow-yellow-500/20 mb-4 border border-yellow-500/30">
+        <div className="absolute inset-0 z-50 bg-space-dark/70 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+            <div className="p-4 bg-space-dark rounded-full shadow-2xl shadow-yellow-500/20 mb-4 border border-yellow-500/30">
               <Lock className="w-10 h-10 text-yellow-500" />
             </div>
             <h3 className="text-2xl font-black text-white mb-2 font-['Space_Grotesk']">

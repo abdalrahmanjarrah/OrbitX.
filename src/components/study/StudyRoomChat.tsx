@@ -196,7 +196,7 @@ function StudyRoomChatComponent({
               )}
               {typingNames.length > 0 && (
                 <div
-                  className={cn("sticky top-0 z-10 text-[10px] text-indigo-400 italic mb-2 animate-pulse bg-[#0a0b16]/80 p-1.5 rounded-lg backdrop-blur-sm self-start inline-block", isAr ? "text-right" : "text-left")}
+                  className={cn("sticky top-0 z-10 text-[10px] text-indigo-400 italic mb-2 animate-pulse bg-space-dark/80 p-1.5 rounded-lg backdrop-blur-sm self-start inline-block", isAr ? "text-right" : "text-left")}
                   dir={isAr ? "rtl" : "ltr"}
                 >
                   {typingNames.slice(0, 3).join(isAr ? " و " : ", ")}{" "}
@@ -244,13 +244,13 @@ function StudyRoomChatComponent({
                                 setDeletingMsgId(null);
                               }
                             }}
-                            className="text-[9px] text-red-500 hover:text-white font-bold"
+                            className="text-[11px] text-red-500 hover:text-white font-bold"
                           >
                             نعم
                           </button>
                           <button
                             onClick={() => setDeletingMsgId(null)}
-                            className="text-[9px] text-gray-400"
+                            className="text-[11px] text-gray-400"
                           >
                             لا
                           </button>
@@ -273,7 +273,7 @@ function StudyRoomChatComponent({
                           "hover:text-indigo-500 transition-colors",
                       )}
                     >
-                      <span className="text-[9px] text-gray-400 font-medium">
+                      <span className="text-[11px] text-gray-400 font-medium">
                         {msg.userName}
                       </span>
                       {msg.userPhoto && (
@@ -302,7 +302,7 @@ function StudyRoomChatComponent({
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 bg-[#0a0b16]/80 border-t border-white/10 shrink-0">
+            <div className="p-3 bg-space-dark/80 border-t border-white/10 shrink-0">
               <div className="relative">
                 {(() => {
                   const isLockedForMe = room?.isChatLocked && !isHost;
@@ -354,7 +354,7 @@ function StudyRoomChatComponent({
                             : (isAr ? "اكتب رسالة..." : "Type a message...")
                         }
                         className={cn(
-                          "w-full bg-[#050510] shadow-inner border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
+                          "w-full bg-space-dark shadow-inner border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
                           isAr ? "pl-14 text-right" : "pr-14 text-left",
                           isLockedForMe
                             ? "border-red-500/30 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-red-400/60"
@@ -390,7 +390,7 @@ function StudyRoomChatComponent({
           "w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl",
           isChatDrawerOpen
             ? "bg-indigo-600 text-white shadow-indigo-900/50"
-            : "bg-[#0a0b16] border border-white/10 text-cyan-400 hover:bg-white/5 shadow-black/50",
+            : "bg-space-dark border border-white/10 text-cyan-400 hover:bg-white/5 shadow-black/50",
         )}
       >
         <MessageCircle

@@ -41,6 +41,7 @@ import {
 } from "firebase/firestore";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../context/LanguageContext";
+import { showToast, confirmDialog } from "../lib/cosmicUI";
 
 interface ChatMessage {
   senderId: string;
@@ -260,7 +261,7 @@ export default function SupportView({ user }: { user: UserData }) {
 
   // Delete message as Admin
   const handleDeleteMessage = async (ticket: SupportTicket, message: ChatMessage) => {
-    if (!window.confirm(isAr ? "هل أنت متأكد من حذف هذه الرسالة؟" : "Are you sure you want to delete this message?")) return;
+    if (!(await confirmDialog(isAr ? "هل أنت متأكد من حذف هذه الرسالة؟" : "Are you sure you want to delete this message?", { title: isAr ? "حذف الرسالة" : "Delete message", danger: true }))) return;
     try {
       const ticketRef = doc(db, "support_tickets", ticket.id);
       
@@ -280,7 +281,7 @@ export default function SupportView({ user }: { user: UserData }) {
 
   // Delete whole ticket as Admin
   const handleDeleteTicket = async (ticketId: string) => {
-    if (!window.confirm(isAr ? "هل أنت متأكد من حذف هذه المحادثة بالكامل؟" : "Are you sure you want to delete this entire chat?")) return;
+    if (!(await confirmDialog(isAr ? "هل أنت متأكد من حذف هذه المحادثة بالكامل؟" : "Are you sure you want to delete this entire chat?", { title: isAr ? "حذف المحادثة" : "Delete chat", danger: true }))) return;
     try {
       setSelectedTicketId(null);
       await deleteDoc(doc(db, "support_tickets", ticketId));
@@ -305,10 +306,11 @@ export default function SupportView({ user }: { user: UserData }) {
         { id: docRef.id, text: suggestionText.trim(), userId: user.uid, userName: user.displayName || user.email || (isAr ? "مستخدم" : "User"), timestamp: null },
         ...prev,
       ]);
-      alert(
+      showToast(
         isAr
           ? "تم إرسال اقتراحك بنجاح. شكراً لمساهمتك في تطوير OrbitX!"
-          : "Your suggestion was submitted successfully. Thank you for contributing to OrbitX!"
+          : "Your suggestion was submitted successfully. Thank you for contributing to OrbitX!",
+        "success",
       );
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, "suggestions");
@@ -422,7 +424,7 @@ export default function SupportView({ user }: { user: UserData }) {
           </div>
           
           {/* Main Tabs */}
-          <div className="flex bg-[#050510]/80 border border-white/10 rounded-2xl p-1 self-stretch lg:self-auto">
+          <div className="flex bg-space-dark/80 border border-white/10 rounded-2xl p-1 self-stretch lg:self-auto">
             <button
               onClick={() => setTab("support")}
               className={cn(
@@ -458,7 +460,7 @@ export default function SupportView({ user }: { user: UserData }) {
           /* ========================================= */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] items-stretch">
             {/* Left Sidebar: Tickets list */}
-            <div className="lg:col-span-5 bg-[#0b0c16] border border-white/10 rounded-3xl p-5 flex flex-col space-y-4 shadow-xl">
+            <div className="lg:col-span-5 bg-space-dark border border-white/10 rounded-3xl p-5 flex flex-col space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Inbox size={18} className="text-indigo-400" />
@@ -500,13 +502,13 @@ export default function SupportView({ user }: { user: UserData }) {
 
               {/* Search ticket box */}
               <div className="relative">
-                <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
                   placeholder={isAr ? "ابحث باسم المستخدم أو نص الرسالة..." : "Search tickets, message content..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#050510] border border-white/10 rounded-xl pr-10 pl-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all"
+                  className="w-full bg-space-dark border border-white/10 rounded-xl ps-10 pe-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
 
@@ -527,7 +529,7 @@ export default function SupportView({ user }: { user: UserData }) {
                           "p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group",
                           isSelected
                             ? "bg-indigo-600/10 border-indigo-500/40 shadow-inner shadow-indigo-950/50"
-                            : "bg-[#050510]/60 border-white/5 hover:border-white/15"
+                            : "bg-space-dark/60 border-white/5 hover:border-white/15"
                         )}
                       >
                         {t.status === "open" && (
@@ -567,11 +569,11 @@ export default function SupportView({ user }: { user: UserData }) {
             </div>
 
             {/* Right Chat panel */}
-            <div className="lg:col-span-7 bg-[#0b0c16] border border-white/10 rounded-3xl flex flex-col overflow-hidden shadow-xl">
+            <div className="lg:col-span-7 bg-space-dark border border-white/10 rounded-3xl flex flex-col overflow-hidden shadow-xl">
               {activeTicket ? (
                 <div className="h-full flex flex-col min-h-[500px]">
                   {/* Chat header */}
-                  <div className="border-b border-white/10 p-4 bg-[#050510]/40 flex items-center justify-between">
+                  <div className="border-b border-white/10 p-4 bg-space-dark/40 flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-white text-base">{activeTicket.userName}</h3>
@@ -668,12 +670,12 @@ export default function SupportView({ user }: { user: UserData }) {
                   </div>
 
                   {/* Admin message input dispatch */}
-                  <div className="p-4 border-t border-white/10 bg-[#050510]/20 flex gap-3">
+                  <div className="p-4 border-t border-white/10 bg-space-dark/20 flex gap-3">
                     <textarea
                       value={adminReplyText}
                       onChange={(e) => setAdminReplyText(e.target.value)}
                       placeholder={isAr ? "اكتب الرد الرسمي للإدارة هنا..." : "Compose official administration response..."}
-                      className="flex-1 bg-[#050510] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all resize-none h-12"
+                      className="flex-1 bg-space-dark border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all resize-none h-12"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -711,11 +713,11 @@ export default function SupportView({ user }: { user: UserData }) {
           /* ========================================= */
           /* NORMAL USER Support View WITH chat rooms   */
           /* ========================================= */
-          <div className="bg-[#0b0c16] border border-white/10 rounded-3xl overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-12 min-h-[550px] items-stretch">
+          <div className="bg-space-dark border border-white/10 rounded-3xl overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-12 min-h-[550px] items-stretch">
             {/* Sidebar with existing ticket tabs and helpful guides */}
             <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-white/10 p-5 flex flex-col justify-between space-y-6">
               <div className="space-y-4">
-                <div className="flex bg-[#050510]/80 border border-white/10 rounded-xl p-1">
+                <div className="flex bg-space-dark/80 border border-white/10 rounded-xl p-1">
                   <button
                     onClick={() => setActiveTicketTab("new")}
                     className={cn(
@@ -735,7 +737,7 @@ export default function SupportView({ user }: { user: UserData }) {
                     <History size={13} />
                     {isAr ? "محادثاتك" : "My Chats"}
                     {tickets.length > 0 && (
-                      <span className="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-1.5 py-0.5 rounded-full text-[9px]">
+                      <span className="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-1.5 py-0.5 rounded-full text-[11px]">
                         {tickets.length}
                       </span>
                     )}
@@ -759,12 +761,12 @@ export default function SupportView({ user }: { user: UserData }) {
                             "p-3 rounded-xl border text-right cursor-pointer transition-all",
                             t.id === selectedTicketId
                               ? "bg-indigo-600/10 border-indigo-500/40 text-white"
-                              : "bg-[#050510]/40 border-white/5 text-gray-400 hover:border-white/10"
+                              : "bg-space-dark/40 border-white/5 text-gray-400 hover:border-white/10"
                           )}
                         >
                           <div className="flex justify-between items-center mb-1">
                             <span className={cn(
-                              "text-[9px] px-1.5 py-0.5 rounded-md font-bold",
+                              "text-[11px] px-1.5 py-0.5 rounded-md font-bold",
                               t.status === "open" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-white/5 text-gray-500"
                             )}>
                               {t.status === "open" ? (isAr ? "مفتوحة" : "OPEN") : (isAr ? "مغلقة" : "CLOSED")}
@@ -818,7 +820,7 @@ export default function SupportView({ user }: { user: UserData }) {
                       value={ticketText}
                       onChange={(e) => setTicketText(e.target.value)}
                       placeholder={isAr ? "مثال: واجهت مشكلة في زيادة XP عند الانتهاء من الدراسة..." : "E.g., Having issues syncing XP updates upon study completion..."}
-                      className="w-full bg-[#050510] border border-white/10 rounded-2xl p-5 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all h-36 resize-none shadow-inner"
+                      className="w-full bg-space-dark border border-white/10 rounded-2xl p-5 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all h-36 resize-none shadow-inner"
                     />
                     <button
                       onClick={handleCreateTicket}
@@ -842,12 +844,12 @@ export default function SupportView({ user }: { user: UserData }) {
                   {activeTicket ? (
                     <div className="flex-grow flex flex-col h-full justify-between">
                       {/* Chat room header */}
-                      <div className="bg-[#050510]/50 p-4 border-b border-white/10 flex items-center justify-between">
+                      <div className="bg-space-dark/50 p-4 border-b border-white/10 flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="font-bold text-white text-sm">{isAr ? "غرفة المحادثة النشطة" : "Active Flight Support"}</h4>
                             {activeTicket.status === "closed" && (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/20 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/20 text-[11px] font-bold">
                                 {isAr ? "مغلقة ومؤرشفة" : "CLOSED & ARCHIVED"}
                               </span>
                             )}
@@ -878,7 +880,7 @@ export default function SupportView({ user }: { user: UserData }) {
                                 isAdminMsg ? "mr-auto items-start" : "ml-auto items-end"
                               )}
                             >
-                              <span className="text-[9px] text-gray-500 mb-0.5 px-1 font-mono">
+                              <span className="text-[11px] text-gray-500 mb-0.5 px-1 font-mono">
                                 {isAdminMsg ? (isAr ? "الادارة 🛡️" : "SUPPORT CREW") : (isAr ? "أنت" : "YOU")} • {formatMessageTime(msg.createdAt)}
                               </span>
                               <div
@@ -898,7 +900,7 @@ export default function SupportView({ user }: { user: UserData }) {
                       </div>
 
                       {/* Chat input */}
-                      <div className="p-4 border-t border-white/10 bg-[#050510]/20 flex gap-3">
+                      <div className="p-4 border-t border-white/10 bg-space-dark/20 flex gap-3">
                         <input
                           type="text"
                           value={userReplyText}
@@ -908,7 +910,7 @@ export default function SupportView({ user }: { user: UserData }) {
                               ? (isAr ? "المحادثاة مغلقة. اكتب رسالة لفتحها مجدداً..." : "Ticket is closed. Write to reopen...")
                               : (isAr ? "اكتب تفاصيل إضافية ليقرأها الدعم الفني..." : "Type clear details for dispatch staff...")
                           }
-                          className="flex-1 bg-[#050510] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all h-11"
+                          className="flex-1 bg-space-dark border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition-all h-11"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -952,7 +954,7 @@ export default function SupportView({ user }: { user: UserData }) {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-[#0b0c16] border border-white/10 rounded-3xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8"
+          className="bg-space-dark border border-white/10 rounded-3xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8"
         >
           <div className="md:col-span-8 space-y-6">
             <div>
@@ -972,7 +974,7 @@ export default function SupportView({ user }: { user: UserData }) {
                 value={suggestionText}
                 onChange={(e) => setSuggestionText(e.target.value)}
                 placeholder={isAr ? "اقتراحي لتطوير المحطة هو... (اكتب بحرية، فريق الإدارة يقرأ كل المقترحات ويناقشها)" : "Describe your suggestion with detail... (we evaluate every payload, admin crew reads everything)"}
-                className="w-full bg-[#050510] border border-white/10 rounded-2xl p-6 text-white text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 min-h-[180px] transition-all resize-none shadow-inner"
+                className="w-full bg-space-dark border border-white/10 rounded-2xl p-6 text-white text-xs md:text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 min-h-[180px] transition-all resize-none shadow-inner"
               />
               <button
                 onClick={handleSubmitSuggestion}
@@ -1011,7 +1013,7 @@ export default function SupportView({ user }: { user: UserData }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0b0c16] border border-white/10 rounded-3xl p-6 md:p-8"
+          className="bg-space-dark border border-white/10 rounded-3xl p-6 md:p-8"
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1034,7 +1036,7 @@ export default function SupportView({ user }: { user: UserData }) {
               {suggestionsList.map((s) => (
                 <div
                   key={s.id}
-                  className="p-4 md:p-5 rounded-2xl bg-[#050510] border border-white/10"
+                  className="p-4 md:p-5 rounded-2xl bg-space-dark border border-white/10"
                 >
                   <div className="flex items-center justify-between mb-2 gap-3">
                     <div className="flex items-center gap-2 text-xs font-bold text-fuchsia-300">

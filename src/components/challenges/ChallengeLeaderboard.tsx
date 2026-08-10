@@ -47,7 +47,7 @@ export const ChallengeLeaderboard: React.FC<ChallengeLeaderboardProps> = ({
   }
 
   return (
-    <div className="p-6 rounded-3xl border border-white/5 bg-[#0b0c16]/30">
+    <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
         <div className="flex items-center gap-2">
           <Trophy size={18} className="text-amber-400" />

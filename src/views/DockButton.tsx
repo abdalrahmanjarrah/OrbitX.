@@ -204,7 +204,7 @@ export default function DockButton({ icon, label, active, onClick, colorClass, g
       
       <div 
          className={cn(
-            "text-[10px] font-black uppercase tracking-wider absolute bottom-2 z-10 transition-all duration-300",
+            "text-[11px] font-black uppercase tracking-wider absolute bottom-2 z-10 transition-all duration-300",
             active ? "opacity-100 translate-y-0 text-white" : "opacity-0 translate-y-2 text-gray-500"
          )}
       >

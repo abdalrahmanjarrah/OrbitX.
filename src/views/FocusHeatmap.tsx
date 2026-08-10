@@ -200,7 +200,7 @@ export default function FocusHeatmap() {
   }
 
   const getDayColor = (minutes: number) => {
-    if (minutes === 0) return "bg-[#0a0b16] border-white/5";
+    if (minutes === 0) return "bg-space-dark border-white/5";
     if (minutes < 30) return "bg-fuchsia-900/60 border-fuchsia-500/20";
     if (minutes < 60) return "bg-fuchsia-600/80 border-fuchsia-400/40";
     if (minutes < 120)
@@ -236,7 +236,7 @@ export default function FocusHeatmap() {
         <div className="w-2.5 h-2.5 rounded-sm bg-purple-500 border border-purple-400/60"></div>
         <div className="w-2.5 h-2.5 rounded-sm bg-fuchsia-600/80 border border-fuchsia-400/40"></div>
         <div className="w-2.5 h-2.5 rounded-sm bg-fuchsia-900/60 border border-fuchsia-500/20"></div>
-        <div className="w-2.5 h-2.5 rounded-sm bg-[#0a0b16] border border-white/5"></div>
+        <div className="w-2.5 h-2.5 rounded-sm bg-space-dark border border-white/5"></div>
         <span>أقل</span>
       </div>
     </div>

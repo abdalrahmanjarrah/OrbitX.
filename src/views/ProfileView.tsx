@@ -45,6 +45,7 @@ import {
 } from "firebase/firestore";
 import { UserData, getAstronautRank, BADGES } from "../shared";
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import FarmDisplay from "./FarmDisplay";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -166,8 +167,10 @@ export default function ProfileView({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/"))
-      return alert("الرجاء اختيار ملف صورة صالح.");
+    if (!file.type.startsWith("image/")) {
+      showToast("الرجاء اختيار ملف صورة صالح.", "warning");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -240,8 +243,10 @@ export default function ProfileView({
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/"))
-      return alert("الرجاء اختيار ملف صورة صالح.");
+    if (!file.type.startsWith("image/")) {
+      showToast("الرجاء اختيار ملف صورة صالح.", "warning");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -611,7 +616,7 @@ export default function ProfileView({
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">
+                <div className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-1">
                   التقدم الكلي
                 </div>
                 <div className="w-32 h-2 bg-black rounded-full overflow-hidden border border-white/5">
@@ -684,7 +689,7 @@ export default function ProfileView({
                           : "مغلق. احصل على المزيد من الطاقة لفتحه."}
                       </p>
                       <span
-                        className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-600"}`}
+                        className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-600"}`}
                       >
                         {unlocked ? rarity : "LOCKED"}
                       </span>
@@ -765,7 +770,7 @@ export default function ProfileView({
                       <p className={`text-lg font-black font-mono ${m.color}`}>
                         {m.value}
                       </p>
-                      <p className="text-[10px] text-gray-500">{m.label}</p>
+                      <p className="text-[11px] text-gray-500">{m.label}</p>
                     </div>
                   ))}
                 </div>
@@ -831,7 +836,7 @@ export default function ProfileView({
                             </span>
                             {task.priority && (
                               <span
-                                className={`text-[9px] px-2 py-0.5 rounded-full border ${prioColor}`}
+                                className={`text-[11px] px-2 py-0.5 rounded-full border ${prioColor}`}
                               >
                                 {task.priority === "high"
                                   ? "عاجل"
@@ -914,7 +919,7 @@ export default function ProfileView({
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#0a0b16] flex items-center justify-center text-[10px] text-gray-500 font-mono">
+                        <div className="w-full h-full bg-space-dark flex items-center justify-center text-[10px] text-gray-500 font-mono">
                           LOADING
                         </div>
                       )}

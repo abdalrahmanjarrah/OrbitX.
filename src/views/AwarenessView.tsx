@@ -404,7 +404,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
                 exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
                 transition={{ duration: 0.3 }}
                 onClick={() => setShowHudTitle(false)}
-                className="bg-[#0a0b16]/80 backdrop-blur-md border border-cyan-500/30 p-4 md:p-6 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] pointer-events-auto cursor-pointer hover:border-cyan-400/50 transition-all group"
+                className="bg-space-dark/80 backdrop-blur-md border border-cyan-500/30 p-4 md:p-6 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] pointer-events-auto cursor-pointer hover:border-cyan-400/50 transition-all group"
                 title="اضغط للإӡف�ء"
               >
                 <h2 className="text-xl md:text-2xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-l from-cyan-400 to-emerald-400 flex items-center gap-3">
@@ -419,7 +419,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
                   <br />
                   &gt; اضغط على النقاط المضيئة لاكتشاف الحقائق المخفية.
                 </p>
-                <p className="text-cyan-500/50 font-mono text-[9px] mt-2 block opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-cyan-500/50 font-mono text-[11px] mt-2 block opacity-0 group-hover:opacity-100 transition-opacity">
                   انقر للإخفاء ✕
                 </p>
               </motion.div>
@@ -448,7 +448,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
             id="admin-signal-form"
             className="hidden mt-4 bg-[#05050a]/90 backdrop-blur-xl border border-cyan-500/50 p-6 rounded-2xl w-full max-w-md pointer-events-auto shadow-2xl ml-auto self-end"
           >
-            <h3 className={cn("text-cyan-400 font-bold mb-4 flex items-center gap-2", isAr ? "flex-row-reverse" : "flex-row")}>
+            <h3 className={cn("text-cyan-400 font-bold mb-4 flex items-center gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
               <ShieldAlert size={18} /> {isAr ? "بث إشارة جديدة" : "Broadcast New Signal"}
             </h3>
             <input
@@ -495,7 +495,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
               initial={{ opacity: 0, x: 50, scale: 0.95 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 50 }}
-              className="absolute right-0 top-0 md:top-24 bottom-0 md:bottom-6 w-full md:w-[450px] max-w-full pointer-events-auto bg-[#0a0b16]/90 backdrop-blur-xl border-l md:border border-cyan-500/40 rounded-none md:rounded-l-3xl p-6 md:p-8 flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
+              className="absolute right-0 top-0 md:top-24 bottom-0 md:bottom-6 w-full md:w-[450px] max-w-full pointer-events-auto bg-space-dark/90 backdrop-blur-xl border-l md:border border-cyan-500/40 rounded-none md:rounded-l-3xl p-6 md:p-8 flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                 <Radio size={200} className="text-cyan-500" />
@@ -509,13 +509,13 @@ export default function AwarenessView({ user }: { user: UserData }) {
                   {isAdmin &&
                     (deletingSignalId === selectedSignal.id ? (
                       <div className="flex items-center gap-1.5 bg-red-500/10 px-1 py-0.5 rounded border border-red-500/30">
-                        <span className="text-[9px] text-red-500">حذف؟</span>
+                        <span className="text-[11px] text-red-500">حذف؟</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(selectedSignal.id);
                           }}
-                          className="text-[9px] text-red-500 font-bold"
+                          className="text-[11px] text-red-500 font-bold"
                         >
                           نعم
                         </button>
@@ -524,7 +524,7 @@ export default function AwarenessView({ user }: { user: UserData }) {
                             e.stopPropagation();
                             setDeletingSignalId(null);
                           }}
-                          className="text-[9px] text-gray-400"
+                          className="text-[11px] text-gray-400"
                         >
                           لا
                         </button>

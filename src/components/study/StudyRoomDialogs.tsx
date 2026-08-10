@@ -149,12 +149,12 @@ function StudyRoomDialogsComponent({
       {/* Cosmic Loss Aversion Bet Modal */}
       <AnimatePresence>
         {showBetModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-xl bg-[#0a0b16]/80 text-white">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-xl bg-space-dark/80 text-white">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0b0c16] border border-white/10 rounded-3xl p-8 max-w-lg w-full shadow-[0_0_80px_rgba(30,58,138,0.4)] text-center relative overflow-hidden"
+              className="bg-space-dark border border-white/10 rounded-3xl p-8 max-w-lg w-full shadow-[0_0_80px_rgba(30,58,138,0.4)] text-center relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Rocket size={120} />
@@ -242,7 +242,7 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[130] bg-[#0a0b16]/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-white"
+            className="fixed inset-0 z-[130] bg-space-dark/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-white"
           >
             <motion.div
               initial={{ scale: 0.8, y: 30 }}
@@ -308,7 +308,7 @@ function StudyRoomDialogsComponent({
             <motion.div
               initial={{ scale: 0.9, y: 50 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-[#0a0b16] border-2 border-red-500 shadow-[0_0_80px_rgba(239,68,68,0.3)] rounded-3xl p-8 max-w-lg text-center"
+              className="bg-space-dark border-2 border-red-500 shadow-[0_0_80px_rgba(239,68,68,0.3)] rounded-3xl p-8 max-w-lg text-center"
             >
               <ShieldAlert className="w-20 h-20 mx-auto text-orange-500 animate-pulse mb-6" />
               <h2 className="text-4xl font-black mb-4 text-orange-500">
@@ -366,7 +366,7 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-red-900/60 backdrop-blur-xl bg-[#0a0b16]/80 flex flex-col items-center justify-center text-white overflow-hidden"
+            className="fixed inset-0 z-[100] bg-red-900/60 backdrop-blur-xl bg-space-dark/80 flex flex-col items-center justify-center text-white overflow-hidden"
           >
             {/* Meteor Animation */}
             <motion.div
@@ -412,10 +412,10 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
             <div
-              className={cn("bg-[#0a0b16] border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20", isAr ? "text-right" : "text-left")}
+              className={cn("bg-space-dark border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             >
               <h2 className="text-xl font-black mb-4 text-center text-red-500">
@@ -451,7 +451,7 @@ function StudyRoomDialogsComponent({
               <div className="flex gap-4">
                 <button
                   onClick={() => setShowDeleteDialog(false)}
-                  className="flex-1 px-4 py-2 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 rounded-xl text-white font-bold transition-all text-sm border border-white/5"
+                  className="flex-1 px-4 py-2 bg-space-dark shadow-lg shadow-indigo-900/10 hover:bg-white/5 rounded-xl text-white font-bold transition-all text-sm border border-white/5"
                 >
                   {isAr ? "إلغاء" : "Cancel"}
                 </button>
@@ -481,9 +481,9 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
-            <div className="bg-[#0a0b16] border border-indigo-500/20 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-950/40 text-right">
+            <div className="bg-space-dark border border-indigo-500/20 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-950/40 text-right">
               <h2 className="text-xl font-black mb-4 text-center text-white flex items-center justify-center gap-2">
                 <Rocket size={24} className="text-indigo-400" />
                 مغادرة المحطة المدارية
@@ -530,9 +530,9 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-[#0a0b16]/60"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
-            <div className="bg-[#0a0b16] border border-orange-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-orange-900/20 text-center">
+            <div className="bg-space-dark border border-orange-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-orange-900/20 text-center">
               <h2 className="text-2xl font-black mb-4 text-orange-400">
                 مهمتك القادمة 🚀
               </h2>
@@ -547,7 +547,7 @@ function StudyRoomDialogsComponent({
                 value={nextMissionInput}
                 onChange={(e) => setNextMissionInput(e.target.value)}
                 autoFocus
-                className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-2xl p-4 text-white placeholder-gray-500 mb-6 focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 rounded-2xl p-4 text-white placeholder-gray-500 mb-6 focus:outline-none focus:border-orange-500 transition-colors"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleNextMissionSubmit();
                 }}
@@ -563,7 +563,7 @@ function StudyRoomDialogsComponent({
                 </button>
                 <button
                   onClick={() => setShowNextMissionModal(false)}
-                  className="px-6 py-3 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"
+                  className="px-6 py-3 bg-space-dark shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"
                 >
                   تخطي
                 </button>
@@ -583,7 +583,7 @@ function StudyRoomDialogsComponent({
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <div
-              className={cn("bg-[#0a0b16] border border-indigo-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20", isAr ? "text-right" : "text-left")}
+              className={cn("bg-space-dark border border-indigo-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             >
               <h2 className="text-2xl font-black mb-4 text-indigo-400">
@@ -625,7 +625,7 @@ function StudyRoomDialogsComponent({
                     studyLinkRef.current = "";
                     setShowStudyLinkModal(false);
                   }}
-                  className="px-6 py-3 bg-[#0a0b16] shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"
+                  className="px-6 py-3 bg-space-dark shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"
                 >
                   {isAr ? "إلغاء" : "Cancel"}
                 </button>

@@ -61,7 +61,7 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
         <input 
           type="text" 
           placeholder="ابحث بالاسم (مثال: أحمد)..."
-          className="w-full bg-[#0a0b16]/80 border-2 border-indigo-500/30 focus:border-indigo-500 rounded-3xl py-5 pr-14 pl-6 text-white text-lg placeholder-indigo-300/30 outline-none transition-all shadow-[0_4px_20px_rgba(99,102,241,0.05)] focus:shadow-[0_4px_30px_rgba(99,102,241,0.2)]"
+          className="w-full bg-space-dark/80 border-2 border-indigo-500/30 focus:border-indigo-500 rounded-3xl py-5 pr-14 pl-6 text-white text-lg placeholder-indigo-300/30 outline-none transition-all shadow-[0_4px_20px_rgba(99,102,241,0.05)] focus:shadow-[0_4px_30px_rgba(99,102,241,0.2)]"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />

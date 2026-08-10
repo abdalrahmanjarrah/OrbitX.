@@ -506,10 +506,10 @@ export default function QuranPlayer() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-24 left-6 z-40 w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl",
+          "fixed bottom-24 ltr:left-6 rtl:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl",
           isOpen
             ? "bg-indigo-600 text-white shadow-indigo-900/50"
-            : "bg-[#0a0b16] border border-white/10 hover:bg-white/5 shadow-black/50",
+            : "bg-space-dark border border-white/10 hover:bg-white/5 shadow-black/50",
         )}
         title="القرآن الكريم"
       >
@@ -536,7 +536,7 @@ export default function QuranPlayer() {
             initial={{ opacity: 0, scale: 0.9, x: -20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, x: -20 }}
-            className="fixed bottom-[130px] left-6 z-50 w-80 bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-indigo-900/40"
+            className="fixed bottom-[130px] ltr:left-6 rtl:right-6 z-50 w-80 max-w-[calc(100vw-2rem)] bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-indigo-900/40"
           >
             {/* Header */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-space-dark/80 shrink-0">
@@ -565,13 +565,13 @@ export default function QuranPlayer() {
                     onChange={(e) =>
                       handleReciterChange(parseInt(e.target.value))
                     }
-                    className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-xl px-4 py-2.5 text-right text-sm appearance-none focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-gray-200"
+                    className="w-full bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 rounded-xl px-4 py-2.5 text-right text-sm appearance-none focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-gray-200"
                   >
                     {RECITERS.map((r, i) => (
                       <option
                         key={i}
                         value={i}
-                        className="bg-[#0a0b16] text-white"
+                        className="bg-space-dark text-white"
                       >
                         {r.name}
                       </option>
@@ -589,13 +589,13 @@ export default function QuranPlayer() {
                     onChange={(e) =>
                       handleSurahChange(parseInt(e.target.value))
                     }
-                    className="w-full bg-[#0a0b16] shadow-lg shadow-indigo-900/10 border border-white/10 rounded-xl px-4 py-2.5 text-right text-sm appearance-none focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-gray-200"
+                    className="w-full bg-space-dark shadow-lg shadow-indigo-900/10 border border-white/10 rounded-xl px-4 py-2.5 text-right text-sm appearance-none focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-gray-200"
                   >
                     {SURAHS.map((s, i) => (
                       <option
                         key={i}
                         value={i}
-                        className="bg-[#0a0b16] text-white"
+                        className="bg-space-dark text-white"
                       >
                         {s} .{i + 1}
                       </option>

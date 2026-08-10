@@ -182,7 +182,7 @@ export default function ArticleModal({ onClose }: { onClose: () => void }) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          className="bg-[#0a0b16] rounded-3xl p-6 md:p-8 w-full max-w-2xl border border-indigo-500/20 shadow-2xl shadow-indigo-900/40 relative my-8"
+          className="bg-space-dark rounded-3xl p-6 md:p-8 w-full max-w-2xl border border-indigo-500/20 shadow-2xl shadow-indigo-900/40 relative my-8"
         >
           <button
             onClick={onClose}

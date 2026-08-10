@@ -93,6 +93,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
 import {
   auth,
   db,
@@ -228,7 +229,7 @@ export default function ChallengeModal({
     if (duration === -1) {
       duration = parseInt(customDuration, 10);
       if (isNaN(duration) || duration < 10) {
-        alert("الرجاء إدخال مدة صحيحة (أقل شيء 10 دقائق).");
+        showToast("الرجاء إدخال مدة صحيحة (أقل شيء 10 دقائق).", "warning");
         return;
       }
     }
@@ -260,7 +261,7 @@ export default function ChallengeModal({
         timestamp: serverTimestamp(),
       }).catch(console.error);
       
-      alert("تم إرسال طلب التحدي بنجاح!");
+      showToast("تم إرسال طلب التحدي بنجاح!", "success");
       onClose();
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, "challenges");
@@ -272,7 +273,7 @@ export default function ChallengeModal({
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#0a0b16] rounded-3xl p-6 md:p-8 w-full max-w-md border border-white/10 shadow-2xl shadow-indigo-900/20 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+        className="bg-space-dark rounded-3xl p-6 md:p-8 w-full max-w-md border border-white/10 shadow-2xl shadow-indigo-900/20 relative max-h-[90vh] overflow-y-auto custom-scrollbar"
       >
         <button
           onClick={onClose}

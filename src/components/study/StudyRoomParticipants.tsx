@@ -118,7 +118,7 @@ function StudyRoomParticipantsComponent({
                       />
                     </button>
                   </div>
-                  <span className="text-[6px] md:text-[8px] font-bold bg-[#0a0b16]/90 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 text-white whitespace-nowrap shadow-lg">
+                  <span className="text-[6px] md:text-[8px] font-bold bg-space-dark/90 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 text-white whitespace-nowrap shadow-lg">
                     {p.displayName.split(" ")[0]}
                   </span>
                 </motion.div>

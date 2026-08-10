@@ -326,7 +326,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
       <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-900/10 to-transparent -z-10 rounded-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-[#0a0b16]/80 backdrop-blur-md p-6 rounded-3xl shadow-xl border border-white/5 sticky top-0 z-30">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-space-dark/80 backdrop-blur-md p-6 rounded-3xl shadow-xl border border-white/5 sticky top-0 z-30">
         <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -379,7 +379,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
       {/* Filters & Search */}
       {!loading && !isCreating && (
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="w-full md:w-64 relative border border-white/10 rounded-xl bg-[#0a0b16] focus-within:border-blue-500/50 transition-colors">
+          <div className="w-full md:w-64 relative border border-white/10 rounded-xl bg-space-dark focus-within:border-blue-500/50 transition-colors">
             <input
               type="text"
               placeholder={isAr ? "ابحث في مهامك..." : "Search your tasks..."}
@@ -388,10 +388,10 @@ export default function ScheduleView({ user }: { user: UserData }) {
               className={cn("w-full bg-transparent px-10 py-2.5 text-sm focus:outline-none text-white placeholder-gray-600 font-medium", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             />
-            <Search className={cn("w-4 h-4 text-gray-500 absolute top-3", isAr ? "left-3" : "right-3")} />
+            <Search className="absolute top-3 start-3 w-4 h-4 text-gray-500" />
           </div>
 
-          <div className="flex items-center justify-end gap-2 text-sm font-bold bg-[#0a0b16]/60 p-1.5 rounded-2xl border border-white/5 w-full md:w-auto overflow-x-auto custom-scrollbar">
+          <div className="flex items-center justify-end gap-2 text-sm font-bold bg-space-dark/60 p-1.5 rounded-2xl border border-white/5 w-full md:w-auto overflow-x-auto custom-scrollbar">
             <button
               onClick={() => setFilterMode("all")}
               className={cn(
@@ -451,7 +451,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   "flex flex-col items-center gap-1 py-3 px-1 rounded-2xl border transition-all",
                   isActive
                     ? "bg-blue-500/15 border-blue-500/40 shadow-lg shadow-blue-500/10"
-                    : "bg-[#0a0b16]/70 border-white/5 hover:border-white/15 hover:bg-white/5",
+                    : "bg-space-dark/70 border-white/5 hover:border-white/15 hover:bg-white/5",
                 )}
               >
                 <span
@@ -479,7 +479,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   </div>
                 )}
                 {isToday && (
-                  <span className="text-[9px] bg-blue-500 font-bold px-1.5 py-0.5 rounded-full text-white">
+                  <span className="text-[11px] bg-blue-500 font-bold px-1.5 py-0.5 rounded-full text-white">
                     اليوم
                   </span>
                 )}
@@ -497,10 +497,10 @@ export default function ScheduleView({ user }: { user: UserData }) {
             initial={{ opacity: 0, height: 0, y: -20 }}
             animate={{ opacity: 1, height: "auto", y: 0 }}
             exit={{ opacity: 0, height: 0, y: -20 }}
-            className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#101223] to-[#0a0b16] shadow-2xl border border-blue-500/30 space-y-6 overflow-hidden"
+            className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#101223] to-space-dark shadow-2xl border border-blue-500/30 space-y-6 overflow-hidden"
           >
-            <h3 className="text-xl font-bold text-right text-blue-300">
-              تفاصيل المهمة الجديدة
+            <h3 className={cn("text-xl font-bold text-blue-300", isAr ? "text-right" : "text-left")}>
+              {isAr ? "تفاصيل المهمة الجديدة" : "New Task Details"}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -520,7 +520,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   />
                 </div>
 
-                <div className={cn("flex gap-4", isAr ? "flex-row-reverse" : "flex-row")}>
+                <div className={cn("flex gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
                   <div className="space-y-2 w-full">
                     <label className={cn("text-sm font-bold text-gray-400 block", isAr ? "text-right" : "text-left")}>
                       {isAr ? "اليوم المستهدف" : "Target Day"}
@@ -532,7 +532,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                       dir={isAr ? "rtl" : "ltr"}
                     >
                       {DAYS.map((d) => (
-                        <option key={d} value={d} className="bg-[#0a0b16]">
+                        <option key={d} value={d} className="bg-space-dark">
                           {d}
                         </option>
                       ))}
@@ -540,14 +540,15 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   </div>
 
                   <div className="space-y-2 w-full">
-                    <label className="text-sm font-bold text-gray-400 block text-right">
-                      الساعة <span className="text-red-500">*</span>
+                    <label className={cn("text-sm font-bold text-gray-400 block", isAr ? "text-right" : "text-left")}>
+                      {isAr ? "الساعة" : "Time"} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="time"
                       value={time}
                       onChange={(e) => setTime(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-right focus:outline-none text-white text-sm cursor-pointer"
+                      className={cn("w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white text-sm cursor-pointer", isAr ? "text-right" : "text-left")}
+                      dir={isAr ? "rtl" : "ltr"}
                     />
                   </div>
                 </div>
@@ -556,10 +557,10 @@ export default function ScheduleView({ user }: { user: UserData }) {
               {/* Left column in RTL */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-400 block text-right">
-                    الأهمية
+                  <label className={cn("text-sm font-bold text-gray-400 block", isAr ? "text-right" : "text-left")}>
+                    {isAr ? "الأهمية" : "Priority"}
                   </label>
-                  <div className="flex gap-2 flex-row-reverse">
+                  <div className={cn("flex gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
                     {PRIORITIES.map((p) => (
                       <button
                         key={p.value}
@@ -577,7 +578,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   </div>
                 </div>
 
-                <div className={cn("flex gap-4", isAr ? "flex-row-reverse" : "flex-row")}>
+                <div className={cn("flex gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
                   <div className="space-y-2 w-full">
                     <label className={cn("text-sm font-bold text-gray-400 block", isAr ? "text-right" : "text-left")}>
                       {isAr ? "المدة (دقائق) - اختياري" : "Duration (mins) - Optional"}
@@ -603,7 +604,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                       dir={isAr ? "rtl" : "ltr"}
                     >
                       {CATEGORIES.map((c) => (
-                        <option key={c} value={c} className="bg-[#0a0b16]">
+                        <option key={c} value={c} className="bg-space-dark">
                           {c === "دراسة" ? (isAr ? "دراسة" : "Study") : c === "مراجعة" ? (isAr ? "مراجعة" : "Review") : c === "اختبار" ? (isAr ? "اختبار" : "Exam") : c === "مشروع" ? (isAr ? "مشروع" : "Project") : (isAr ? "عام" : "General")}
                         </option>
                       ))}
@@ -632,7 +633,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
           {DAYS.map((d) => (
             <div
               key={d}
-              className="h-64 rounded-3xl bg-[#0a0b16] animate-pulse border border-white/5 p-4 space-y-4"
+              className="h-64 rounded-3xl bg-space-dark animate-pulse border border-white/5 p-4 space-y-4"
             >
               <div className="h-6 bg-white/5 rounded-md w-1/2 mx-auto" />
               <div className="h-20 bg-white/5 rounded-2xl w-full" />
@@ -661,7 +662,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                   "flex flex-col gap-3 p-4 md:p-5 rounded-3xl transition-colors border",
                   isToday
                     ? "bg-blue-500/5 border-blue-500/20"
-                    : "bg-[#0a0b16]/50 border-white/5",
+                    : "bg-space-dark/50 border-white/5",
                 )}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, dayName)}
@@ -736,7 +737,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
                           className={cn(
                             "p-3.5 md:p-4 rounded-2xl border relative group cursor-grab active:cursor-grabbing transition-all",
                             isCompleted
-                              ? "bg-[#0a0b16]/50 border-white/5 opacity-60"
+                              ? "bg-space-dark/50 border-white/5 opacity-60"
                               : `bg-[#0e1021] ${pInfo.border} ${pInfo.bg.replace("/10", "/5")}`,
                             draggedItemId === item.id
                               ? "opacity-50 scale-[0.98]"

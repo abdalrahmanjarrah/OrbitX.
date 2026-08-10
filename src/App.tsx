@@ -656,7 +656,7 @@ function App() {
         </p>
         <button
           onClick={logout}
-          className="mt-8 px-8 py-3 bg-white/5 rounded-xl hover:bg-[#0a0b16]/20 transition-all font-sans text-xs"
+          className="mt-8 px-8 py-3 bg-white/5 rounded-xl hover:bg-space-dark/20 transition-all font-sans text-xs"
         >
           {t("common.logout", "تسجيل الخروج")}
         </button>
@@ -694,7 +694,7 @@ function App() {
             className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-gradient-to-r from-yellow-400 to-orange-500 p-1 rounded-2xl shadow-2xl shadow-indigo-900/20 shadow-orange-500/40"
           >
             <div
-              className="bg-[#0a0b16] px-8 py-4 rounded-[calc(1rem-1px)] flex items-center gap-4"
+              className="bg-space-dark px-8 py-4 rounded-[calc(1rem-1px)] flex items-center gap-4"
               dir={isAr ? "rtl" : "ltr"}
             >
               <div className="w-12 h-12 bg-yellow-400/20 rounded-full flex items-center justify-center text-2xl">
