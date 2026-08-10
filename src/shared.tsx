@@ -11,7 +11,6 @@ import Markdown from "react-markdown";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Globe from "react-globe.gl";
 import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Leaf,

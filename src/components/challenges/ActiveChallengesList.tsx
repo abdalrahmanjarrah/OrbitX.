@@ -65,22 +65,8 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
 
       // Award the winner — full rewards for the most focused astronaut
       if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
-        const uRef = doc(db, "users", winnerId);
-        const pRef = doc(db, "profiles", winnerId);
-        const { arrayUnion } = await import("firebase/firestore");
-
-        await updateDoc(uRef, {
-          coins: increment(50),
-          badges: arrayUnion("challenge_champ"),
-          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          xp: increment(100)
-        });
-
-        await updateDoc(pRef, {
-          badges: arrayUnion("challenge_champ"),
-          challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          xp: increment(100)
-        });
+        const { grantChallengeReward } = await import("../../lib/xpSystem");
+        await grantChallengeReward(challenge.id, winnerId);
 
         // Push notifications
         await addDoc(collection(db, "users", winnerId, "notifications"), {

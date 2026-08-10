@@ -1393,22 +1393,8 @@ export function useSessionEngine(
 
       if (rewardedUser && winnerId) {
         if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
-          const uRef = doc(db, "users", winnerId);
-          const pRef = doc(db, "profiles", winnerId);
-          const { arrayUnion } = await import("firebase/firestore");
-
-          await updateDoc(uRef, {
-            coins: increment(50),
-            badges: arrayUnion("challenge_champ"),
-            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-            xp: increment(100)
-          }).catch(() => {});
-
-          await updateDoc(pRef, {
-            badges: arrayUnion("challenge_champ"),
-            challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-            xp: increment(100)
-          }).catch(() => {});
+          const { grantChallengeReward } = await import("../lib/xpSystem");
+          await grantChallengeReward(cId, winnerId);
 
           await addDoc(collection(db, "users", winnerId, "notifications"), {
             type: "challenge_win",

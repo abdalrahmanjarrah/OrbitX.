@@ -50,6 +50,43 @@
 import { db, runTransaction, updateDoc } from '../firebase';
 import { doc, increment } from 'firebase/firestore';
 import { Debugger } from '../firebaseDebug';
+import { callRpc, isRpcUnavailable } from '../supabaseAdapter';
+
+// Whether the server-side grant_xp RPC has been deployed. Once confirmed
+// present we stop using the client-side fallback entirely.
+let xpRpcAvailable: boolean | null = null;
+
+const rpcGrantXp = async (
+  userId: string,
+  fleetId: string | undefined,
+  roomChallengeId: string | null,
+  isPlayer1: boolean,
+  amount: number,
+  source: string,
+  forceBypassLock: boolean
+): Promise<number> => {
+  const { success, data, error } = await callRpc('grant_xp', {
+    p_user_id: userId,
+    p_fleet_id: fleetId || null,
+    p_challenge_id: roomChallengeId || null,
+    p_is_player1: !!isPlayer1,
+    p_amount: Math.round(amount),
+    p_source: source,
+    p_force: !!forceBypassLock,
+  });
+  if (success) {
+    xpRpcAvailable = true;
+    if (data?.blocked) return -1;
+    if (!data?.success) return 0;
+    Debugger.logXP(amount, source, (data?.xp || 0) - amount, data?.xp || 0);
+    return amount;
+  }
+  if (!isRpcUnavailable(error)) {
+    Debugger.logSuspicious(`grant_xp RPC failed: ${String(error?.message || error)}`);
+  }
+  xpRpcAvailable = false;
+  return 0;
+};
 
 /**
  * requestXpGrant
@@ -73,6 +110,13 @@ export const requestXpGrant = async (
   forceBypassLock: boolean = false
 ) => {
   if (amount === 0) return 0;
+
+  if (xpRpcAvailable !== false) {
+    const rpcResult = await rpcGrantXp(userId, fleetId, roomChallengeId, isPlayer1, amount, source, forceBypassLock);
+    if (rpcResult !== 0) return rpcResult;
+    if (xpRpcAvailable) return 0; // RPC succeeded but returned "not granted"
+    // xpRpcAvailable === false -> RPC not deployed, use the legacy path below
+  }
   
   const userRef = doc(db, 'users', userId);
   
@@ -169,6 +213,20 @@ export const requestXpGrant = async (
  */
 export const purchaseItemXpDeduction = async (userId: string, price: number): Promise<boolean> => {
   if (price <= 0) return false;
+
+  // Server-verified deduction first
+  const { success, data } = await callRpc('purchase_item_deduct', {
+    p_user_id: userId,
+    p_price: Math.round(price),
+  });
+  if (success) {
+    if (data?.success) {
+      Debugger.logXP(-price, "store_purchase", (data?.xp || 0) + price, data?.xp || 0);
+      return true;
+    }
+    return false; // insufficient / invalid — server decision is final
+  }
+
   const userRef = doc(db, 'users', userId);
   
   try {
@@ -214,8 +272,34 @@ export const purchaseItemXpDeduction = async (userId: string, price: number): Pr
  * adminSetXP
  * Completely overwrites the user's XP (and optionally level) for absolute Admin overrides.
  * This bypasses the increment system altogether.
+ * Now verified server-side: only accounts in the admins table may call it.
  */
 export const adminSetXP = async (userId: string, newXp: number, newLevel?: number, currentActivity?: string, totalFocusSessions?: number) => {
+    // Server-verified path first
+    const { success, data } = await callRpc('admin_set_xp', {
+      p_user_id: userId,
+      p_xp: Math.round(newXp),
+      p_level: newLevel !== undefined ? Math.round(newLevel) : null,
+    });
+    if (success) {
+      if (data?.success) {
+        Debugger.logXP(newXp, "admin_override", 0, newXp);
+        // Keep activity fields in sync client-side (non-progression)
+        if (currentActivity || totalFocusSessions !== undefined) {
+          const userRef = doc(db, "users", userId);
+          const profileRef = doc(db, "profiles", userId);
+          const sync: any = {};
+          if (currentActivity !== undefined) sync.currentActivity = currentActivity;
+          if (totalFocusSessions !== undefined) sync.totalFocusSessions = totalFocusSessions;
+          updateDoc(userRef, sync).catch(() => {});
+          updateDoc(profileRef, sync).catch(() => {});
+        }
+        return true;
+      }
+      return false; // forbidden etc. — server decision is final
+    }
+
+    // Legacy fallback while the security migration isn't deployed yet
     try {
        const userRef = doc(db, "users", userId);
        const profileRef = doc(db, "profiles", userId);
@@ -238,5 +322,38 @@ export const adminSetXP = async (userId: string, newXp: number, newLevel?: numbe
        console.error("Admin XP Set Error:", e);
        return false;
     }
+}
+
+/**
+ * grantChallengeReward
+ * Awards the weekly challenge "champion" reward (XP, coins, badge) to the winner.
+ * Uses the server-verified grant_challenge_reward RPC when deployed, otherwise
+ * falls back to the legacy client-side direct writes.
+ */
+export const grantChallengeReward = async (challengeId: string, winnerId: string): Promise<boolean> => {
+  const { success, data } = await callRpc('grant_challenge_reward', {
+    p_challenge_id: challengeId,
+    p_winner_id: winnerId,
+  });
+  if (success) {
+    return !!data?.success;
+  }
+
+  // Legacy fallback (only works while the DB is still wide-open)
+  const { arrayUnion } = await import("firebase/firestore");
+  const uRef = doc(db, "users", winnerId);
+  const pRef = doc(db, "profiles", winnerId);
+  await updateDoc(uRef, {
+    coins: increment(50),
+    badges: arrayUnion("challenge_champ"),
+    challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    xp: increment(100)
+  }).catch(() => {});
+  await updateDoc(pRef, {
+    badges: arrayUnion("challenge_champ"),
+    challengeChampExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    xp: increment(100)
+  }).catch(() => {});
+  return true;
 }
 

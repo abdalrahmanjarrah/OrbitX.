@@ -37,28 +37,123 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.documents;
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
--- 5. Define access policies for the compat layer
--- Read Policy: Allow anyone (anonymous or authenticated) to read data for testing and seamless transition
-CREATE POLICY "Allow public read access" 
-ON public.documents 
-FOR SELECT 
+-- 5. SECURE access policies for the compat layer
+-- -------------------------------------------------------------------------
+-- Read: anyone may read (leaderboards and public metadata are client-rendered;
+-- the anon key is visible in the browser anyway).
+DROP POLICY IF EXISTS "Allow public read access" ON public.documents;
+DROP POLICY IF EXISTS "Allow public write mutations" ON public.documents;
+DROP POLICY IF EXISTS "Allow public update mutations" ON public.documents;
+DROP POLICY IF EXISTS "Allow public delete mutations" ON public.documents;
+
+CREATE POLICY "allow_read_all"
+ON public.documents
+FOR SELECT
 USING (true);
 
--- Insert/Update/Delete Policy: Allow anyone to perform mutations
-CREATE POLICY "Allow public write mutations" 
-ON public.documents 
-FOR INSERT 
-WITH CHECK (true);
+-- MUTATIONS REQUIRE AUTHENTICATION. Anonymous visitors can no longer create,
+-- edit or delete anything.
+--
+-- users/{uid} and profiles/{uid} top-level docs: owner (or admin) only.
+CREATE POLICY "mutate_users_owner"
+ON public.documents
+FOR ALL
+USING (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
+WITH CHECK (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
 
-CREATE POLICY "Allow public update mutations" 
-ON public.documents 
-FOR UPDATE 
-USING (true);
+CREATE POLICY "mutate_profiles_owner"
+ON public.documents
+FOR ALL
+USING (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
+WITH CHECK (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
 
-CREATE POLICY "Allow public delete mutations" 
-ON public.documents 
-FOR DELETE 
-USING (true);
+-- users/{uid}/notifications, /friends, /schedule subcollections: any
+-- authenticated user (friend requests and challenge notifications are
+-- written cross-user by design).
+CREATE POLICY "mutate_users_subcollections"
+ON public.documents
+FOR ALL
+USING (path ~ '^users/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL)
+WITH CHECK (path ~ '^users/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL);
+
+-- Admin-only collections (system settings, alerts, updates, announcements,
+-- advice content). Only accounts listed in the admins table can touch them.
+CREATE POLICY "mutate_admin_collections"
+ON public.documents
+FOR ALL
+USING (public.is_admin_user() AND (
+  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
+  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
+  path LIKE 'advices/%'))
+WITH CHECK (public.is_admin_user() AND (
+  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
+  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
+  path LIKE 'advices/%'));
+
+-- Admins may also manage any user/profile document (banning, XP fixes...).
+CREATE POLICY "mutate_admins_manage_users"
+ON public.documents
+FOR ALL
+USING (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'))
+WITH CHECK (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'));
+
+-- Everything else (rooms, discussions, fleets, suggestions, support_tickets,
+-- awareness_signals, exhibitions, challenges, worlds, global_chat, ...):
+-- any authenticated user.
+CREATE POLICY "mutate_shared_collections"
+ON public.documents
+FOR ALL
+USING (auth.uid() IS NOT NULL
+  AND path NOT LIKE 'users/%'
+  AND path NOT LIKE 'profiles/%'
+  AND path NOT LIKE 'system/%'
+  AND path NOT LIKE 'admin_alerts/%'
+  AND path NOT LIKE 'app_updates/%'
+  AND path NOT LIKE 'global_notifications/%'
+  AND path NOT LIKE 'advices/%')
+WITH CHECK (auth.uid() IS NOT NULL
+  AND path NOT LIKE 'users/%'
+  AND path NOT LIKE 'profiles/%'
+  AND path NOT LIKE 'system/%'
+  AND path NOT LIKE 'admin_alerts/%'
+  AND path NOT LIKE 'app_updates/%'
+  AND path NOT LIKE 'global_notifications/%'
+  AND path NOT LIKE 'advices/%');
+
+-- -------------------------------------------------------------------------
+-- 5b. Admin accounts table + helper functions used by the policies above
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.admins (
+    email TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+INSERT INTO public.admins (email) VALUES
+    ('lumafashionhq@gmail.com'),
+    ('abdalrahmanjarrah94@gmail.com'),
+    ('abdalrahmanjarrah1@gmail.com')
+ON CONFLICT (email) DO NOTHING;
+
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "admins_readable" ON public.admins;
+CREATE POLICY "admins_readable" ON public.admins FOR SELECT USING (true);
+
+-- Owner of a Firestore-style path = second segment ("users/abc/..." -> "abc")
+CREATE OR REPLACE FUNCTION public.doc_owner(p_path text)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+AS $$ SELECT split_part(p_path, '/', 2) $$;
+
+-- Is the current request's JWT an admin?
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE sql STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admins
+    WHERE email = COALESCE(auth.jwt() ->> 'email', '')
+  )
+$$;
 
 -- 6. Automatically update 'updated_at' column on row modification
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -73,6 +168,397 @@ CREATE OR REPLACE TRIGGER trigger_update_documents_timestamp
     BEFORE UPDATE ON public.documents
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- =========================================================================
+-- 7. PROGRESSION FIELD PROTECTION (XP / LEVEL / ROLE)
+-- -------------------------------------------------------------------------
+-- Clients may update their own users/profiles docs freely EXCEPT the
+-- progression fields (xp, level, role). Those can only change through the
+-- SECURITY DEFINER functions below (grant_xp, grant_challenge_reward,
+-- admin_set_xp) or by an actual admin account. This makes XP/level/role
+-- tampering server-controlled instead of client-controlled.
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.protect_progression_fields()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.path ~ '^users/[^/]+$' OR NEW.path ~ '^profiles/[^/]+$' THEN
+    IF current_setting('app.progression_allowed', true) = '1' THEN
+      RETURN NEW;
+    END IF;
+    IF public.is_admin_user() THEN
+      RETURN NEW;
+    END IF;
+    IF (OLD.data ->> 'xp') IS DISTINCT FROM (NEW.data ->> 'xp')
+       OR (OLD.data ->> 'level') IS DISTINCT FROM (NEW.data ->> 'level')
+       OR (OLD.data ->> 'role') IS DISTINCT FROM (NEW.data ->> 'role') THEN
+      RAISE EXCEPTION 'progression_fields_locked';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_protect_progression ON public.documents;
+CREATE TRIGGER trg_protect_progression
+    BEFORE UPDATE ON public.documents
+    FOR EACH ROW
+    EXECUTE FUNCTION public.protect_progression_fields();
+
+-- =========================================================================
+-- 8. SERVER-SIDE XP ENGINE (SECURITY DEFINER)
+-- -------------------------------------------------------------------------
+-- These functions run with elevated privileges, verify the caller, and apply
+-- atomic JSONB updates + server-side cooldowns. The protection trigger above
+-- only lets these (or admins) modify xp/level/role.
+-- =========================================================================
+
+-- grant_xp: server-verified XP grant/deduct with cooldown + level recalc
+CREATE OR REPLACE FUNCTION public.grant_xp(
+    p_user_id text,
+    p_fleet_id text DEFAULT NULL,
+    p_challenge_id text DEFAULT NULL,
+    p_is_player1 boolean DEFAULT false,
+    p_amount bigint DEFAULT 0,
+    p_source text DEFAULT '',
+    p_force boolean DEFAULT false
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid text := auth.uid()::text;
+    v_row public.documents%ROWTYPE;
+    v_old_xp bigint;
+    v_new_xp bigint;
+    v_level bigint;
+    v_now bigint := (extract(epoch FROM now()) * 1000)::bigint;
+    v_is_focus boolean := p_source LIKE '%Focus Interval Loop%';
+    v_blocked boolean := false;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'unauthorized';
+    END IF;
+    IF p_amount = 0 THEN
+        RETURN jsonb_build_object('success', true, 'blocked', false, 'amount', 0);
+    END IF;
+
+    -- Only allow granting XP to yourself, or admins granting to anyone.
+    IF v_uid <> p_user_id AND NOT public.is_admin_user() THEN
+        RAISE EXCEPTION 'forbidden';
+    END IF;
+
+    SELECT * INTO v_row
+    FROM public.documents
+    WHERE path = 'users/' || p_user_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'blocked', false, 'error', 'no_user');
+    END IF;
+
+    v_old_xp := COALESCE((v_row.data ->> 'xp')::bigint, 0);
+
+    -- Cooldown (45s) on positive grants, unless explicitly forced.
+    IF NOT p_force AND p_amount > 0 THEN
+        IF v_is_focus THEN
+            IF v_now - COALESCE((v_row.data ->> 'lastFocusXpUpdate')::bigint, 0) < 45000 THEN
+                v_blocked := true;
+            END IF;
+        ELSE
+            IF v_now - COALESCE((v_row.data ->> 'lastXpUpdate')::bigint, 0) < 45000 THEN
+                v_blocked := true;
+            END IF;
+        END IF;
+    END IF;
+
+    IF v_blocked THEN
+        RETURN jsonb_build_object('success', false, 'blocked', true, 'amount', p_amount);
+    END IF;
+
+    v_new_xp := v_old_xp + p_amount;
+    v_level := floor(v_new_xp / 1000) + 1;
+
+    v_row.data := jsonb_set(v_row.data, '{xp}', to_jsonb(v_new_xp));
+    v_row.data := jsonb_set(v_row.data, '{level}', to_jsonb(v_level));
+    IF p_amount > 0 THEN
+        v_row.data := jsonb_set(v_row.data, '{lastXpUpdate}', to_jsonb(v_now));
+        IF v_is_focus THEN
+            v_row.data := jsonb_set(v_row.data, '{lastFocusXpUpdate}', to_jsonb(v_now));
+        END IF;
+    END IF;
+
+    PERFORM set_config('app.progression_allowed', '1', true);
+    UPDATE public.documents
+    SET data = v_row.data, updated_at = now()
+    WHERE path = v_row.path;
+
+    -- Fleet progress
+    IF p_fleet_id IS NOT NULL THEN
+        UPDATE public.documents
+        SET data = jsonb_set(
+                data,
+                '{xp}',
+                to_jsonb(COALESCE((data ->> 'xp')::bigint, 0) + p_amount)
+            ), updated_at = now()
+        WHERE path = 'fleets/' || p_fleet_id;
+    END IF;
+
+    -- Challenge progress
+    IF p_challenge_id IS NOT NULL THEN
+        UPDATE public.documents
+        SET data = jsonb_set(
+                data,
+                ARRAY[CASE WHEN p_is_player1 THEN 'progressPlayer1' ELSE 'progressPlayer2' END],
+                to_jsonb(
+                    COALESCE(
+                        (data #>> ARRAY[CASE WHEN p_is_player1 THEN 'progressPlayer1' ELSE 'progressPlayer2' END])::bigint,
+                        0
+                    ) + p_amount
+                )
+            ), updated_at = now()
+        WHERE path = 'challenges/' || p_challenge_id;
+    END IF;
+
+    RETURN jsonb_build_object('success', true, 'blocked', false, 'amount', p_amount, 'xp', v_new_xp, 'level', v_level);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.grant_xp(text, text, text, boolean, bigint, text, boolean) TO authenticated;
+
+-- grant_challenge_reward: server-verified challenge win rewards
+CREATE OR REPLACE FUNCTION public.grant_challenge_reward(
+    p_challenge_id text,
+    p_winner_id text
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid text := auth.uid()::text;
+    v_ch public.documents%ROWTYPE;
+    v_challenger text;
+    v_challenged text;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'unauthorized';
+    END IF;
+
+    SELECT * INTO v_ch
+    FROM public.documents
+    WHERE path = 'challenges/' || p_challenge_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'no_challenge');
+    END IF;
+
+    v_challenger := v_ch.data ->> 'challengerId';
+    v_challenged := v_ch.data ->> 'challengedId';
+
+    -- Caller must be a participant (or an admin) and the winner must be real.
+    IF NOT public.is_admin_user()
+       AND v_uid <> v_challenger AND v_uid <> v_challenged THEN
+        RAISE EXCEPTION 'forbidden';
+    END IF;
+    IF p_winner_id <> v_challenger AND p_winner_id <> v_challenged THEN
+        RAISE EXCEPTION 'invalid_winner';
+    END IF;
+
+    PERFORM public.grant_xp(p_winner_id, NULL, NULL, false, 100, 'challenge_win', true);
+
+    PERFORM set_config('app.progression_allowed', '1', true);
+
+    -- Winner: users doc (coins, badge, expiry) + profiles doc (badge, xp already done above)
+    UPDATE public.documents
+    SET data = jsonb_set(
+            jsonb_set(
+                jsonb_set(
+                    data,
+                    '{coins}',
+                    to_jsonb(COALESCE((data ->> 'coins')::bigint, 0) + 50)
+                ),
+                '{badges}',
+                CASE WHEN data -> 'badges' @> '["challenge_champ"]'::jsonb
+                     THEN data -> 'badges'
+                     ELSE COALESCE(data -> 'badges', '[]'::jsonb) || '["challenge_champ"]'::jsonb
+                END
+            ),
+            '{challengeChampExpiry}',
+            to_jsonb((extract(epoch FROM now()) * 1000)::bigint + 7 * 24 * 60 * 60 * 1000)
+        ), updated_at = now()
+    WHERE path = 'users/' || p_winner_id;
+
+    UPDATE public.documents
+    SET data = jsonb_set(
+            data,
+            '{badges}',
+            CASE WHEN data -> 'badges' @> '["challenge_champ"]'::jsonb
+                 THEN data -> 'badges'
+                 ELSE COALESCE(data -> 'badges', '[]'::jsonb) || '["challenge_champ"]'::jsonb
+            END
+        ), updated_at = now()
+    WHERE path = 'profiles/' || p_winner_id;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.grant_challenge_reward(text, text) TO authenticated;
+
+-- purchase_item_deduct: server-verified store purchase (prevents negative XP)
+CREATE OR REPLACE FUNCTION public.purchase_item_deduct(
+    p_user_id text,
+    p_price bigint
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid text := auth.uid()::text;
+    v_row public.documents%ROWTYPE;
+    v_old_xp bigint;
+    v_new_xp bigint;
+    v_level bigint;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'unauthorized';
+    END IF;
+    IF v_uid <> p_user_id AND NOT public.is_admin_user() THEN
+        RAISE EXCEPTION 'forbidden';
+    END IF;
+    IF p_price <= 0 THEN
+        RETURN jsonb_build_object('success', false, 'reason', 'invalid_price');
+    END IF;
+
+    SELECT * INTO v_row
+    FROM public.documents
+    WHERE path = 'users/' || p_user_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'reason', 'no_user');
+    END IF;
+
+    v_old_xp := COALESCE((v_row.data ->> 'xp')::bigint, 0);
+    IF v_old_xp < p_price THEN
+        RETURN jsonb_build_object('success', false, 'reason', 'insufficient');
+    END IF;
+
+    v_new_xp := v_old_xp - p_price;
+    v_level := floor(v_new_xp / 1000) + 1;
+
+    v_row.data := jsonb_set(jsonb_set(v_row.data, '{xp}', to_jsonb(v_new_xp)), '{level}', to_jsonb(v_level));
+
+    PERFORM set_config('app.progression_allowed', '1', true);
+    UPDATE public.documents
+    SET data = v_row.data, updated_at = now()
+    WHERE path = v_row.path;
+
+    RETURN jsonb_build_object('success', true, 'xp', v_new_xp, 'level', v_level);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.purchase_item_deduct(text, bigint) TO authenticated;
+
+-- admin_set_xp: absolute XP/level override, admins only
+CREATE OR REPLACE FUNCTION public.admin_set_xp(
+    p_user_id text,
+    p_xp bigint,
+    p_level bigint DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_level bigint := p_level;
+BEGIN
+    IF NOT public.is_admin_user() THEN
+        RAISE EXCEPTION 'forbidden';
+    END IF;
+
+    IF v_level IS NULL THEN
+        v_level := floor(p_xp / 1000) + 1;
+    END IF;
+
+    PERFORM set_config('app.progression_allowed', '1', true);
+
+    UPDATE public.documents
+    SET data = jsonb_set(jsonb_set(data, '{xp}', to_jsonb(p_xp)), '{level}', to_jsonb(v_level)),
+        updated_at = now()
+    WHERE path = 'users/' || p_user_id;
+
+    UPDATE public.documents
+    SET data = jsonb_set(jsonb_set(data, '{xp}', to_jsonb(p_xp)), '{level}', to_jsonb(v_level)),
+        updated_at = now()
+    WHERE path = 'profiles/' || p_user_id;
+
+    RETURN jsonb_build_object('success', true, 'xp', p_xp, 'level', v_level);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_xp(text, bigint, bigint) TO authenticated;
+
+-- increment_document_field: generic atomic counter used by the client adapter
+-- for any increment(...) sentinel. Never touches xp/level/role on users/profiles.
+CREATE OR REPLACE FUNCTION public.increment_document_field(
+    p_path text,
+    p_field text,
+    p_amount bigint
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_uid text := auth.uid()::text;
+    v_row public.documents%ROWTYPE;
+    v_new bigint;
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'unauthorized';
+    END IF;
+
+    -- Admin-only collections
+    IF p_path ~ '^(system|admin_alerts|app_updates|global_notifications|advices)/'
+       AND NOT public.is_admin_user() THEN
+        RAISE EXCEPTION 'forbidden';
+    END IF;
+
+    -- users/profiles docs: progression fields are off-limits except through grant_xp
+    IF (p_path ~ '^users/[^/]+$' OR p_path ~ '^profiles/[^/]+$')
+       AND p_field IN ('xp', 'level', 'role')
+       AND NOT public.is_admin_user() THEN
+        RAISE EXCEPTION 'use_grant_xp';
+    END IF;
+
+    SELECT * INTO v_row
+    FROM public.documents
+    WHERE path = p_path
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'no_doc');
+    END IF;
+
+    v_new := COALESCE((v_row.data ->> p_field)::bigint, 0) + p_amount;
+    v_row.data := jsonb_set(v_row.data, ARRAY[p_field], to_jsonb(v_new));
+
+    PERFORM set_config('app.progression_allowed', '1', true);
+    UPDATE public.documents
+    SET data = v_row.data, updated_at = now()
+    WHERE path = v_row.path;
+
+    RETURN jsonb_build_object('success', true, 'value', v_new);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.increment_document_field(text, text, bigint) TO authenticated;
 
 -- =========================================================================
 -- Done! Your Supabase Postgres database is now ready for OrbitX.

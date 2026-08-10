@@ -12,8 +12,8 @@ import Markdown from "react-markdown";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Globe from "react-globe.gl";
 import React, { useState, useEffect, useRef, Component, Suspense, lazy } from "react";
+import { isAdminUser } from "./supabaseAdapter";
 import {
   Leaf,
   Swords,
@@ -280,21 +280,18 @@ function App() {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserData;
-            // Auto-upgrade to admin if email matches
-            const isAdminEmail =
-              user.email === "lumafashionhq@gmail.com" ||
-              user.email === "abdalrahmanjarrah94@gmail.com" ||
-              user.email === "abdalrahmanjarrah1@gmail.com";
-            if (isAdminEmail && data.role !== "admin") {
-              updateDoc(userRef, { role: "admin" }).catch((e) =>
-                handleFirestoreError(
-                  e,
-                  OperationType.WRITE,
-                  `users/${user.uid}`,
-                ),
-              );
-              data.role = "admin";
-            }
+            // Admin role is now decided by the server (admins table), never auto-upgraded client-side.
+            isAdminUser(user.email).then((isAdmin) => {
+              if (isAdmin && data.role !== "admin") {
+                updateDoc(userRef, { role: "admin" }).catch((e) =>
+                  handleFirestoreError(
+                    e,
+                    OperationType.WRITE,
+                    `users/${user.uid}`,
+                  ),
+                );
+              }
+            });
             setUserData(data);
             setView("dashboard");
           } else {

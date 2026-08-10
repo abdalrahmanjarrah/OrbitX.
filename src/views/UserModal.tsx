@@ -11,7 +11,6 @@ import Markdown from "react-markdown";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Globe from "react-globe.gl";
 import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Leaf,
@@ -174,7 +173,6 @@ import CosmicDiary from './CosmicDiary';
 import NavLink from './NavLink';
 import FarmDisplay from './FarmDisplay';
 import BlackHolesView from './BlackHolesView';
-import AwarenessView from './AwarenessView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
 

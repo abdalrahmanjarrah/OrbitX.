@@ -13,6 +13,54 @@ export const isRealSupabase =
   import.meta.env.VITE_SUPABASE_ANON_KEY && 
   import.meta.env.VITE_SUPABASE_ANON_KEY !== "your-anon-key";
 
+// True when the error means "RPC function not deployed yet" -> safe fallback
+export const isRpcUnavailable = (err: any): boolean => {
+  const code = String(err?.code || "");
+  const msg = String(err?.message || "");
+  return code === "PGRST202" || msg.includes("PGRST202") || msg.includes("Could not find the function");
+};
+
+// Server-side RPC helper. Returns { success, data, error }.
+export const callRpc = async (fn: string, args: any) => {
+  if (!isRealSupabase) {
+    return { success: false, data: null, error: { code: "PGRST202", message: "RPC disabled (no real supabase)" } };
+  }
+  try {
+    const { data, error } = await supabase.rpc(fn, args);
+    return { success: !error, data, error };
+  } catch (err) {
+    return { success: false, data: null, error: err };
+  }
+};
+
+// Server-verified admin check (admins table), with graceful fallback to the
+// legacy hardcoded list while the security migration hasn't been applied yet.
+const ADMIN_EMAILS = ["lumafashionhq@gmail.com", "abdalrahmanjarrah94@gmail.com", "abdalrahmanjarrah1@gmail.com"];
+const adminEmailCache: Record<string, boolean> = {};
+export const isAdminUser = async (email?: string | null): Promise<boolean> => {
+  if (!email) return false;
+  if (email in adminEmailCache) return adminEmailCache[email];
+
+  if (isRealSupabase) {
+    try {
+      const { data, error } = await supabase
+        .from("admins")
+        .select("email")
+        .eq("email", email)
+        .maybeSingle();
+      if (!error) {
+        adminEmailCache[email] = !!data;
+        return !!data;
+      }
+    } catch (e) {
+      // table missing -> fall back below
+    }
+  }
+
+  adminEmailCache[email] = ADMIN_EMAILS.includes(email);
+  return adminEmailCache[email];
+};
+
 // Local storage fallback for seamless testing and offline-first persistence
 export interface FallbackDoc {
   path: string;
@@ -445,6 +493,66 @@ export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQ
   return runInMemoryFilter(getLocalDocs());
 };
 
+// Top-level increment() sentinels inside an update payload
+const extractIncrementFields = (updates: any): { field: string; amount: number }[] => {
+  const out: { field: string; amount: number }[] = [];
+  for (const key in updates) {
+    const val = updates[key];
+    if (val instanceof MockFieldValue && val.type === "increment") {
+      out.push({ field: key, amount: Number(val.payload) || 0 });
+    }
+  }
+  return out;
+};
+
+// Persist a write that contains increment() sentinels. Increments are applied
+// ATOMICALLY on the server via the increment_document_field RPC (never as a
+// client-computed sum, which causes lost updates). Non-increment fields are
+// then written as a partial document so the server's incremented value is
+// never overwritten. Returns true when fully handled server-side.
+const persistIncremental = async (docRef: MockDocRef, updates: any, finalData: any): Promise<boolean> => {
+  const increments = extractIncrementFields(updates);
+  if (increments.length === 0) return false;
+
+  for (const inc of increments) {
+    const { error } = await supabase.rpc("increment_document_field", {
+      p_path: docRef.path,
+      p_field: inc.field,
+      p_amount: inc.amount,
+    });
+    if (error) {
+      if (!isRpcUnavailable(error)) {
+        console.warn(`[Supabase Compatibility] atomic increment failed on ${docRef.path}.${inc.field}:`, error);
+      }
+      return false; // fall back to the legacy whole-document write
+    }
+  }
+
+  const nonIncFields = Object.keys(updates).filter(
+    (k) => !(updates[k] instanceof MockFieldValue && updates[k].type === "increment"),
+  );
+  if (nonIncFields.length === 0) return true; // increments only -> nothing else to persist
+
+  const nonIncData: any = { ...finalData };
+  for (const inc of increments) delete nonIncData[inc.field];
+
+  const { error } = await supabase
+    .from("documents")
+    .upsert({
+      path: docRef.path,
+      collection: docRef.collectionName,
+      id: docRef.id,
+      data: nonIncData,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "path" });
+
+  if (error) {
+    console.warn(`[Supabase Compatibility] partial write failed on ${docRef.path}:`, error);
+    return false;
+  }
+  return true;
+};
+
 export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: boolean }): Promise<void> => {
   const applyLocalSet = () => {
     const localDocs = getLocalDocs();
@@ -496,6 +604,11 @@ export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: 
     updated_at: new Date().toISOString()
   });
   notifyListeners(docRef.path);
+
+  if (options?.merge) {
+    const handled = await persistIncremental(docRef, data, finalData);
+    if (handled) return;
+  }
 
   try {
     const { error } = await supabase
@@ -558,6 +671,9 @@ export const updateDoc = async (docRef: MockDocRef, updates: any): Promise<void>
     updated_at: new Date().toISOString()
   });
   notifyListeners(docRef.path);
+
+  const handled = await persistIncremental(docRef, updates, finalData);
+  if (handled) return;
 
   try {
     const { error } = await supabase
