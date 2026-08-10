@@ -206,9 +206,14 @@ export default function StationCard({
     const updateTime = () => {
       let accumulatedFocusSeconds = room.accumulatedFocusSeconds || 0;
       if (room.timerStatus === "focus" && room.startTime) {
-        const start = room.startTime.toMillis
-          ? room.startTime.toMillis()
-          : room.startTime.seconds * 1000 || Date.now();
+        const rawStart: any = room.startTime;
+        const start = typeof rawStart === "string"
+          ? new Date(rawStart).getTime()
+          : typeof rawStart === "number"
+            ? rawStart
+            : rawStart.toMillis
+              ? rawStart.toMillis()
+              : rawStart.seconds ? rawStart.seconds * 1000 : Date.now();
         accumulatedFocusSeconds += Math.max(0, Math.floor((Date.now() - start) / 1000));
       }
       if (accumulatedFocusSeconds < 60) {

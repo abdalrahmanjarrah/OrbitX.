@@ -45,7 +45,9 @@ export function useSessionCompletion(
     const focusStartVal = completedSessionStartTime 
       ? (typeof completedSessionStartTime.toDate === 'function' 
           ? completedSessionStartTime.toDate().getTime() 
-          : (completedSessionStartTime.seconds ? completedSessionStartTime.seconds * 1000 : Number(completedSessionStartTime))) 
+          : typeof completedSessionStartTime === 'string'
+            ? new Date(completedSessionStartTime).getTime()
+            : (completedSessionStartTime.seconds ? completedSessionStartTime.seconds * 1000 : Number(completedSessionStartTime))) 
       : 0;
 
     const isTransitioningToRest = (currentStatus === "break" || currentStatus === "idle") && prevStatus === "focus";

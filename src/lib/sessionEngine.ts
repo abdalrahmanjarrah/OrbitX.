@@ -90,12 +90,20 @@ const activeHookInstances = new Map<string, string>(); // userId -> hookInstance
 // Global session-level in-memory cache for participant profiles to eliminate redundant getDoc loads
 const profileCache: Record<string, UserData> = {};
 
-// Resolve a Firestore serverTimestamp into epoch ms.
-// While a serverTimestamp() write is still pending locally, Firestore returns a
-// placeholder Timestamp whose seconds/nanoseconds are NaN. Resolve to null in that
-// case so callers never compute NaN timers ("NaN:NaN").
+// Resolve a session startTime into epoch ms, handling every representation this
+// app stores: ISO strings (Supabase adapter's serverTimestamp() -> toISOString()),
+// epoch ms numbers (Date.now()), Firestore Timestamp objects (.toDate()/.seconds),
+// and pending placeholder Timestamps whose seconds/nanoseconds are NaN (resolved to
+// null so callers never compute NaN timers like "NaN:NaN").
 function resolveStartTimeMs(startTime: any): number | null {
   if (!startTime) return null;
+  if (typeof startTime === "string") {
+    const ms = new Date(startTime).getTime();
+    return isNaN(ms) ? null : ms;
+  }
+  if (typeof startTime === "number") {
+    return isNaN(startTime) ? null : startTime;
+  }
   if (typeof startTime.toDate === "function") {
     const t = startTime.toDate();
     const ms = t.getTime();
