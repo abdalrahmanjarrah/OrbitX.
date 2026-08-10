@@ -43,7 +43,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
           <span className="text-xs text-gray-400 font-medium">معدل الفوز</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-emerald-400">{winRate}%</span>
-            <span className="text-[10px] text-gray-500 font-mono">({wins} فوز / {totalCompleted} سباقات)</span>
+            <span className="text-[10px] text-gray-500 font-mono">({wins} فوز / {totalCompleted} نزالات)</span>
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
           <span className="text-xs text-gray-400 font-medium">أعلى نتيجة فوز</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-indigo-400">+{maxVictoriousXp} XP</span>
-            <span className="text-[10px] text-gray-500 font-mono">في سباق واحد</span>
+            <span className="text-[10px] text-gray-500 font-mono">في نزال واحد</span>
           </div>
         </div>
 
@@ -75,14 +75,14 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
       {/* Ledger history listing */}
       <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
         <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-          <Trophy size={15} className="text-indigo-400" />
-          <span>سجل السباقات السابقة</span>
+          <Trophy size={15} className="text-amber-400" />
+          <span>سجل النزالات السابقة</span>
         </h3>
 
         {completedList.length === 0 ? (
           <div className="text-center py-12 max-w-sm mx-auto">
             <div className="text-3xl mb-3">⚔️</div>
-            <h4 className="text-sm font-bold text-white mb-1.5">لم تبدأ أي سباقات بعد</h4>
+            <h4 className="text-sm font-bold text-white mb-1.5">لم تخض أي نزالات بعد</h4>
             <p className="text-[11px] text-gray-500 leading-relaxed">
               بعد إنهاء أول تحدي ستظهر نتائجك وإحصائياتك هنا.
             </p>
@@ -141,9 +141,9 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between md:justify-end gap-6 md:text-left self-stretch md:self-auto border-t md:border-0 border-white/5 pt-3 md:pt-0">
-                    <span className="md:hidden text-xs text-gray-500">مدة الجولة</span>
+                    <span className="md:hidden text-xs text-gray-500">مدة النزال</span>
                     <div className="flex items-center gap-1 text-xs text-gray-400 font-mono">
-                      <Timer size={13} className="text-indigo-400" />
+                      <Timer size={13} className="text-amber-400" />
                       <span>{challenge.durationMinutes} دقيقة تركيز</span>
                     </div>
                   </div>

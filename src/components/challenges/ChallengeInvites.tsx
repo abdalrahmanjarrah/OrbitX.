@@ -84,7 +84,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       });
       await addDoc(collection(db, "users", challenge.challengerId, "notifications"), {
         type: "challenge_accepted",
-        content: `قبل ${currentUser.displayName} التحدي! السباق بدأ الآن — مين بيجمع أكتر دقائق تركيز خلال ${challenge.durationMinutes} دقيقة؟ ⚡`,
+        content: `قبل ${currentUser.displayName} التحدي! النزال بدأ الآن — مين بيجمع أكتر دقائق تركيز خلال ${challenge.durationMinutes} دقيقة؟ ⚡`,
         challengeId: challenge.id,
         senderId: currentUser.uid,
         senderName: currentUser.displayName,
@@ -166,11 +166,11 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
       {/* Quick Invite Form */}
       <div className="lg:col-span-5 p-6 rounded-3xl border border-white/5 bg-space-dark/50 backdrop-blur-md">
         <h3 className="text-md font-bold text-white flex items-center gap-2 mb-4">
-          <Swords size={16} className="text-indigo-400" />
-          <span>سباق تركيز سريع</span>
+          <Swords size={16} className="text-rose-400" />
+          <span>نزال تركيز سريع</span>
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-6">
-          حدد زميلاً دراسياً واختر مدة السباق. كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء المدة يحرز الجوائز!
+          استدعِ زميلاً دراسياً وحدد مدة النزال. كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء المدة يرفع راية الفوز ويحرز الجوائز!
         </p>
 
         {loadingFriends ? (
@@ -184,7 +184,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-300 font-semibold block mb-2">اختر الصديق المراد تحديه</label>
+              <label className="text-xs text-gray-300 font-semibold block mb-2">اختر المقاتل المراد استدعاؤه</label>
               <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[160px] pr-1">
                 {friends.map((friend) => {
                   const isSelected = selectedFriend?.uid === friend.uid;
@@ -220,7 +220,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                 className="space-y-3 pt-2"
               >
                 <div>
-                  <label className="text-xs text-gray-300 font-semibold block mb-2">مدة السباق</label>
+                  <label className="text-xs text-gray-300 font-semibold block mb-2">مدة النزال</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { mins: 25, label: "25 دقيقة" },
@@ -257,7 +257,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                   ) : (
                     <Send size={13} />
                   )}
-                  <span>إرسال دعوة السباق</span>
+                  <span>إرسال طلب النزال</span>
                 </button>
               </motion.div>
             )}
@@ -271,7 +271,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
             <Mail size={15} className="text-fuchsia-400" />
-            <span>الدعوات الواردة ({incomingInvites.length})</span>
+            <span>طلبات نزال واردة ({incomingInvites.length})</span>
           </h4>
 
           {incomingInvites.length === 0 ? (
@@ -293,7 +293,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                       <div className="text-xs font-bold text-white">{challenge.challengerName}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                         <Timer size={10} />
-                        <span>مدة التحدي: {formatDuration(challenge.durationMinutes)}</span>
+                        <span>مدة النزال: {formatDuration(challenge.durationMinutes)}</span>
                       </div>
                     </div>
                   </div>
@@ -324,7 +324,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
             <Send size={15} className="text-indigo-400" />
-            <span>الدعوات المرسلة المعلقة ({outgoingInvites.length})</span>
+            <span>طلبات مرسلة بانتظار الرد ({outgoingInvites.length})</span>
           </h4>
 
           {outgoingInvites.length === 0 ? (
@@ -346,7 +346,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                       <div className="text-xs font-bold text-white">{challenge.challengedName}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                         <Timer size={10} />
-                        <span>مدة الجولة: {challenge.durationMinutes} دقيقة</span>
+                        <span>مدة النزال: {challenge.durationMinutes} دقيقة</span>
                       </div>
                     </div>
                   </div>

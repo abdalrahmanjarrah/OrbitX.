@@ -105,13 +105,13 @@ export default function ChallengesHubView({
             onClick={() => setActiveSubTab("active")}
             className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
               activeSubTab === "active"
-                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/30"
+                ? "bg-rose-500/10 text-rose-300 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
                 : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
             }`}
           >
             <Swords size={14} />
             <span>
-              {isAr ? `السباقات النشطة (${activeChallenges.length})` : `Active Races (${activeChallenges.length})`}
+              {isAr ? `النزالات النشطة (${activeChallenges.length})` : `Active Duels (${activeChallenges.length})`}
             </span>
           </button>
 
@@ -126,8 +126,8 @@ export default function ChallengesHubView({
             <Zap size={14} />
             <span>
               {isAr 
-                ? `الدعوات والطلبات (${incomingInvites.length + outgoingInvites.length})` 
-                : `Invites & Requests (${incomingInvites.length + outgoingInvites.length})`}
+                ? `طلبات النزال (${incomingInvites.length + outgoingInvites.length})` 
+                : `Duel Requests (${incomingInvites.length + outgoingInvites.length})`}
             </span>
           </button>
 
@@ -135,15 +135,15 @@ export default function ChallengesHubView({
             onClick={() => setActiveSubTab("history")}
             className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
               activeSubTab === "history"
-                ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+                ? "bg-amber-500/10 text-amber-300 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
                 : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
             }`}
           >
             <Trophy size={14} />
             <span>
               {isAr 
-                ? `السجل والإحصائيات (${completedChallenges.length})` 
-                : `History & Stats (${completedChallenges.length})`}
+                ? `سجل النزالات (${completedChallenges.length})` 
+                : `Duel History (${completedChallenges.length})`}
             </span>
           </button>
         </div>
