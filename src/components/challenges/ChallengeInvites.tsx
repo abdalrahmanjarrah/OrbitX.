@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Swords, Mail, Send, CheckCircle, XCircle, Timer, Award, User, Loader2 } from "lucide-react";
+import { Swords, Mail, Send, CheckCircle, XCircle, Timer, User, Loader2, Flame } from "lucide-react";
 import { Challenge, UserData } from "../../shared";
 import { db } from "../../firebase";
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
@@ -163,19 +163,25 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Quick Invite Form */}
-      <div className="lg:col-span-5 p-6 rounded-3xl border border-white/5 bg-space-dark/50 backdrop-blur-md">
-        <h3 className="text-md font-bold text-white flex items-center gap-2 mb-4">
-          <Swords size={16} className="text-rose-400" />
-          <span>نزال تركيز سريع</span>
-        </h3>
-        <p className="text-xs text-gray-400 leading-relaxed mb-6">
-          استدعِ زميلاً دراسياً وحدد مدة النزال. كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء المدة يرفع راية الفوز ويحرز الجوائز!
+      {/* فتح نزال — نموذج سريع */}
+      <div className="lg:col-span-5 p-6 rounded-3xl border border-rose-500/10 bg-gradient-to-br from-[#110f1f] to-[#0a0912] shadow-[0_15px_40px_rgba(244,63,94,0.08)]">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-9 h-9 rounded-xl bg-rose-500/12 border border-rose-500/30 flex items-center justify-center text-rose-400">
+            <Swords size={17} />
+          </span>
+          <div>
+            <h3 className="text-md font-bold text-white">افتح نزال تركيز</h3>
+            <p className="text-[10px] text-gray-500">اختر مقاتلاً وحدد مدة الحلبة</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 leading-relaxed mb-6 mt-3">
+          كل دقيقة تركيز تجمعها بأي محطة تتحول لنقطة، والأكثر تركيزاً عند انتهاء
+          المدة يرفع راية الفوز ويحرز الجوائز!
         </p>
 
         {loadingFriends ? (
           <div className="flex justify-center py-6">
-            <Loader2 size={20} className="text-indigo-400 animate-spin" />
+            <Loader2 size={20} className="text-rose-400 animate-spin" />
           </div>
         ) : friends.length === 0 ? (
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center text-xs text-gray-500">
@@ -184,8 +190,8 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-300 font-semibold block mb-2">اختر المقاتل المراد استدعاؤه</label>
-              <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[160px] pr-1">
+              <label className="text-xs text-gray-300 font-semibold block mb-2">اختر المقاتل</label>
+              <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[170px] pr-1">
                 {friends.map((friend) => {
                   const isSelected = selectedFriend?.uid === friend.uid;
                   return (
@@ -193,17 +199,17 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                       key={friend.uid}
                       type="button"
                       onClick={() => setSelectedFriend(friend)}
-                      className={`p-2.5 rounded-xl border text-right transition-all flex items-center gap-2 ${
+                      className={`p-2.5 rounded-xl border text-right transition-all flex items-center gap-2.5 ${
                         isSelected
-                          ? "bg-indigo-500/10 border-indigo-500 text-white shadow-[0_4px_12px_rgba(99,102,241,0.15)]"
-                          : "bg-white/[0.01] border-white/5 text-gray-400 hover:border-white/10 hover:text-white"
+                          ? "bg-rose-500/10 border-rose-500/60 text-white shadow-[0_4px_16px_rgba(244,63,94,0.2)]"
+                          : "bg-white/[0.01] border-white/5 text-gray-400 hover:border-rose-500/30 hover:text-white"
                       }`}
                     >
-                      <div className="w-6 h-6 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 flex items-center justify-center shrink-0 overflow-hidden">
                         {friend.photoURL ? (
-                          <img src={friend.photoURL} alt={friend.displayName} className="w-full h-full rounded-full object-cover" />
+                          <img src={friend.photoURL} alt={friend.displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <User size={12} className="text-indigo-400" />
+                          <User size={14} className="text-rose-400" />
                         )}
                       </div>
                       <span className="text-xs font-bold truncate">{friend.displayName}</span>
@@ -236,7 +242,7 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                         onClick={() => setDuration(opt.mins)}
                         className={`py-1.5 px-1 rounded-lg border font-mono text-[11px] font-bold transition-all ${
                           duration === opt.mins
-                            ? "bg-fuchsia-500/10 border-fuchsia-500 text-fuchsia-400"
+                            ? "bg-amber-500/10 border-amber-500/60 text-amber-300"
                             : "bg-white/[0.01] border-white/5 text-gray-400 hover:border-white/10"
                         }`}
                       >
@@ -250,14 +256,14 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                   type="button"
                   disabled={sendingInvite}
                   onClick={handleSendChallenge}
-                  className="w-full py-2.5 bg-gradient-to-l from-indigo-500 to-fuchsia-500 hover:from-indigo-600 hover:to-fuchsia-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(99,102,241,0.2)] disabled:opacity-50 mt-4"
+                  className="w-full py-2.5 bg-gradient-to-l from-rose-500 to-amber-600 hover:from-rose-600 hover:to-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_0_18px_rgba(244,63,94,0.3)] disabled:opacity-50 mt-4 transition-all active:scale-95"
                 >
                   {sendingInvite ? (
                     <Loader2 size={13} className="animate-spin" />
                   ) : (
                     <Send size={13} />
                   )}
-                  <span>إرسال طلب النزال</span>
+                  <span>إطلاق النزال</span>
                 </button>
               </motion.div>
             )}
@@ -265,32 +271,42 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         )}
       </div>
 
-      {/* Invites Lists View */}
+      {/* الطلبات */}
       <div className="lg:col-span-7 space-y-6">
-        {/* Incoming challenges */}
+        {/* طلبات واردة */}
         <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
             <Mail size={15} className="text-fuchsia-400" />
             <span>طلبات نزال واردة ({incomingInvites.length})</span>
+            {incomingInvites.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-[10px] font-bold text-fuchsia-300">
+                <Flame size={10} className="inline animate-pulse mr-0.5 -mt-0.5" />
+                خصمك ينتظر
+              </span>
+            )}
           </h4>
 
           {incomingInvites.length === 0 ? (
             <div className="text-center py-6 text-xs text-gray-500">
-              لا توجد طلبات تحدي مرسلة لك حالياً.
+              لا توجد طلبات نزال مرسلة لك حالياً.
             </div>
           ) : (
-            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
               {incomingInvites.map((challenge) => (
                 <div
                   key={challenge.id}
-                  className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between transition-hover hover:border-white/10"
+                  className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3 transition-hover hover:border-fuchsia-500/20"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 text-xs font-black">
-                      {challenge.challengerName.charAt(0)}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-fuchsia-500/15 border border-fuchsia-500/25 flex items-center justify-center text-fuchsia-400 text-xs font-black overflow-hidden shrink-0">
+                      {challenge.challengerPhoto ? (
+                        <img src={challenge.challengerPhoto} alt={challenge.challengerName} className="w-full h-full object-cover" />
+                      ) : (
+                        challenge.challengerName.charAt(0)
+                      )}
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">{challenge.challengerName}</div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{challenge.challengerName}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                         <Timer size={10} />
                         <span>مدة النزال: {formatDuration(challenge.durationMinutes)}</span>
@@ -298,18 +314,19 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleAcceptInvite(challenge)}
-                      className="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                      className="px-3.5 py-1.5 bg-gradient-to-l from-rose-500 to-amber-600 hover:from-rose-600 hover:to-amber-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 active:scale-95"
                     >
                       <CheckCircle size={12} />
                       <span>قبول</span>
                     </button>
-                    
+
                     <button
                       onClick={() => handleDeclineInvite(challenge)}
                       className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-bold rounded-lg transition-colors"
+                      title="رفض"
                     >
                       <XCircle size={12} />
                     </button>
@@ -320,38 +337,46 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
           )}
         </div>
 
-        {/* Outgoing challenges */}
+        {/* طلبات مرسلة */}
         <div className="p-6 rounded-3xl border border-white/5 bg-space-dark/30">
           <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-            <Send size={15} className="text-indigo-400" />
+            <Send size={15} className="text-amber-400" />
             <span>طلبات مرسلة بانتظار الرد ({outgoingInvites.length})</span>
           </h4>
 
           {outgoingInvites.length === 0 ? (
             <div className="text-center py-6 text-xs text-gray-500">
-              لم تقم بإرسال أي دعوات معلقة بعد.
+              لم ترسل أي طلبات معلقة بعد.
             </div>
           ) : (
-            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
               {outgoingInvites.map((challenge) => (
                 <div
                   key={challenge.id}
-                  className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between"
+                  className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center text-indigo-400 text-xs font-black">
-                      {challenge.challengedName.charAt(0)}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 text-xs font-black overflow-hidden shrink-0">
+                      {challenge.challengedPhoto ? (
+                        <img src={challenge.challengedPhoto} alt={challenge.challengedName} className="w-full h-full object-cover" />
+                      ) : (
+                        challenge.challengedName.charAt(0)
+                      )}
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">{challenge.challengedName}</div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{challenge.challengedName}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                         <Timer size={10} />
-                        <span>مدة النزال: {challenge.durationMinutes} دقيقة</span>
+                        <span>مدة النزال: {formatDuration(challenge.durationMinutes)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] text-gray-400">
+                  <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] text-gray-400 shrink-0 flex items-center gap-1">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-amber-400"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                    </span>
                     بانتظار الموافقة...
                   </span>
                 </div>

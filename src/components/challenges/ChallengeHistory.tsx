@@ -1,5 +1,5 @@
 import React from "react";
-import { Award, Trophy, Timer, Swords, ArrowUpRight, AwardIcon, ShieldAlert, Sparkles, AlertCircle } from "lucide-react";
+import { Award, Trophy, Timer, Swords, Percent, TrendingUp, Crosshair } from "lucide-react";
 import { Challenge, UserData } from "../../shared";
 import { db } from "../../firebase";
 
@@ -22,7 +22,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
   const losses = completedList.filter((c) => c.winnerId && c.winnerId !== currentUser.uid && c.winnerId !== "draw").length;
   const draws = completedList.filter((c) => c.winnerId === "draw").length;
   const totalCompleted = completedList.length;
-  
+
   const winRate = totalCompleted > 0 ? Math.round((wins / totalCompleted) * 100) : 0;
 
   // Largest XP victory
@@ -35,41 +35,59 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
     }
   });
 
+  const stats = [
+    {
+      icon: <Percent size={15} />,
+      label: "معدل الفوز",
+      value: `${winRate}%`,
+      sub: `${wins} فوز / ${totalCompleted} نزالات`,
+      accent: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      valueColor: "text-emerald-400",
+    },
+    {
+      icon: <TrendingUp size={15} />,
+      label: "أعلى نتيجة فوز",
+      value: `+${maxVictoriousXp} XP`,
+      sub: "في نزال واحد",
+      accent: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      valueColor: "text-amber-400",
+    },
+    {
+      icon: <Crosshair size={15} />,
+      label: "إجمالي الهزائم",
+      value: `${losses}`,
+      sub: "فرصة للتعويض",
+      accent: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      valueColor: "text-rose-400",
+    },
+    {
+      icon: <Award size={15} />,
+      label: "التعادلات",
+      value: `${draws}`,
+      sub: "توازن الطاقات",
+      accent: "text-gray-300 bg-white/5 border-white/10",
+      valueColor: "text-gray-300",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Derived Statistics Header widgets */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-gray-400 font-medium">معدل الفوز</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-emerald-400">{winRate}%</span>
-            <span className="text-[10px] text-gray-500 font-mono">({wins} فوز / {totalCompleted} نزالات)</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <div key={s.label} className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between gap-3 hover:border-white/10 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400 font-medium">{s.label}</span>
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${s.accent}`}>
+                {s.icon}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={`text-2xl font-black font-mono ${s.valueColor}`}>{s.value}</span>
+              <span className="text-[10px] text-gray-500 font-mono">{s.sub}</span>
+            </div>
           </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-gray-400 font-medium">أعلى نتيجة فوز</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-indigo-400">+{maxVictoriousXp} XP</span>
-            <span className="text-[10px] text-gray-500 font-mono">في نزال واحد</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-gray-400 font-medium">إجمالي الهزائم</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-rose-400">{losses}</span>
-            <span className="text-[10px] text-gray-500 font-mono">تحتوي فرصة للتعويض</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-space-dark/50 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-gray-400 font-medium">التعادلات</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-gray-300">{draws}</span>
-            <span className="text-[10px] text-gray-500 font-mono">توازن الطاقات</span>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Ledger history listing */}
@@ -84,17 +102,17 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
             <div className="text-3xl mb-3">⚔️</div>
             <h4 className="text-sm font-bold text-white mb-1.5">لم تخض أي نزالات بعد</h4>
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              بعد إنهاء أول تحدي ستظهر نتائجك وإحصائياتك هنا.
+              بعد إنهاء أول نزال ستظهر نتائجك وإحصائياتك هنا.
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
             {completedList.map((challenge) => {
               const isChallenger = challenge.challengerId === currentUser.uid;
               const myXp = isChallenger ? (challenge.progressPlayer1 || 0) : (challenge.progressPlayer2 || 0);
               const oppXp = isChallenger ? (challenge.progressPlayer2 || 0) : (challenge.progressPlayer1 || 0);
               const opponentName = isChallenger ? challenge.challengedName : challenge.challengerName;
-              
+
               const isWinner = challenge.winnerId === currentUser.uid;
               const isDraw = challenge.winnerId === "draw";
 
@@ -108,7 +126,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
                 resultClass = "text-gray-300 bg-white/5 border-white/10";
               }
 
-              const challengeDate = challenge.completedAt 
+              const challengeDate = challenge.completedAt
                 ? new Date(challenge.completedAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })
                 : "غير مؤرخ";
 
@@ -119,18 +137,18 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
                 >
                   <div className="flex items-center gap-4">
                     {/* Status graphic circle */}
-                    <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold ${resultClass}`}>
+                    <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold shrink-0 ${resultClass}`}>
                       {resultLabel}
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                        <span>ضد {opponentName}</span>
-                        <span className="text-[10px] text-gray-500 font-mono">({challengeDate})</span>
+                        <span className="truncate">ضد {opponentName}</span>
+                        <span className="text-[10px] text-gray-500 font-mono shrink-0">({challengeDate})</span>
                       </div>
-                      <div className="text-xs text-gray-400 mt-1 flex items-center gap-3">
+                      <div className="text-xs text-gray-400 mt-1 flex items-center gap-3 flex-wrap">
                         <span className="flex items-center gap-1 text-[11px] font-mono">
-                          <Swords size={11} className="text-indigo-400" />
+                          <Swords size={11} className="text-amber-400" />
                           <span>نتيجتك: {myXp} XP</span>
                         </span>
                         <span className="flex items-center gap-1 text-[11px] font-mono border-r border-white/10 pr-3">
@@ -142,7 +160,7 @@ export const ChallengeHistory: React.FC<ChallengeHistoryProps> = ({
 
                   <div className="flex items-center justify-between md:justify-end gap-6 md:text-left self-stretch md:self-auto border-t md:border-0 border-white/5 pt-3 md:pt-0">
                     <span className="md:hidden text-xs text-gray-500">مدة النزال</span>
-                    <div className="flex items-center gap-1 text-xs text-gray-400 font-mono">
+                    <div className="flex items-center gap-1 text-xs text-gray-400 font-mono shrink-0">
                       <Timer size={13} className="text-amber-400" />
                       <span>{challenge.durationMinutes} دقيقة تركيز</span>
                     </div>

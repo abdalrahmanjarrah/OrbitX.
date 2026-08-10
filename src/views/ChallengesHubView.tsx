@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Swords, RefreshCw, Zap, Loader2, Trophy } from "lucide-react";
+import { Flame, Swords, Trophy, RefreshCw, Loader2 } from "lucide-react";
 import { UserData, Challenge } from "../shared";
 import { db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -8,7 +8,6 @@ import { ActiveChallengesList } from "../components/challenges/ActiveChallengesL
 import { ChallengeInvites } from "../components/challenges/ChallengeInvites";
 import { HowChallengesWork } from "../components/challenges/HowChallengesWork";
 import { ChallengeHistory } from "../components/challenges/ChallengeHistory";
-import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../context/LanguageContext";
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
@@ -18,6 +17,29 @@ interface ChallengesHubViewProps {
   onSelectUser: (userId: string) => void;
 }
 
+interface SectionHeaderProps {
+  icon: React.ReactNode;
+  title: string;
+  count?: number;
+  accent?: string;
+}
+
+const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, count, accent = "text-rose-400" }) => (
+  <div className="flex items-center justify-between gap-4 mb-5">
+    <div className="flex items-center gap-2.5">
+      <span className={cn("w-8 h-8 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center", accent)}>
+        {icon}
+      </span>
+      <h2 className="text-lg font-black text-white tracking-tight">{title}</h2>
+      {typeof count === "number" && count > 0 && (
+        <span className="px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-[11px] font-bold text-rose-300 font-mono">
+          {count}
+        </span>
+      )}
+    </div>
+  </div>
+);
+
 export default function ChallengesHubView({
   user,
   onSelectUser,
@@ -25,7 +47,6 @@ export default function ChallengesHubView({
   const { isAr, t } = useLanguage();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<"active" | "invites" | "history">("active");
 
   const fetchAllChallenges = async () => {
     setLoading(true);
@@ -66,170 +87,92 @@ export default function ChallengesHubView({
   const outgoingInvites = challenges.filter(c => c.status === "pending" && c.challengerId === user.uid);
   const activeChallenges = challenges.filter(c => c.status === "active");
   const completedChallenges = challenges.filter(c => c.status === "completed");
+  const winsCount = completedChallenges.filter(c => c.winnerId === user.uid).length;
+
+  const scrollTo = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleInviteFriendClick = () => {
+    const element = document.getElementById("mobile-search-tab-trigger");
+    if (element) {
+      element.click();
+    } else {
+      showToast(
+        isAr
+          ? "يمكنك استدعاء مقاتلين جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
+          : "You can invite new fighters to the galaxy by heading to the Radar & Explore section and searching for them!",
+        "info",
+      );
+    }
+  };
 
   return (
-    <div className={cn("space-y-8 pb-32", isAr ? "text-right" : "text-left")} dir={isAr ? "rtl" : "ltr"}>
-      {/* 1. HERO / INTRO SECTION */}
+    <div className={cn("space-y-12 pb-32", isAr ? "text-right" : "text-left")} dir={isAr ? "rtl" : "ltr"}>
+      {/* 1. حلبة النزالات — HERO */}
       <ChallengesHero
-        onStartChallengeClick={() => {
-          setActiveSubTab("invites");
-          // Smooth scroll to challenge friend panel
-          const element = document.getElementById("challenges-interactive-hub");
-          if (element) {
-            element.scrollIntoView({ behavior: "smooth" });
-          }
-        }}
-        onInviteFriendClick={() => {
-          // Instruct the parent dashboard helper to switch to search/add-friend tab
-          const element = document.getElementById("mobile-search-tab-trigger");
-          if (element) {
-            element.click();
-          } else {
-            // General support guidance
-            showToast(
-              isAr
-                ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
-                : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!",
-              "info",
-            );
-          }
-        }}
+        activeCount={activeChallenges.length}
+        invitesCount={incomingInvites.length + outgoingInvites.length}
+        winsCount={winsCount}
+        onStartChallengeClick={() => scrollTo("challenges-command-center")}
+        onInviteFriendClick={handleInviteFriendClick}
         friendsCount={user.friendsCount || 0}
       />
 
-      {/* Control center sub-navigation */}
-      <div id="challenges-interactive-hub" className={cn("flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-white/5 pb-4", isAr ? "md:flex-row" : "md:flex-row-reverse")}>
-        {/* Dynamic Nav buttons */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setActiveSubTab("active")}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
-              activeSubTab === "active"
-                ? "bg-rose-500/10 text-rose-300 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
-                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            <Swords size={14} />
-            <span>
-              {isAr ? `النزالات النشطة (${activeChallenges.length})` : `Active Duels (${activeChallenges.length})`}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab("invites")}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
-              activeSubTab === "invites"
-                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/30"
-                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            <Zap size={14} />
-            <span>
-              {isAr 
-                ? `طلبات النزال (${incomingInvites.length + outgoingInvites.length})` 
-                : `Duel Requests (${incomingInvites.length + outgoingInvites.length})`}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab("history")}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${
-              activeSubTab === "history"
-                ? "bg-amber-500/10 text-amber-300 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
-                : "bg-white/[0.01] border border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            <Trophy size={14} />
-            <span>
-              {isAr 
-                ? `سجل النزالات (${completedChallenges.length})` 
-                : `Duel History (${completedChallenges.length})`}
-            </span>
-          </button>
-        </div>
-
-        {/* Global Manual telemetry refresh button */}
-        <button
-          onClick={fetchAllChallenges}
-          disabled={loading}
-          className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-indigo-400 transition-colors bg-white/[0.02] border border-white/5 rounded-full flex items-center gap-2 self-start md:self-auto active:scale-95 disabled:opacity-50"
-        >
-          {loading ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <RefreshCw size={13} className="hover:rotate-180 transition-transform duration-500" />
-          )}
-          <span>{isAr ? "مسح راداري جديد" : "New Radar Sweep"}</span>
-        </button>
-      </div>
-
-      {/* Subtab Dynamic Views Container */}
-      <div className="relative">
+      {/* 2. النزالات المشتعلة */}
+      <section id="active-duels" className="scroll-mt-24">
+        <SectionHeader
+          icon={<Flame size={15} />}
+          title={isAr ? "نزالات مشتعلة" : "Burning Duels"}
+          count={activeChallenges.length}
+        />
         {loading && challenges.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 size={36} className="text-indigo-500 animate-spin mb-4" />
+          <div className="flex flex-col items-center justify-center py-16 rounded-3xl border border-white/5 bg-space-dark/20">
+            <Loader2 size={32} className="text-rose-500 animate-spin mb-4" />
             <span className="text-xs text-gray-500 font-mono">
               {isAr ? "تحديث رادار الفضاء..." : "Scanning deep space radar..."}
             </span>
           </div>
         ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSubTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {activeSubTab === "active" && (
-                <ActiveChallengesList
-                  challenges={challenges}
-                  currentUser={user}
-                  onRefresh={fetchAllChallenges}
-                  onStartChallengeClick={() => {
-                    setActiveSubTab("invites");
-                    const element = document.getElementById("challenges-interactive-hub");
-                    if (element) {
-                      element.scrollIntoView({ behavior: "smooth" });
-                    }
-                  }}
-                  onInviteFriendClick={() => {
-                    const element = document.getElementById("mobile-search-tab-trigger");
-                    if (element) {
-                      element.click();
-                    } else {
-                      showToast(
-                        isAr 
-                          ? "يمكنك دعوة مفقودين ورواد فضاء جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
-                          : "You can invite new astronauts to the galaxy by heading to the Radar & Explore section and searching for them!",
-                        "info",
-                      );
-                    }
-                  }}
-                />
-              )}
-
-              {activeSubTab === "invites" && (
-                <ChallengeInvites
-                  incomingInvites={incomingInvites}
-                  outgoingInvites={outgoingInvites}
-                  currentUser={user}
-                  onRefresh={fetchAllChallenges}
-                />
-              )}
-
-              {activeSubTab === "history" && (
-                <ChallengeHistory
-                  challenges={challenges}
-                  currentUser={user}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <ActiveChallengesList
+            challenges={challenges}
+            currentUser={user}
+            onRefresh={fetchAllChallenges}
+            onStartChallengeClick={() => scrollTo("challenges-command-center")}
+            onInviteFriendClick={handleInviteFriendClick}
+          />
         )}
-      </div>
+      </section>
 
-      {/* 6. SIMPLE "HOW IT WORKS" SECTION */}
+      {/* 3. مركز القيادة — فتح نزال + الطلبات */}
+      <section id="challenges-command-center" className="scroll-mt-24">
+        <SectionHeader
+          icon={<Swords size={15} />}
+          title={isAr ? "مركز القيادة" : "Command Center"}
+          count={incomingInvites.length + outgoingInvites.length}
+          accent="text-amber-400"
+        />
+        <ChallengeInvites
+          incomingInvites={incomingInvites}
+          outgoingInvites={outgoingInvites}
+          currentUser={user}
+          onRefresh={fetchAllChallenges}
+        />
+      </section>
+
+      {/* 4. سجل النزالات */}
+      <section id="challenge-history" className="scroll-mt-24">
+        <SectionHeader
+          icon={<Trophy size={15} />}
+          title={isAr ? "سجل النزالات" : "Duel History"}
+          count={completedChallenges.length}
+          accent="text-amber-400"
+        />
+        <ChallengeHistory challenges={challenges} currentUser={user} />
+      </section>
+
+      {/* 5. كيف تعمل النزالات */}
       <HowChallengesWork />
     </div>
   );
