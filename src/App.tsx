@@ -101,6 +101,7 @@ import {
   auth,
   db,
   signInWithGoogle,
+  signInAsGuest,
   logout,
   handleFirestoreError,
   OperationType,
@@ -222,6 +223,20 @@ function App() {
     }
   };
 
+  const handleGuestLogin = async () => {
+    try {
+      setLoginError(null);
+      await signInAsGuest();
+    } catch (err: any) {
+      console.error("Guest login attempt error:", err);
+      setLoginError({
+        code: err?.code || "guest-login-failed",
+        message: err?.message || String(err),
+        fullError: `${err?.code || "guest-login-failed"} | ${err?.message || String(err)}`,
+      });
+    }
+  };
+
   useEffect(() => {
     if (user) {
       if (userData) {
@@ -262,6 +277,7 @@ function App() {
         if (now - lastActivityUpdate > 60000) {
           // Throttle to 1 min
           lastActivityUpdate = now;
+          if (user.isAnonymous) return; // Guests don't write activity to avoid profiles docs
           updateDoc(doc(db, "profiles", user.uid), {
             lastActiveTime: now,
           }).catch(() => {});
@@ -296,6 +312,7 @@ function App() {
             setView("dashboard");
           } else {
             // Initialize new user
+            const isGuest = !!user.isAnonymous || !user.email;
             const isAdminEmail =
               user.email === "lumafashionhq@gmail.com" ||
               user.email === "abdalrahmanjarrah94@gmail.com" ||
@@ -303,7 +320,7 @@ function App() {
 
             const newUserData: UserData = {
               uid: user.uid,
-              displayName: user.displayName || "رائد فضاء",
+              displayName: user.displayName || (isGuest ? "زائر" : "رائد فضاء"),
               email: user.email || "",
               photoURL: user.photoURL || "",
               level: 1,
@@ -311,9 +328,13 @@ function App() {
               role: isAdminEmail ? "admin" : "user",
               friendsCount: 0,
               banned: false,
-              currentActivity: "في لوحة التحكم",
+              currentActivity: isGuest
+                ? "في وضع المشاهدة"
+                : "في لوحة التحكم",
               streak: 1,
               lastActiveDate: new Date().toISOString().split("T")[0],
+              isGuest: isGuest || undefined,
+              completedWizard: isGuest ? true : undefined,
             };
 
             const initUser = async () => {
@@ -325,32 +346,35 @@ function App() {
                 ),
               );
 
-              const profileRef = doc(db, "profiles", user.uid);
-              await setDoc(
-                profileRef,
-                {
-                  uid: user.uid,
-                  displayName: user.displayName || "رائد فضاء",
-                  photoURL: user.photoURL || "",
-                  bio: "",
-                  level: 1,
-                  xp: 0,
-                  totalFocusSessions: 0,
-                  friendsCount: 0,
-                  role: isAdminEmail ? "admin" : "user",
-                  banned: false,
-                  currentActivity: "في لوحة التحكم",
-                  streak: 1,
-                  lastActiveDate: new Date().toISOString().split("T")[0],
-                },
-                { merge: true },
-              ).catch((e) =>
-                handleFirestoreError(
-                  e,
-                  OperationType.WRITE,
-                  `profiles/${user.uid}`,
-                ),
-              );
+              // Guests stay invisible on the public leaderboard: no profiles doc is created for them.
+              if (!isGuest) {
+                const profileRef = doc(db, "profiles", user.uid);
+                await setDoc(
+                  profileRef,
+                  {
+                    uid: user.uid,
+                    displayName: user.displayName || "رائد فضاء",
+                    photoURL: user.photoURL || "",
+                    bio: "",
+                    level: 1,
+                    xp: 0,
+                    totalFocusSessions: 0,
+                    friendsCount: 0,
+                    role: isAdminEmail ? "admin" : "user",
+                    banned: false,
+                    currentActivity: "في لوحة التحكم",
+                    streak: 1,
+                    lastActiveDate: new Date().toISOString().split("T")[0],
+                  },
+                  { merge: true },
+                ).catch((e) =>
+                  handleFirestoreError(
+                    e,
+                    OperationType.WRITE,
+                    `profiles/${user.uid}`,
+                  ),
+                );
+              }
 
               // Immediately transition user state to prevent lockouts on realtime subscription delays
               setUserData(newUserData);
@@ -496,7 +520,7 @@ function App() {
   }, [userData?.xp, userData?.level, userData?.uid]);
 
   useEffect(() => {
-    if (userData) {
+    if (userData && !userData.isGuest) {
       const publicData = {
         uid: userData.uid,
         displayName: userData.displayName,
@@ -541,7 +565,7 @@ function App() {
   if (view === "landing" && !user) {
     return (
       <>
-        <LandingPage onLogin={handleLogin} />
+        <LandingPage onLogin={handleLogin} onGuest={handleGuestLogin} />
         {loginError && (
           <div
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]"
@@ -729,7 +753,7 @@ function App() {
       <Suspense fallback={null}>
         <QuranPlayer />
       </Suspense>
-      <Dashboard user={userData} onLogout={logout} />
+      <Dashboard user={userData} onLogout={logout} onLogin={handleLogin} />
     </>
   );
 }

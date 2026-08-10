@@ -9,6 +9,7 @@ import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle,
+  Eye,
   Flame,
   Info,
   Lock,
@@ -69,6 +70,25 @@ export default function StudyRoomView(props: {
         const data = snap.data() as Room;
         let allowed = true;
         let spectator = false;
+
+        // 0. Guest (viewer) access: public stations only, always as spectator.
+        if (props.user.isGuest) {
+          if (data.isPrivate || data.isChallenge) {
+            showToast(
+              data.isPrivate
+                ? "الغرف الخاصة تتطلب حساباً مسجلاً. سجّل الدخول للانضمام."
+                : "التحديات تتطلب حساباً مسجلاً. سجّل الدخول للمشاركة.",
+              "warning",
+            );
+            setAuthStatus("rejected");
+            props.onExit();
+            return;
+          }
+          spectator = true;
+          allowed = true;
+          if (active) setAuthStatus("spectator");
+          return;
+        }
 
         // 1. Participant Eligibility (Private Challenge)
         if (data.isChallenge) {
@@ -136,7 +156,7 @@ export default function StudyRoomView(props: {
     return () => {
       active = false;
     };
-  }, [props.stationId, props.user.uid, props.user.role, props.onExit]);
+  }, [props.stationId, props.user.uid, props.user.role, props.user.isGuest, props.onExit]);
 
   if (authStatus === "loading") {
     return (
@@ -261,6 +281,17 @@ function StudyRoomContent({
     >
       <StarBackground />
       <div className="atmosphere-bg" />
+
+      {isSpectator && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-950/80 backdrop-blur-xl border border-indigo-500/30 text-indigo-200 text-xs font-bold shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <Eye size={14} className="text-indigo-400" />
+            {isAr
+              ? "وضع المشاهدة — أنت تشاهد المحطة فقط، لا تُسجَّل أي نقاط"
+              : "Spectator mode — you're just watching; no XP is recorded"}
+          </div>
+        </div>
+      )}
 
       {/* Grouped Dialogs & Modals */}
       <StudyRoomDialogs
@@ -775,7 +806,7 @@ function StudyRoomContent({
         </div>
 
         {/* Tools */}
-        <PersonalTasks />
+        {!isSpectator && <PersonalTasks />}
       </main>
 
       {/* Floating Station Chat (Available in break and idle) */}
@@ -788,6 +819,7 @@ function StudyRoomContent({
             user={user}
             stationId={stationId}
             isHost={isHost}
+            isSpectator={isSpectator}
             handleSendMessage={handleSendMessage}
             onSelectUser={onSelectUser}
             isChatDrawerOpen={isChatDrawerOpen}

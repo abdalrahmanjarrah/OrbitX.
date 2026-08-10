@@ -334,6 +334,10 @@ export default function HomeView({
   };
 
   const handleJoinByCode = async () => {
+    if (user.isGuest) {
+      showToast(isAr ? "الانضمام بالرمز يتطلب حساباً مسجلاً." : "Joining by code requires a registered account.", "warning");
+      return;
+    }
     const code = joinCodeInput.trim().toUpperCase();
     if (!code) return;
     setJoiningByCode(true);
@@ -363,6 +367,10 @@ export default function HomeView({
   };
 
   const handleCreateRoom = async () => {
+    if (user.isGuest) {
+      showToast(isAr ? "إنشاء المحطات يتطلب حساباً مسجلاً." : "Creating stations requires a registered account.", "warning");
+      return;
+    }
     if (!newRoomName) return;
     setIsCreating(true);
 
@@ -447,36 +455,47 @@ export default function HomeView({
             </p>
             
             <div className="flex flex-wrap gap-4 pt-2">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="group relative px-6 py-3 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] transition-all duration-500"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/50 to-cyan-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center justify-center gap-3 text-white font-bold">
-                  <Plus size={18} className="text-cyan-400 group-hover:rotate-90 transition-transform duration-500" />
-                  <span>{t("home.create_station", "برمجة محطة جديدة")}</span>
-                </div>
-              </button>
-
-              <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 px-2 overflow-hidden flex-1 min-w-0">
-                <input
-                  value={joinCodeInput}
-                  onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
-                  placeholder={isAr ? "رمز المحطة" : "Station code"}
-                  className="w-24 sm:w-28 bg-transparent outline-none text-white text-sm font-mono placeholder-gray-600 p-3"
-                  dir="ltr"
-                  maxLength={6}
-                />
+              {!user.isGuest && (
                 <button
-                  onClick={handleJoinByCode}
-                  disabled={joiningByCode || !joinCodeInput.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold transition-colors disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap"
+                  onClick={() => setShowCreateModal(true)}
+                  className="group relative px-6 py-3 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)] transition-all duration-500"
                 >
-                  <Lock size={14} />
-                  {joiningByCode ? "..." : isAr ? "انضم" : "Join"}
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/50 to-cyan-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex items-center justify-center gap-3 text-white font-bold">
+                    <Plus size={18} className="text-cyan-400 group-hover:rotate-90 transition-transform duration-500" />
+                    <span>{t("home.create_station", "برمجة محطة جديدة")}</span>
+                  </div>
                 </button>
-              </div>
+              )}
+
+              {user.isGuest ? (
+                <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-indigo-500/20 px-4 py-3 flex-1 min-w-0">
+                  <Eye size={16} className="text-indigo-400 shrink-0" />
+                  <span className="text-xs text-indigo-200/80 font-medium">
+                    {isAr ? "وضع المشاهدة — انضم بحسابك لإنشاء محطات أو دخول غرف خاصة" : "Guest mode — sign in to create stations or join private rooms"}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 px-2 overflow-hidden flex-1 min-w-0">
+                  <input
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
+                    placeholder={isAr ? "رمز المحطة" : "Station code"}
+                    className="w-24 sm:w-28 bg-transparent outline-none text-white text-sm font-mono placeholder-gray-600 p-3"
+                    dir="ltr"
+                    maxLength={6}
+                  />
+                  <button
+                    onClick={handleJoinByCode}
+                    disabled={joiningByCode || !joinCodeInput.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold transition-colors disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    <Lock size={14} />
+                    {joiningByCode ? "..." : isAr ? "انضم" : "Join"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

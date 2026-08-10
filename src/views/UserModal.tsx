@@ -211,6 +211,10 @@ export default function UserModal({
 
   const handleInviteToFleet = async () => {
     if (!myFleet || !currentUser?.fleetId) return;
+    if (currentUser.isGuest) {
+      showToast("وضع المشاهدة — الدعوات تتطلب حساباً مسجلاً.", "warning");
+      return;
+    }
     try {
       await updateDoc(doc(db, "users", userId), {
         fleetInvites: arrayUnion(myFleet.id),
@@ -287,6 +291,10 @@ export default function UserModal({
 
   const sendChallengeFromProfile = async () => {
     if (!userData || !currentUser) return;
+    if (currentUser.isGuest) {
+      showToast("وضع المشاهدة — التحديات تتطلب حساباً مسجلاً.", "warning");
+      return;
+    }
     try {
       await addDoc(collection(db, "challenges"), {
         challengerId: currentUserId,
@@ -318,6 +326,10 @@ export default function UserModal({
 
   const handleSendFriendRequest = async () => {
     if (!userData || !currentUser) return;
+    if (currentUser.isGuest) {
+      showToast("وضع المشاهدة — هذه الإجراءات تتطلب حساباً مسجلاً.", "warning");
+      return;
+    }
 
     try {
       if (isFriend) {
@@ -409,7 +421,7 @@ export default function UserModal({
               <div className="flex-1 text-center md:text-right space-y-4">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex gap-4 flex-wrap">
-                    {userId !== currentUserId && (
+                    {userId !== currentUserId && !currentUser?.isGuest && (
                       <button
                         onClick={handleSendFriendRequest}
                         className={cn(
@@ -423,7 +435,7 @@ export default function UserModal({
                         {isFriend ? "إلغاء الصداقة" : "إرسال طلب صداقة"}
                       </button>
                     )}
-                    {userId !== currentUserId && (
+                    {userId !== currentUserId && !currentUser?.isGuest && (
                       <button
                         onClick={() => setShowChallengeModal(true)}
                         className="px-6 py-2 rounded-xl font-bold transition-all text-sm flex items-center gap-2 bg-gradient-to-l from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 border border-amber-300/30"
@@ -432,6 +444,7 @@ export default function UserModal({
                       </button>
                     )}
                     {userId !== currentUserId &&
+                      !currentUser?.isGuest &&
                       myFleet &&
                       (myFleet.ownerId === currentUser?.uid ||
                         myFleet.coAdmins?.includes(currentUser?.uid || "")) &&

@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Trophy,
   HelpCircle,
+  Eye,
 } from "lucide-react";
 import StarBackground from "./StarBackground";
 import HeroSolarSystem from "./HeroSolarSystem";
@@ -122,7 +123,13 @@ function SectionHead({
   );
 }
 
-export default function LandingPage({ onLogin }: { onLogin: () => void }) {
+export default function LandingPage({
+  onLogin,
+  onGuest,
+}: {
+  onLogin: () => void;
+  onGuest?: () => void;
+}) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -661,6 +668,16 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               <span>{isAr ? "استكشف الميزات" : "Explore features"}</span>
             </button>
           </div>
+
+          {onGuest && (
+            <button
+              onClick={onGuest}
+              className="mt-6 text-gray-400 hover:text-white transition-colors text-sm font-medium flex items-center gap-2 group"
+            >
+              <Eye className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+              {isAr ? "جرّب كمشاهد بدون حساب" : "Try as a guest — no account needed"}
+            </button>
+          )}
 
           <div className="mt-14 text-[10px] md:text-xs font-mono tracking-widest text-[#a5b4fc]/40 uppercase flex items-center gap-4 flex-wrap justify-center">
             <span>🛡️ NO ADS IN CABIN</span>

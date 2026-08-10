@@ -16,6 +16,7 @@ export interface StudyRoomChatProps {
   user: UserData;
   stationId: string;
   isHost: boolean;
+  isSpectator?: boolean;
   handleSendMessage: (customText?: string) => Promise<any> | any;
   onSelectUser: (id: string) => void;
   isChatDrawerOpen: boolean;
@@ -30,6 +31,7 @@ function StudyRoomChatComponent({
   user,
   stationId,
   isHost,
+  isSpectator = false,
   handleSendMessage,
   onSelectUser,
   isChatDrawerOpen,
@@ -305,7 +307,7 @@ function StudyRoomChatComponent({
             <div className="p-3 bg-space-dark/80 border-t border-white/10 shrink-0">
               <div className="relative">
                 {(() => {
-                  const isLockedForMe = room?.isChatLocked && !isHost;
+                  const isLockedForMe = isSpectator || (room?.isChatLocked && !isHost);
                   return (
                     <>
                       <input
@@ -349,15 +351,19 @@ function StudyRoomChatComponent({
                           }
                         }}
                         placeholder={
-                          isLockedForMe
-                            ? (isAr ? "الدردشة مغلقة حالياً من قبل المشرف 🔒" : "Chat is currently locked by the host 🔒")
-                            : (isAr ? "اكتب رسالة..." : "Type a message...")
+                          isSpectator
+                            ? (isAr ? "وضع المشاهدة — الدردشة للقراءة فقط 👁️" : "Spectator mode — chat is read-only 👁️")
+                            : isLockedForMe
+                              ? (isAr ? "الدردشة مغلقة حالياً من قبل المشرف 🔒" : "Chat is currently locked by the host 🔒")
+                              : (isAr ? "اكتب رسالة..." : "Type a message...")
                         }
                         className={cn(
                           "w-full bg-space-dark shadow-inner border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 text-white placeholder:text-gray-600 transition-all",
                           isAr ? "pl-14 text-right" : "pr-14 text-left",
                           isLockedForMe
-                            ? "border-red-500/30 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-red-400/60"
+                            ? isSpectator
+                              ? "border-indigo-500/20 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-indigo-400/50"
+                              : "border-red-500/30 opacity-70 cursor-not-allowed text-gray-400 placeholder:text-red-400/60"
                             : "border-white/5",
                         )}
                         dir={isAr ? "rtl" : "ltr"}

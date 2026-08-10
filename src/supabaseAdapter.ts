@@ -824,23 +824,30 @@ export const mapSupabaseUser = (sbUser: any) => {
     cachedUser = null;
     return null;
   }
+  const isAnonymous = !!sbUser.is_anonymous || sbUser.app_metadata?.provider === "anonymous";
   const mapped = {
     uid: sbUser.id,
     id: sbUser.id,
-    email: sbUser.email,
-    displayName: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || "رائد فضاء",
-    photoURL: sbUser.user_metadata?.avatar_url || "",
+    email: isAnonymous ? null : sbUser.email,
+    displayName: isAnonymous
+      ? (sbUser.user_metadata?.name || "زائر")
+      : (sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || "رائد فضاء"),
+    photoURL: isAnonymous
+      ? `https://api.dicebear.com/7.x/bottts/svg?seed=${sbUser.id}`
+      : (sbUser.user_metadata?.avatar_url || ""),
     emailVerified: !!sbUser.email_confirmed_at,
-    isAnonymous: false,
-    providerData: [
-      {
-        providerId: "google",
-        uid: sbUser.id,
-        displayName: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || "رائد فضاء",
-        email: sbUser.email,
-        photoURL: sbUser.user_metadata?.avatar_url || ""
-      }
-    ],
+    isAnonymous,
+    providerData: isAnonymous
+      ? []
+      : [
+          {
+            providerId: "google",
+            uid: sbUser.id,
+            displayName: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || "رائد فضاء",
+            email: sbUser.email,
+            photoURL: sbUser.user_metadata?.avatar_url || ""
+          }
+        ],
     getIdToken: async () => {
       const { data } = await supabase.auth.getSession();
       return data.session?.access_token || "";
@@ -924,6 +931,17 @@ export const signInWithPopup = async (authInstance: any, providerInstance: any) 
 export const signOut = async (authInstance: any) => {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
+};
+
+// Anonymous (guest) sign in — creates a throwaway account with no email/provider.
+export const signInAnonymously = async (authInstance: any) => {
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+  const mapped = data?.user ? mapSupabaseUser(data.user) : null;
+  if (mapped) {
+    window.dispatchEvent(new Event("storage"));
+  }
+  return { user: mapped };
 };
 
 export const onAuthStateChanged = (authInstance: any, callback: (user: any) => void) => {

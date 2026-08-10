@@ -175,12 +175,16 @@ const UserSearchView = React.lazy(() => import('../components/UserSearchView').t
 export default function Dashboard({
   user,
   onLogout,
+  onLogin,
 }: {
   user: UserData | null;
   onLogout: () => void;
+  onLogin?: () => void;
 }) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
   useRenderLog("Dashboard", { userEmail: user?.email });
+  const isGuest = !!user?.isGuest;
+  const guestAllowedTabs = ["home", "discussions", "leaderboard", "blackholes"] as const;
   const [activeTab, setActiveTab] = useState<
     | "home"
     | "chat"
@@ -224,7 +228,7 @@ export default function Dashboard({
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(
-    !user?.missionRole && !localStorage.getItem("hasSkippedRoleModal"),
+    !user?.isGuest && !user?.missionRole && !localStorage.getItem("hasSkippedRoleModal"),
   );
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [dailyFocusTarget, setDailyFocusTarget] = useState("2 ساعتان");
@@ -301,15 +305,13 @@ export default function Dashboard({
     );
   }
 
-  const focusTabs = ["home", "schedule", "challenges", "blackholes"];
-  const communityTabs = [
-    "search",
-    "discussions",
-    "fleets",
-    "leaderboard",
-    "awareness",
-  ];
-  const profileTabs = ["profile", "admin", "support"];
+  const focusTabs = isGuest
+    ? ["home", "blackholes"]
+    : ["home", "schedule", "challenges", "blackholes"];
+  const communityTabs = isGuest
+    ? ["discussions", "leaderboard"]
+    : ["search", "discussions", "fleets", "leaderboard", "awareness"];
+  const profileTabs = isGuest ? [] : ["profile", "admin", "support"];
 
   let currentCategory = "focus";
   if (communityTabs.includes(activeTab as string)) currentCategory = "community";
@@ -317,11 +319,15 @@ export default function Dashboard({
 
   const setCategory = (cat: string) => {
     if (cat === "focus") handleTabChange("home");
-    if (cat === "community") handleTabChange("search");
-    if (cat === "profile") handleTabChange("profile");
+    if (cat === "community") handleTabChange(isGuest ? "leaderboard" : "search");
+    if (cat === "profile") handleTabChange(isGuest ? "home" : "profile");
   };
 
   const handleTabChange = (tab: typeof activeTab) => {
+    if (isGuest && !(guestAllowedTabs as readonly string[]).includes(tab as string)) {
+      setActiveTab("home");
+      return;
+    }
     setActiveTab(tab);
     let activity = "في لوحة القيادة المركزية";
     if (tab === "profile") activity = "يعاين الهوية الفضائية";
@@ -628,16 +634,16 @@ export default function Dashboard({
               {currentCategory === "focus" && (
                 <>
                   <NavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
-                  <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
-                  <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
+                  {!isGuest && <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />}
+                  {!isGuest && <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />}
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
               )}
               {currentCategory === "community" && (
                 <>
-                  <NavPill icon={<Search size={14} />} label={t("nav.search", "البث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
+                  {!isGuest && <NavPill icon={<Search size={14} />} label={t("nav.search", "البث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
                   <NavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "النقاشات")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
-                  <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
+                  {!isGuest && <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />}
                   <NavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "التصنيف")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
                   {/* قسم الوعي (Awareness) مخفي مؤقتاً — يمكن إرجاعه بإزالة التعليق:
                   <NavPill icon={<Radio size={14} />} label={t("nav.awareness", "الوعي")} active={activeTab === "awareness"} onClick={() => handleTabChange("awareness")} className="tour-step-awareness" />
@@ -646,9 +652,9 @@ export default function Dashboard({
               )}
               {currentCategory === "profile" && (
                 <>
-                  <NavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
-                  <NavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />
-                  {user.role === "admin" && (
+                  {!isGuest && <NavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />}
+                  {!isGuest && <NavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />}
+                  {!isGuest && user.role === "admin" && (
                     <NavPill icon={<Shield size={14} />} label={t("nav.admin", "الإدارة")} active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
                   )}
                 </>
@@ -698,16 +704,18 @@ export default function Dashboard({
             <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2 py-0.5 rounded whitespace-nowrap">{t("top.tour_sub", "🧭 جولة سريعة")}</span>
           </button>
 
-          <div className="md:border-l md:border-white/10 md:pl-2">
-            <NotificationsDropdown
-              userId={user.uid}
-              userName={user.displayName}
-              userPhoto={user.photoURL}
-              onOpenChallenges={() => handleTabChange("challenges")}
-            />
-          </div>
+          {!isGuest && (
+            <div className="md:border-l md:border-white/10 md:pl-2">
+              <NotificationsDropdown
+                userId={user.uid}
+                userName={user.displayName}
+                userPhoto={user.photoURL}
+                onOpenChallenges={() => handleTabChange("challenges")}
+              />
+            </div>
+          )}
 
-          {activeTab === "home" && (
+          {activeTab === "home" && !isGuest && (
             <button
                onClick={() => setShowRoleModal(true)}
                className="hidden md:flex p-2 hover:bg-white/10 rounded-full transition-colors relative group"
@@ -749,6 +757,32 @@ export default function Dashboard({
           </div>
         </div>
       </nav>
+
+      {/* Guest Mode Banner */}
+      {isGuest && (
+        <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-5xl">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-950/60 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-2.5 text-indigo-200 text-xs md:text-sm font-bold">
+              <Eye size={16} className="text-indigo-400 shrink-0" />
+              <span className="hidden sm:inline">
+                {isAr ? "أنت في وضع المشاهدة — شاهد المحطات والنقاشات والتصنيف دون حفظ أي تقدم." : "You're in guest mode — watch stations, discussions, and the leaderboard without saving any progress."}
+              </span>
+              <span className="sm:hidden">
+                {isAr ? "وضع المشاهدة — لا يُحفظ أي تقدم" : "Guest mode — progress isn't saved"}
+              </span>
+            </div>
+            {onLogin && (
+              <button
+                onClick={onLogin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:scale-105 active:scale-95 transition-all text-white text-xs font-black whitespace-nowrap"
+              >
+                <Rocket size={14} />
+                {isAr ? "سجّل وأطلق مجرتك" : "Sign in & launch"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 px-4 lg:px-8 pt-28 pb-32 z-10 transition-all duration-300">
@@ -792,25 +826,25 @@ export default function Dashboard({
             {currentCategory === "focus" && (
                 <>
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
-                  <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
-                  <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
+                  {!isGuest && <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />}
+                  {!isGuest && <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />}
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
             )}
             {/* ... Mobile Sub-nav for others ... */}
             {currentCategory === "community" && (
                 <>
-                  <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "الاستكشاف")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />
+                  {!isGuest && <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "الاستكشاف")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
                   <MobileNavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "مجلس الحكماء")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} />
-                  <MobileNavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />
+                  {!isGuest && <MobileNavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />}
                   <MobileNavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "المتصدرين")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} />
                 </>
             )}
             {currentCategory === "profile" && (
                 <>
-                  <MobileNavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />
-                  <MobileNavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />
-                  {user.role === "admin" && (
+                  {!isGuest && <MobileNavPill icon={<UserIcon size={14} />} label={t("nav.profile", "الملف")} active={activeTab === "profile"} onClick={() => handleTabChange("profile")} />}
+                  {!isGuest && <MobileNavPill icon={<Info size={14} />} label={t("nav.support", "الدعم والاقتراحات")} active={activeTab === "support"} onClick={() => handleTabChange("support")} />}
+                  {!isGuest && user.role === "admin" && (
                     <MobileNavPill icon={<Shield size={14} />} label={t("nav.admin", "الإدارة")} active={activeTab === "admin"} onClick={() => handleTabChange("admin")} />
                   )}
                 </>
@@ -837,14 +871,16 @@ export default function Dashboard({
             colorClass="from-fuchsia-600 to-pink-500"
             glowClass="bg-fuchsia-500/30"
           />
-          <DockButton
-            icon={<UserCircle size={20} />}
-            label={t("cat.profile", "الهوية")}
-            active={currentCategory === "profile"}
-            onClick={() => setCategory("profile")}
-            colorClass="from-cyan-600 to-emerald-400"
-            glowClass="bg-cyan-500/30"
-          />
+          {!isGuest && (
+            <DockButton
+              icon={<UserCircle size={20} />}
+              label={t("cat.profile", "الهوية")}
+              active={currentCategory === "profile"}
+              onClick={() => setCategory("profile")}
+              colorClass="from-cyan-600 to-emerald-400"
+              glowClass="bg-cyan-500/30"
+            />
+          )}
         </div>
       </div>
     </div>

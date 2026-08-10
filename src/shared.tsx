@@ -566,6 +566,7 @@ export interface UserData {
   fleetInvites?: string[];
   challengeWins?: number;
   challengeChampExpiry?: number;
+  isGuest?: boolean;
 }
 
 export interface Fleet {

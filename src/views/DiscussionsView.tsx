@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Hash,
   MessageSquare,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { db, handleFirestoreError, OperationType } from "../firebase";
@@ -377,15 +378,17 @@ export default function DiscussionsView({ user }: { user: UserData }) {
               className={cn("bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 w-full md:w-64 transition-all", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             />
-            <button
-              onClick={() => setIsCreating(!isCreating)}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20 whitespace-nowrap"
-            >
-              {isCreating ? <X size={18} /> : <Plus size={18} />}
-              <span className="hidden sm:inline">
-                {isCreating ? (isAr ? "إلغاء" : "Cancel") : (isAr ? "موضوع جديد" : "New post")}
-              </span>
-            </button>
+            {!user.isGuest && (
+              <button
+                onClick={() => setIsCreating(!isCreating)}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20 whitespace-nowrap"
+              >
+                {isCreating ? <X size={18} /> : <Plus size={18} />}
+                <span className="hidden sm:inline">
+                  {isCreating ? (isAr ? "إلغاء" : "Cancel") : (isAr ? "موضوع جديد" : "New post")}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -551,33 +554,35 @@ export default function DiscussionsView({ user }: { user: UserData }) {
 
               <div className="flex items-center justify-between pt-6 mt-6 border-t border-white/5 text-sm text-gray-500">
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => handleLike(selectedDiscussion.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 transition-colors cursor-pointer",
-                      ((selectedDiscussion as any).likedBy || []).includes(
-                        user.uid,
-                      )
-                        ? "text-pink-500 hover:text-pink-400"
-                        : "text-gray-400 hover:text-pink-400",
-                    )}
-                  >
-                    <Heart
-                      size={18}
-                      className={
+                  {!user.isGuest && (
+                    <button
+                      onClick={() => handleLike(selectedDiscussion.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 transition-colors cursor-pointer",
                         ((selectedDiscussion as any).likedBy || []).includes(
                           user.uid,
                         )
-                          ? "fill-pink-500"
-                          : ""
-                      }
-                    />
-                    <span>
-                      {Array.isArray((selectedDiscussion as any).likedBy)
-                        ? (selectedDiscussion as any).likedBy.length
-                        : (selectedDiscussion as any).likesCount || 0}
-                    </span>
-                  </button>
+                          ? "text-pink-500 hover:text-pink-400"
+                          : "text-gray-400 hover:text-pink-400",
+                      )}
+                    >
+                      <Heart
+                        size={18}
+                        className={
+                          ((selectedDiscussion as any).likedBy || []).includes(
+                            user.uid,
+                          )
+                            ? "fill-pink-500"
+                            : ""
+                        }
+                      />
+                      <span>
+                        {Array.isArray((selectedDiscussion as any).likedBy)
+                          ? (selectedDiscussion as any).likedBy.length
+                          : (selectedDiscussion as any).likesCount || 0}
+                      </span>
+                    </button>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <MessageSquare size={18} />
                     <span>{selectedDiscussion.repliesCount} {isAr ? "ردود" : "Replies"}</span>
@@ -666,29 +671,40 @@ export default function DiscussionsView({ user }: { user: UserData }) {
             </div>
 
             <div className="sticky bottom-4 z-20">
-              <div className={cn("relative p-2 bg-[#0e1021]/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex gap-2 w-full mx-auto shadow-black/50", isAr ? "flex-row" : "flex-row-reverse")}>
-                <input
-                  type="text"
-                  placeholder={isAr ? "أكتب ردك هنا..." : "Write your reply..."}
-                  value={newReply}
-                  onChange={(e) => setNewReply(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendReply();
-                    }
-                  }}
-                  className={cn("flex-1 bg-transparent px-4 py-3 focus:outline-none text-white placeholder-gray-500", isAr ? "text-right" : "text-left")}
-                  dir={isAr ? "rtl" : "ltr"}
-                />
-                <button
-                  onClick={handleSendReply}
-                  disabled={!newReply.trim()}
-                  className="px-6 bg-indigo-500 hover:bg-indigo-600 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:hover:bg-indigo-500 flex items-center justify-center flex-shrink-0"
-                >
-                  {isAr ? "إرسال" : "Send"}
-                </button>
-              </div>
+              {user.isGuest ? (
+                <div className={cn("p-4 bg-[#0e1021]/90 backdrop-blur-xl border border-indigo-500/20 rounded-3xl shadow-2xl shadow-black/50 flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
+                  <Lock className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <p className="text-sm text-indigo-200/80 font-medium">
+                    {isAr
+                      ? "أنت في وضع المشاهدة — النقاشات للقراءة فقط. سجّل الدخول للمشاركة."
+                      : "You're in guest mode — discussions are read-only. Sign in to participate."}
+                  </p>
+                </div>
+              ) : (
+                <div className={cn("relative p-2 bg-[#0e1021]/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex gap-2 w-full mx-auto shadow-black/50", isAr ? "flex-row" : "flex-row-reverse")}>
+                  <input
+                    type="text"
+                    placeholder={isAr ? "أكتب ردك هنا..." : "Write your reply..."}
+                    value={newReply}
+                    onChange={(e) => setNewReply(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendReply();
+                      }
+                    }}
+                    className={cn("flex-1 bg-transparent px-4 py-3 focus:outline-none text-white placeholder-gray-500", isAr ? "text-right" : "text-left")}
+                    dir={isAr ? "rtl" : "ltr"}
+                  />
+                  <button
+                    onClick={handleSendReply}
+                    disabled={!newReply.trim()}
+                    className="px-6 bg-indigo-500 hover:bg-indigo-600 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:hover:bg-indigo-500 flex items-center justify-center flex-shrink-0"
+                  >
+                    {isAr ? "إرسال" : "Send"}
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         ) : (
@@ -711,12 +727,14 @@ export default function DiscussionsView({ user }: { user: UserData }) {
                 <p className="text-gray-500 text-sm">
                   {isAr ? "كن أول من يفتح نقاشاً مثيراً للاهتمام!" : "Be the first to start an exciting discussion!"}
                 </p>
-                <button
-                  onClick={() => setIsCreating(true)}
-                  className="mt-4 px-6 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all font-bold"
-                >
-                  {isAr ? "إبدأ نقاشاً" : "Start a discussion"}
-                </button>
+                {!user.isGuest && (
+                  <button
+                    onClick={() => setIsCreating(true)}
+                    className="mt-4 px-6 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all font-bold"
+                  >
+                    {isAr ? "إبدأ نقاشاً" : "Start a discussion"}
+                  </button>
+                )}
               </div>
             ) : (
               filteredDiscussions.map((disc, index) => (

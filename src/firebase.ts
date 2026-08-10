@@ -6,6 +6,7 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
 } from "./supabaseAdapter";
 import { Debugger } from "./firebaseDebug";
 
@@ -28,6 +29,16 @@ export const signInWithGoogle = async () => {
 };
 
 export const logout = () => signOut(auth);
+
+export const signInAsGuest = async () => {
+  try {
+    const result = await signInAnonymously(auth);
+    return result?.user;
+  } catch (error: any) {
+    console.error("Error signing in as guest", error);
+    throw error;
+  }
+};
 
 export const signInWithEmail = async (email: string, password: string) => {
   try {
