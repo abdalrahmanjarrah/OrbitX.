@@ -90,6 +90,23 @@ const activeHookInstances = new Map<string, string>(); // userId -> hookInstance
 // Global session-level in-memory cache for participant profiles to eliminate redundant getDoc loads
 const profileCache: Record<string, UserData> = {};
 
+// Resolve a Firestore serverTimestamp into epoch ms.
+// While a serverTimestamp() write is still pending locally, Firestore returns a
+// placeholder Timestamp whose seconds/nanoseconds are NaN. Resolve to null in that
+// case so callers never compute NaN timers ("NaN:NaN").
+function resolveStartTimeMs(startTime: any): number | null {
+  if (!startTime) return null;
+  if (typeof startTime.toDate === "function") {
+    const t = startTime.toDate();
+    const ms = t.getTime();
+    return isNaN(ms) ? null : ms;
+  }
+  const secs = startTime.seconds;
+  if (typeof secs !== "number") return null;
+  if (isNaN(secs)) return null;
+  return secs * 1000;
+}
+
 export function useSessionEngine(
   stationId: string,
   user: UserData,
@@ -635,13 +652,14 @@ export function useSessionEngine(
 
         // Timer Sync relative to database startTime
         if (data.timerStatus !== "idle" && data.startTime) {
-          const start = typeof data.startTime.toDate === "function"
-            ? data.startTime.toDate().getTime()
-            : (data.startTime as any).seconds * 1000;
-          const duration = (data.timerStatus === "focus" ? data.timerDuration : data.breakDuration) * 60 * 1000;
-          const elapsed = (Date.now() + clockOffsetRef.current) - start;
-          const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
-          setTimeLeft(remaining);
+          const start = resolveStartTimeMs(data.startTime);
+          if (start !== null) {
+            const duration = (data.timerStatus === "focus" ? data.timerDuration : data.breakDuration) * 60 * 1000;
+            const elapsed = (Date.now() + clockOffsetRef.current) - start;
+            const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
+            setTimeLeft(remaining);
+          }
+          // While the server timestamp is still pending, keep the current display untouched
         } else {
           setTimeLeft(data.timerDuration * 60);
         }
@@ -872,11 +890,7 @@ export function useSessionEngine(
     }
   }, [room?.timerStatus, isJoined, isSpectator, handleVisibilityChangeVal]);
 
-  const startTimeVal = room?.startTime
-    ? (typeof room.startTime.toDate === "function"
-        ? room.startTime.toDate().getTime()
-        : (room.startTime as any).seconds * 1000)
-    : 0;
+  const startTimeVal = room?.startTime ? (resolveStartTimeMs(room.startTime) ?? 0) : 0;
 
   // Active worker ticking to obtain authentic remaining timer ticks
   useEffect(() => {
@@ -898,16 +912,13 @@ export function useSessionEngine(
       worker.onmessage = () => {
         const r = roomSnapshotRef.current;
         if (!r || !r.startTime) return;
-        
+
         // Securely handle pending Firestore server timestamps in latency-compensation phase
-        const seconds = r.startTime.seconds || (r.startTime as any).seconds;
-        if (seconds === undefined && typeof r.startTime.toDate !== "function") {
+        const start = resolveStartTimeMs(r.startTime);
+        if (start === null) {
           return; // تجاهل الـ tick، انتظر الـ startTime الحقيقي
         }
 
-        const start = typeof r.startTime.toDate === "function"
-          ? r.startTime.toDate().getTime()
-          : (r.startTime as any).seconds * 1000;
         const duration = (r.timerStatus === "focus" ? r.timerDuration : r.breakDuration) * 60 * 1000;
         const elapsed = (Date.now() + clockOffsetRef.current) - start;
         const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
@@ -946,9 +957,9 @@ export function useSessionEngine(
   if (!isJoined) {
     focusSessionKeyRef.current = "";
   } else if (room?.timerStatus === "focus" && room?.startTime) {
-    const seconds = room.startTime.seconds || (room.startTime as any).seconds;
-    if (seconds !== undefined || typeof room.startTime.toDate === "function") {
-      const sessionKey = seconds?.toString() || (typeof room.startTime.toDate === "function" ? room.startTime.toDate().getTime().toString() : "");
+    const startMs = resolveStartTimeMs(room.startTime);
+    if (startMs !== null) {
+      const sessionKey = startMs.toString();
       if (sessionKey && focusSessionKeyRef.current !== sessionKey) {
         focusSessionKeyRef.current = sessionKey;
         lastXpUpdateTimeRef.current = null;
@@ -1178,9 +1189,8 @@ export function useSessionEngine(
       if (!room.startTime) return;
       if (isSpectator) return; // Spectators have no mutation rights
 
-      const startMs = typeof room.startTime.toDate === "function"
-        ? room.startTime.toDate().getTime()
-        : (room.startTime as any).seconds * 1000;
+      const startMs = resolveStartTimeMs(room.startTime);
+      if (startMs === null) return;
       const durationMs = (room.timerStatus === "focus" ? room.timerDuration : room.breakDuration) * 60 * 1000;
       const elapsed = (Date.now() + clockOffsetRef.current) - startMs;
 
@@ -1206,7 +1216,7 @@ export function useSessionEngine(
 
       // CLIENT-SIDE PROGRESS REWARDS (Safe, independent, and strictly bounded)
       if (room.timerStatus === "focus" && isLegitEnd) {
-        const sessionStartVal = room.startTime ? (typeof room.startTime.toDate === 'function' ? room.startTime.toDate().getTime() : (room.startTime as any).seconds * 1000) : 0;
+        const sessionStartVal = resolveStartTimeMs(room.startTime) ?? 0;
         const transitionLockKey = `processed_transition_${stationId}_${sessionStartVal}`;
         if (localStorage.getItem(transitionLockKey)) {
           console.log("[Collision Shield] Rewards already granted in another tab/instance for this session");

@@ -241,6 +241,7 @@ function StudyRoomContent({
   const typingNames = Object.values(typingMap).map((p: any) => p.name);
 
   const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) seconds = 0;
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? "0" : ""}${s}`;
