@@ -229,10 +229,14 @@ function App() {
       await signInAsGuest();
     } catch (err: any) {
       console.error("Guest login attempt error:", err);
+      const code = err?.code || "guest-login-failed";
       setLoginError({
-        code: err?.code || "guest-login-failed",
-        message: err?.message || String(err),
-        fullError: `${err?.code || "guest-login-failed"} | ${err?.message || String(err)}`,
+        code,
+        message:
+          code.includes("anonymous_provider_disabled")
+            ? "Anonymous sign-ins are disabled in the Supabase project settings."
+            : err?.message || String(err),
+        fullError: `${code} | ${err?.message || String(err)}`,
       });
     }
   };
@@ -571,6 +575,10 @@ function App() {
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]"
             id="auth-error-overlay"
           >
+            {(() => {
+              const isAnonDisabled =
+                loginError.code.includes("anonymous_provider_disabled");
+              return (
             <div
               className={cn("bg-[#0a0f25]/95 border border-red-500/20 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl shadow-indigo-950/40 relative overflow-hidden", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
@@ -589,10 +597,14 @@ function App() {
                 <div className={cn("flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse")}>
                   <div className={isAr ? "text-right" : "text-left"}>
                     <h2 className="text-xl font-black text-white font-sans">
-                      {isAr ? "عقبة في المدار الفضائي" : "Orbital Space Hindrance"}
+                      {isAnonDisabled
+                        ? (isAr ? "وضع المشاهدة مو مفعّل بعد" : "Guest mode isn't enabled yet")
+                        : (isAr ? "عقبة في المدار الفضائي" : "Orbital Space Hindrance")}
                     </h2>
                     <p className="text-xs text-red-400/80 mt-0.5">
-                      {isAr ? "فشل الاتصال بمزود Google Auth" : "Failed to connect to Google Auth provider"}
+                      {isAnonDisabled
+                        ? (isAr ? "التسجيل المجهول معطّل في إعدادات Supabase" : "Anonymous sign-ins are disabled in the Supabase settings")
+                        : (isAr ? "فشل الاتصال بمزود Google Auth" : "Failed to connect to Google Auth provider")}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-red-400/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-400 font-bold shrink-0">
@@ -604,15 +616,27 @@ function App() {
               {/* Main info */}
               <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-sans">
                 <p className="font-semibold text-gray-200">
-                  {isAr
-                    ? "تلقينا خطأ من مزود Google أو أن الميزة مقيدة في متصفحك."
-                    : "We encountered an error from the Google provider or it is restricted in your browser."}
+                  {isAnonDisabled
+                    ? (isAr
+                        ? "لتفعيل وضع المشاهدة، اذهب إلى لوحة تحكم Supabase وفعّل التسجيل المجهول. الخطوات:"
+                        : "To enable guest mode, turn on anonymous sign-ins from your Supabase dashboard. Steps:")
+                    : (isAr
+                        ? "تلقينا خطأ من مزود Google أو أن الميزة مقيدة في متصفحك."
+                        : "We encountered an error from the Google provider or it is restricted in your browser.")}
                 </p>
 
                 <div className="bg-black/40 border border-white/5 rounded-2xl p-4 text-xs font-mono text-gray-400 text-left overflow-x-auto">
                   {loginError.fullError || loginError.message}
                 </div>
 
+                {isAnonDisabled ? (
+                  <ol className="space-y-2 text-xs text-gray-400 font-sans">
+                    <li>1. {isAr ? "افتح " + "Supabase Dashboard" + " ← مشروعك ← Authentication ← Sign In / Providers" : "Open Supabase Dashboard → your project → Authentication → Sign In / Providers"}</li>
+                    <li>2. {isAr ? "فعّل خيار " + "Anonymous sign-ins" + " واحفظ التغييرات." : "Enable 'Anonymous sign-ins' and save."}</li>
+                    <li>3. {isAr ? "ارجع وجرّب زر المشاهد من جديد." : "Come back and retry the guest button."}</li>
+                  </ol>
+                ) : (
+                  <>
                 <p className="text-gray-400">
                   {isAr
                     ? "تمنع المتصفحات الحديثة أحياناً النوافذ المنبثقة للتحقق من الهوية داخل إطارات المعاينة. يرجى تجربة الحل الأنسب أدناه:"
@@ -635,6 +659,8 @@ function App() {
                     </div>
                   </div>
                 </div>
+                </>
+                )}
               </div>
 
               {/* Footer controls */}
@@ -645,6 +671,7 @@ function App() {
                 >
                   {isAr ? "إلغاء" : "Cancel"}
                 </button>
+                {!isAnonDisabled && (
                 <button
                   onClick={() => {
                     setLoginError(null);
@@ -654,8 +681,11 @@ function App() {
                 >
                   {isAr ? "إعادة محاولة Google" : "Retry Google"}
                 </button>
+                )}
               </div>
             </div>
+              );
+            })()}
           </div>
         )}
       </>
