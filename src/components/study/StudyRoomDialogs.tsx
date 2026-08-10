@@ -412,10 +412,10 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
             <div
-              className={cn("bg-space-dark border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-900/20 shadow-red-500/20", isAr ? "text-right" : "text-left")}
+              className={cn("bg-space-dark border border-red-500/30 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-red-500/20", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             >
               <h2 className="text-xl font-black mb-4 text-center text-red-500">
@@ -481,7 +481,7 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
             <div className="bg-space-dark border border-indigo-500/20 rounded-3xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl shadow-indigo-950/40 text-right">
               <h2 className="text-xl font-black mb-4 text-center text-white flex items-center justify-center gap-2">
@@ -530,7 +530,7 @@ function StudyRoomDialogsComponent({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/20 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 shadow-2xl shadow-indigo-900/20 backdrop-blur-lg bg-space-dark/60"
           >
             <div className="bg-space-dark border border-orange-500/30 rounded-3xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl shadow-orange-900/20 text-center">
               <h2 className="text-2xl font-black mb-4 text-orange-400">
@@ -612,7 +612,8 @@ function StudyRoomDialogsComponent({
               <div className="flex gap-4">
                 <button
                   onClick={() => {
-                    studyLinkRef.current = studyLink;
+                    studyLinkRef.current = studyLink.trim();
+                    localStorage.setItem("orbitx_study_link", studyLink.trim());
                     setShowStudyLinkModal(false);
                   }}
                   className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white font-bold transition-all text-sm shadow-sm shadow-indigo-600/30"
@@ -623,6 +624,7 @@ function StudyRoomDialogsComponent({
                   onClick={() => {
                     setStudyLink("");
                     studyLinkRef.current = "";
+                    localStorage.removeItem("orbitx_study_link");
                     setShowStudyLinkModal(false);
                   }}
                   className="px-6 py-3 bg-space-dark shadow-lg shadow-indigo-900/10 hover:bg-white/5 border border-white/5 rounded-xl text-white font-bold transition-all text-sm"

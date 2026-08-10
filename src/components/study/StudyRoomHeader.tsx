@@ -27,7 +27,7 @@ function StudyRoomHeaderComponent({
   isExiting,
 }: StudyRoomHeaderProps) {
   return (
-    <nav className="z-20 mx-auto mt-6 max-w-[95%] lg:max-w-7xl flex items-center justify-between px-6 py-3 bg-space-dark/80 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-indigo-900/20 shadow-indigo-900/40">
+    <nav className="z-20 mx-auto mt-6 max-w-[95%] lg:max-w-7xl flex items-center justify-between px-6 py-3 bg-space-dark/80 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-indigo-900/40">
       {/* Right Side: Station Info */}
       <div className="flex items-center gap-4">
         <div className="relative">

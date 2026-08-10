@@ -37,7 +37,7 @@ export const SessionCompletionModal: React.FC<SessionCompletionModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" id="session-completion-overlay-container">
+      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" id="session-completion-overlay-container">
         {/* Backdrop overlay filter blur */}
         <motion.div
           initial={{ opacity: 0 }}

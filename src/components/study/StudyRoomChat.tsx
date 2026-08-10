@@ -143,7 +143,7 @@ function StudyRoomChatComponent({
             initial={{ height: 0, opacity: 0, y: 20 }}
             animate={{ height: "500px", opacity: 1, y: 0 }}
             exit={{ height: 0, opacity: 0, y: 20 }}
-            className="w-96 bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-indigo-900/40 mb-4 flex flex-col"
+            className="w-[min(24rem,calc(100vw-2.5rem))] bg-gradient-to-br from-[#0c0c16]/95 to-[#050510]/95 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl shadow-indigo-900/40 mb-4 flex flex-col"
           >
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-space-dark/80 shrink-0">
               <div className="flex items-center gap-4">

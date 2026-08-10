@@ -53,18 +53,6 @@ export function useSessionCompletion(
     const storageKey = `celebrated_completion_${stationId}_${focusStartVal}`;
     const hasCelebrated = isEligible ? sessionStorage.getItem(storageKey) : null;
 
-    console.log("[useSessionCompletion Audit]", {
-      stationId,
-      currentStatus,
-      prevStatus,
-      focusStartVal,
-      isTransitioningToRest,
-      isEligible,
-      hasCelebrated,
-      currentRoomStartTimeText: currentStartTime ? JSON.stringify(currentStartTime) : "null",
-      prevRoomStartTimeText: prevStartTime ? JSON.stringify(prevStartTime) : "null"
-    });
-
     if (isEligible) {
       if (!hasCelebrated) {
         sessionStorage.setItem(storageKey, "true");
@@ -74,13 +62,6 @@ export function useSessionCompletion(
         const isQuestBonus = totalCompleted % 3 === 0;
         const estimatedXp = duration + (isQuestBonus ? 50 : 0);
 
-        console.log("[useSessionCompletion Audit] 🎉 TRIGGERING CELEBRATION MODAL", {
-          duration,
-          totalCompleted,
-          isQuestBonus,
-          estimatedXp
-        });
-
         setCompletionData({
           stationId,
           stationName: room.name || "المحطة الاستكشافية",
@@ -89,8 +70,6 @@ export function useSessionCompletion(
           completedAt: Date.now()
         });
         setIsOpen(true);
-      } else {
-        console.log("[useSessionCompletion Audit] 🛡️ Collision Shield: This session was already celebrated.", storageKey);
       }
     }
 

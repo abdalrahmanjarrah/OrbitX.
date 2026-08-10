@@ -240,7 +240,12 @@ export function useSessionEngine(
   const isWatchingClassRef = useRef(false);
   const currentBetRef = useRef<number>(0);
   const remainingShieldRef = useRef<number>(0);
-  const studyLinkRef = useRef<string>("");
+  const studyLinkRef = useRef<string>(
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("orbitx_study_link") || ""
+      : ""
+  );
+  const nextMissionDismissedRef = useRef(false);
   const roomStatusRef = useRef<string | null>(null);
   const roomSnapshotRef = useRef<Room | null>(null);
   const isTransitioningRef = useRef(false);
@@ -949,6 +954,7 @@ export function useSessionEngine(
         lastXpUpdateTimeRef.current = null;
         sessionXpCountRef.current = 0;
         afkFailCountRef.current = 0;
+        nextMissionDismissedRef.current = false;
       }
     }
   }
@@ -1538,6 +1544,7 @@ export function useSessionEngine(
     if (nextMissionInput.trim()) {
       localStorage.setItem("pendingMission", nextMissionInput.trim());
     }
+    nextMissionDismissedRef.current = true;
     setShowNextMissionModal(false);
     setNextMissionInput("");
   };
@@ -1557,10 +1564,19 @@ export function useSessionEngine(
   }, [room?.timerStatus]);
 
   useEffect(() => {
-    if (room?.timerStatus === "focus" && timeLeft <= 60 && timeLeft > 0 && !isTransitioningRef.current && room.timerDuration > 1) {
+    if (
+      isJoined &&
+      !isSpectator &&
+      !nextMissionDismissedRef.current &&
+      room?.timerStatus === "focus" &&
+      timeLeft <= 60 &&
+      timeLeft > 0 &&
+      !isTransitioningRef.current &&
+      room.timerDuration > 1
+    ) {
       setShowNextMissionModal(true);
     }
-  }, [timeLeft, room?.timerStatus, room?.timerDuration]);
+  }, [timeLeft, room?.timerStatus, room?.timerDuration, isJoined, isSpectator]);
 
   // Private fields helper functions
   const incrementField = (amount: number) => increment(amount);

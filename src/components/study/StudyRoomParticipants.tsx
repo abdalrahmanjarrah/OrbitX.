@@ -84,8 +84,8 @@ function StudyRoomParticipantsComponent({
             >
               {/* The Planet itself */}
               <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
-                style={{ transform: `translateY(-${radius}px)` }}
+                className="absolute top-1/2 left-1/2 flex flex-col items-center gap-1"
+                style={{ transform: `translate(-50%, -50%) translateY(-${radius}px)` }}
               >
                 {/* Counter-rotate content */}
                 <motion.div
@@ -118,7 +118,7 @@ function StudyRoomParticipantsComponent({
                       />
                     </button>
                   </div>
-                  <span className="text-[6px] md:text-[8px] font-bold bg-space-dark/90 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 text-white whitespace-nowrap shadow-lg">
+                  <span className="text-[10px] md:text-[11px] font-bold bg-space-dark/90 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 text-white whitespace-nowrap shadow-lg">
                     {p.displayName.split(" ")[0]}
                   </span>
                 </motion.div>

@@ -1,137 +1,36 @@
-import { Joyride } from "react-joyride";
-import { playSound } from "../lib/sound";
 import { useSessionEngine } from "../lib/sessionEngine";
 import { useRenderLog } from "../firebaseDebug";
-import Markdown from "react-markdown";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Leaf,
-  Swords,
-  ChevronLeft,
-  Rocket,
-  Timer,
-  Users,
-  Zap,
-  Star,
-  LogOut,
-  LayoutDashboard,
-  MessageSquare,
-  User as UserIcon,
-  Heart,
-  ShieldAlert,
   AlertTriangle,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Lock,
-  Send,
-  Image as ImageIcon,
-  Plus,
-  X,
-  MessageCircle,
-  Calendar,
-  Shield,
-  Trash2,
-  Music,
-  CloudRain,
-  Flame,
-  Wind,
-  Bird,
-  ChevronDown,
-  PlayCircle,
-  PauseCircle,
   CheckCircle,
+  Flame,
   Info,
-  Keyboard,
-  Waves,
-  TrainFront,
-  Mic,
-  MicOff,
-  Headphones,
-  Settings,
-  Radio,
-  Trophy,
-  Menu,
+  Lock,
+  Play,
+  Rocket,
   Square,
-  Store,
-  BookOpen,
+  Swords,
   Target,
-  Telescope,
-  Award,
-  Activity,
-  Eye,
-  Terminal as TerminalIcon,
-  Cpu,
-  CheckSquare,
-  Bell,
-  BarChart3,
-  Search,
-  Globe2,
-  UserCircle,
+  X,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
-import { Debugger } from "../firebaseDebug";
-import { requestXpGrant } from "../lib/xpSystem";
+import { db } from "../firebase";
 import {
-  auth,
-  db,
-  signInWithGoogle,
-  logout,
-  handleFirestoreError,
-  OperationType,
-} from "../firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
-import {
-  collection,
   doc,
-  setDoc,
   getDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  addDoc,
   serverTimestamp,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  where,
-  deleteDoc,
   deleteField,
-  writeBatch,
 } from "firebase/firestore";
-import { UserSearchView } from "../components/UserSearchView";
-
-import { FirestoreError } from "firebase/firestore";
 
 import StudyRoomHeader from "../components/study/StudyRoomHeader";
 import StudyRoomParticipants from "../components/study/StudyRoomParticipants";
@@ -140,49 +39,8 @@ import StudyRoomDialogs from "../components/study/StudyRoomDialogs";
 import { useSessionCompletion } from "../hooks/useSessionCompletion";
 import { SessionCompletionModal } from "../components/sessionCompletion/SessionCompletionModal";
 
-import {
-  SURAHS,
-  getAstronautRank,
-  BADGES,
-  MeteorEffect,
-  RECITERS,
-  UserData,
-  Fleet,
-  Discussion,
-  Reply,
-  ScheduleItem,
-  Room,
-  Challenge,
-  AwarenessSignal,
-  Message,
-} from "../shared";
-import NotificationsDropdown from "./NotificationsDropdown";
-import Dashboard from "./Dashboard";
-import NavPill from "./NavPill";
-import MobileNavPill from "./MobileNavPill";
-import DockButton from "./DockButton";
-import ChallengeModal from "./ChallengeModal";
-import ArticleModal from "./ArticleModal";
-import HomeView from "./HomeView";
-import StationCard from "./StationCard";
-import ExhibitionGallery from "./ExhibitionGallery";
-import SuggestionsSection from "./SuggestionsSection";
-import QuranPlayer from "./QuranPlayer";
+import { UserData, Room } from "../shared";
 import PersonalTasks from "./PersonalTasks";
-import LeaderboardView from "./LeaderboardView";
-import FocusHeatmap from "./FocusHeatmap";
-import ProfileView from "./ProfileView";
-import DiscussionsView from "./DiscussionsView";
-import ScheduleView from "./ScheduleView";
-import AdminView from "./AdminView";
-import BadgeCard from "./BadgeCard";
-import CosmicDiary from "./CosmicDiary";
-
-import UserModal from "./UserModal";
-import NavLink from "./NavLink";
-import BlackHolesView from "./BlackHolesView";
-import AnalyticsView from "./AnalyticsView";
-import FleetsView from "./FleetsView";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function StudyRoomView(props: {
@@ -634,13 +492,17 @@ function StudyRoomContent({
 
       {/* Task Bar / Info Badge */}
       <div className="z-10 px-8 py-2 max-w-5xl mx-auto -mt-2 space-y-2">
-        <div className="w-full bg-space-dark/80 backdrop-blur-xl bg-space-dark/80 border border-white/5 rounded-full px-6 py-2 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-3 text-cyan-400">
-            <div className="p-1 bg-cyan-500/20 rounded-full">
+        <div className="w-full bg-space-dark/80 backdrop-blur-xl border border-white/5 rounded-full px-6 py-2 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+          <div className={cn("flex items-center gap-3", room.timerStatus === "focus" ? "text-cyan-400" : room.timerStatus === "break" ? "text-teal-400" : "text-gray-500")}>
+            <div className={cn("p-1 rounded-full", room.timerStatus === "focus" ? "bg-cyan-500/20" : room.timerStatus === "break" ? "bg-teal-500/20" : "bg-white/10")}>
               <CheckCircle size={16} />
             </div>
             <span className="text-xs font-bold tracking-wide">
-              التركيز مستمر
+              {room.timerStatus === "focus"
+                ? "التركيز مستمر"
+                : room.timerStatus === "break"
+                  ? "استراحة"
+                  : "المحطة جاهزة"}
             </span>
           </div>
           <div className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors cursor-pointer">
@@ -870,7 +732,10 @@ function StudyRoomContent({
                       التركيز بنظام الرهان (الضياع الكوني)
                     </button>
                     <button
-                      onClick={() => setShowStudyLinkModal(true)}
+                      onClick={() => {
+                        setStudyLink(studyLinkRef.current);
+                        setShowStudyLinkModal(true);
+                      }}
                       className="px-8 py-3 outline-none border border-white/10 rounded-2xl bg-space-dark hover:bg-white/5 transition-all text-indigo-400 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/20 group"
                     >
                       <Target size={18} />
