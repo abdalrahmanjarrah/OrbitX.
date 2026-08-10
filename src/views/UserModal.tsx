@@ -172,7 +172,6 @@ import AdminView from './AdminView';
 import BadgeCard from './BadgeCard';
 import CosmicDiary from './CosmicDiary';
 import NavLink from './NavLink';
-import FarmDisplay from './FarmDisplay';
 import BlackHolesView from './BlackHolesView';
 import AnalyticsView from './AnalyticsView';
 import FleetsView from './FleetsView';
@@ -618,8 +617,6 @@ export default function UserModal({
               />
             ))}
           </div>
-
-          <FarmDisplay user={userData} isOwner={false} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
             {/* Left Column - Exhibitions */}

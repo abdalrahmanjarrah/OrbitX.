@@ -23,7 +23,6 @@ const dictionary: Record<string, Record<string, string>> = {
     "nav.home": "Stations",
     "nav.schedule": "Schedule",
     "nav.challenges": "Races",
-    "nav.farm": "Cosmic Farm",
     "nav.blackholes": "Black Holes",
     "nav.search": "Broadcast",
     "nav.discussions": "Discussions",
@@ -46,7 +45,7 @@ const dictionary: Record<string, Record<string, string>> = {
     "onboarding.custom_placeholder": "Or write a custom specialty yourself...",
     "onboarding.fuel": "Commitment & Daily Fuel Goal",
     "onboarding.commit_title": "Daily Fuel Generator Charge 🔋",
-    "onboarding.commit_sub": "Set your daily active focus targets. The system depends on this to award badges, coins, and farm crops.",
+    "onboarding.commit_sub": "Set your daily active focus targets. The system depends on this to award badges, coins, and rewards.",
     "onboarding.launch": "Activate Launch Protocol & Isolate Distractions 👨‍🚀",
 
     // Top Bar
@@ -58,7 +57,7 @@ const dictionary: Record<string, Record<string, string>> = {
     "landing.login": "Enter OrbitX Cockpit",
     "landing.tag": "COSMIC DEEP FOCUS PROTOCOL · ORBITX",
     "landing.hero_title": "Isolate Distractions, Elevate Your Intelligence",
-    "landing.hero_sub": "OrbitX is a stylized cosmic workspace for scholars, developers, and writers. Immerse yourself in quiet chambers, participate in focus duels, cultivate synthetic crops, and track your telemetry safely.",
+    "landing.hero_sub": "OrbitX is a stylized cosmic workspace for scholars, developers, and writers. Immerse yourself in quiet chambers, participate in focus duels, and track your telemetry safely.",
     "landing.cockpit_btn": "Launch Astronaut Passport",
 
     // Home View Stations Directory

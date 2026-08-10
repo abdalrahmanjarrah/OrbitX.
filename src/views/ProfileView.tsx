@@ -46,7 +46,6 @@ import {
 import { UserData, getAstronautRank, BADGES } from "../shared";
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
-import FarmDisplay from "./FarmDisplay";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function ProfileView({
@@ -512,9 +511,6 @@ export default function ProfileView({
         </div>
       </motion.div>
 
-      <div className="mb-6">
-        <FarmDisplay user={user} isOwner={true} isStudying={isStudying} />
-      </div>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left/Main Column */}
         <div className="lg:col-span-3 space-y-6">

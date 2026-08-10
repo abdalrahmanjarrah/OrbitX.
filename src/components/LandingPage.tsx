@@ -22,7 +22,6 @@ import {
   ShieldAlert,
   Swords,
   Calendar,
-  Sprout,
   MessageSquare,
   Timer,
   ChevronDown,
@@ -299,8 +298,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
       bg: "bg-cyan-500/10",
       title: isAr ? "تحفيز عميق يقودك" : "Deep gamification drives you",
       desc: isAr
-        ? "XP، 9 رتب فضائية، شارات نادرة، مزرعة كونية، وتحدي الثقب الأسود الأسبوعي."
-        : "XP, 9 astronaut ranks, rare badges, a cosmic farm, and the weekly Black Hole quest.",
+        ? "XP، 9 رتب فضائية، شارات نادرة، وتحدي الثقب الأسود الأسبوعي."
+        : "XP, 9 astronaut ranks, rare badges, and the weekly Black Hole quest.",
     },
   ];
 
@@ -328,14 +327,6 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
       desc: isAr
         ? "خطّط أسبوعك بالكامل: دروس، مراجعات، امتحانات ومشاريع، مع مؤشر سلسلة المواظبة اليومية."
         : "Plan your whole week: study, review, exams and projects, with a daily streak tracker.",
-    },
-    {
-      icon: Sprout,
-      color: "text-emerald-400",
-      title: isAr ? "المزرعة الكونية" : "Cosmic Farm",
-      desc: isAr
-        ? "كل ساعة تركيز تنبت زرعاً وتربي كائناً فضائياً. حوّل انضباطك إلى عالم حي يتوسع معك."
-        : "Every focus hour grows crops and raises cosmic creatures. Turn your discipline into a living, growing world.",
     },
     {
       icon: Rocket,
@@ -1092,7 +1083,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       {isAr ? "انتهت الرحلة المدارية بنجاح! 🎉" : "Orbital journey completed! 🎉"}
                     </h4>
                     <p className="text-[11px] text-emerald-200/50 mt-1">
-                      {isAr ? "اكتملت جلسة التركيز وحصدت محاصيل إضافية. مستعد للمزيد؟" : "Your focus session completed and you harvested extra yields. Ready for more?"}
+                      {isAr ? "اكتملت جلسة التركيز وحصدت نقاط الخبرة. مستعد للمزيد؟" : "Your focus session completed and you earned XP. Ready for more?"}
                     </p>
                   </div>
                 )}
@@ -1404,10 +1395,6 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 <div className="flex items-start gap-3">
                   <span className="text-indigo-400">⚡</span>
                   <span>{isAr ? "كسب نقاط الخبرة (XP) وترقية الشارات الفضائية." : "Earning XP and upgrading custom space badges."}</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-indigo-400">🐾</span>
-                  <span>{isAr ? "رعاية كائناتك الفضائية وحصاد نتاج المعرفة بالمزرعة." : "Raising your celestial creatures and harvesting knowledge at the farm."}</span>
                 </div>
               </div>
 

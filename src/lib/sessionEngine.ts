@@ -1245,24 +1245,13 @@ export function useSessionEngine(
             lastStudyDate: new Date().toISOString().split("T")[0],
           };
 
-          if (((userRef.current.totalFocusSessions || 0) + 1) % 3 === 0) {
-            updates.completedTasks = increment(1);
-          }
-          if (((userRef.current.totalFocusSessions || 0) + 1) % 5 === 0) {
-            updates.seeds = increment(1);
-          }
-          if (userRef.current.plants && userRef.current.plants.length > 0) {
-            updates.plants = userRef.current.plants.map((p) => ({ ...p, lastWateredAt: Date.now() + clockOffsetRef.current }));
-          }
-
           updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
 
           let totalXpToGive = 0;
           if (safeXpEarned > 0) totalXpToGive += safeXpEarned;
-          if (((userRef.current.totalFocusSessions || 0) + 1) % 3 === 0) totalXpToGive += 50;
 
           if (totalXpToGive > 0) {
-            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, totalXpToGive, `on_exit_session (refund/quest)`, true);
+            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, totalXpToGive, `on_exit_session (refund)`, true);
           }
 
           if (userRef.current.fleetId) {

@@ -48,7 +48,6 @@ import {
   CloudRain,
   Flame,
   Wind,
-  Bird,
   ChevronDown,
   PlayCircle,
   PauseCircle,
@@ -167,7 +166,6 @@ const DiscussionsView = React.lazy(() => import('./DiscussionsView'));
 const ScheduleView = React.lazy(() => import('./ScheduleView'));
 const AdminView = React.lazy(() => import('./AdminView'));
 const SupportView = React.lazy(() => import('./SupportView'));
-const FarmDisplay = React.lazy(() => import('./FarmDisplay'));
 const BlackHolesView = React.lazy(() => import('./BlackHolesView'));
 const AwarenessView = React.lazy(() => import('./AwarenessView'));
 const ChallengesHubView = React.lazy(() => import('./ChallengesHubView'));
@@ -195,7 +193,6 @@ export default function Dashboard({
     | "awareness"
     | "blackholes"
     | "fleets"
-    | "farm"
     | "support"
     | "challenges"
   >("home");
@@ -304,7 +301,7 @@ export default function Dashboard({
     );
   }
 
-  const focusTabs = ["home", "schedule", "challenges", "farm", "blackholes"];
+  const focusTabs = ["home", "schedule", "challenges", "blackholes"];
   const communityTabs = [
     "search",
     "discussions",
@@ -334,7 +331,6 @@ export default function Dashboard({
     if (tab === "admin") activity = "في غرفة القيادة العليا 🛡️";
     if (tab === "awareness") activity = "يستقبل إشارات الوعي 📡";
     if (tab === "challenges") activity = "يستعد لسباقات التركيز";
-    if (tab === "farm") activity = "يرعى المزرعة الفضائية 🐓";
     if (tab === "blackholes") activity = "يتفادى الثقوب السوداء 🌌";
     if (tab === "fleets") activity = "يدير الأسطول المجري 🌌";
     if (tab === "support") activity = "يرفع اقتراحات للدعم الفني 📡";
@@ -532,7 +528,7 @@ export default function Dashboard({
                     {t("onboarding.fuel", "كمية شحن مولد الوقود اليومي 🔋")}
                   </h2>
                   <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
-                    {t("onboarding.commit_sub", "اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت وحصاد المحاصيل.")}
+                    {t("onboarding.commit_sub", "اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت.")}
                   </p>
 
                   <div className="space-y-3 mb-8">
@@ -634,7 +630,6 @@ export default function Dashboard({
                   <NavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
                   <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />
                   <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />
-                  <NavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
               )}
@@ -780,11 +775,6 @@ export default function Dashboard({
               {activeTab === "discussions" && <DiscussionsView user={user} />}
               {activeTab === "schedule" && <ScheduleView user={user} />}
               {activeTab === "challenges" && <ChallengesHubView user={user} onSelectUser={setSelectedUserId} />}
-              {activeTab === "farm" && (
-                <div className="max-w-4xl mx-auto animate-fade-in pb-12">
-                  <FarmDisplay user={user} isOwner={true} isStudying={false} />
-                </div>
-              )}
               {activeTab === "leaderboard" && <LeaderboardView user={user} onSelectUser={setSelectedUserId} />}
               {activeTab === "admin" && <AdminView user={user} />}
               {activeTab === "support" && <SupportView user={user} />}
@@ -804,7 +794,6 @@ export default function Dashboard({
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
                   <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />
                   <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />
-                  <MobileNavPill icon={<Bird size={14} />} label={t("nav.farm", "المزرعة")} active={activeTab === "farm"} onClick={() => handleTabChange("farm")} />
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
             )}

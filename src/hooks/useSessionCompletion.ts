@@ -58,9 +58,7 @@ export function useSessionCompletion(
         sessionStorage.setItem(storageKey, "true");
         
         const duration = room.timerDuration || 25;
-        const totalCompleted = (user.totalFocusSessions || 0) + 1;
-        const isQuestBonus = totalCompleted % 3 === 0;
-        const estimatedXp = duration + (isQuestBonus ? 50 : 0);
+        const estimatedXp = duration;
 
         setCompletionData({
           stationId,

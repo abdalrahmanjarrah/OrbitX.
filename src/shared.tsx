@@ -560,15 +560,8 @@ export interface UserData {
   lastStudyDate?: string;
   totalFocusTime?: number;
   focusSessions?: number;
-  completedTasks?: number;
   hearts?: number;
   totalFocusSessions?: number;
-  seeds?: number;
-  plants?: {
-    id: string;
-    plantedAt: number;
-    lastWateredAt: number;
-  }[];
   fleetId?: string;
   fleetInvites?: string[];
   challengeWins?: number;
