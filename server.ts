@@ -317,7 +317,7 @@ async function startServer() {
           "script-src 'self'",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' https://fonts.gstatic.com data:",
-          "img-src 'self' data: blob: https://api.dicebear.com https://images.unsplash.com https://www.transparenttextures.com https://grainy-gradients.vercel.app https://raw.githubusercontent.com https://unpkg.com",
+          "img-src 'self' data: blob: https://api.dicebear.com https://images.unsplash.com https://www.transparenttextures.com https://grainy-gradients.vercel.app https://raw.githubusercontent.com https://unpkg.com https://*.googleusercontent.com",
           "media-src 'self' blob: https://server*.mp3quran.net https://archive.org https://assets.mixkit.co",
           "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
           "worker-src 'self' blob:",
