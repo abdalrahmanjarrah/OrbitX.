@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
 -- 2. Add high-performance indexes
 -- Index for lightning-fast queries by collection (e.g. fetching all posts in global_chat)
 CREATE INDEX IF NOT EXISTS idx_documents_collection ON public.documents(collection);
+CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON public.documents(updated_at);
 
 -- GIN (Generalized Inverted Index) for high-performance key searches inside JSONB data fields (e.g., where 'userId' == 'xyz')
 CREATE INDEX IF NOT EXISTS idx_documents_data_gin ON public.documents USING gin (data);

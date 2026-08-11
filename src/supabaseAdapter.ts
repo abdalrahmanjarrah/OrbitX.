@@ -158,17 +158,29 @@ const ensureHydrated = (): Promise<void> => {
   return hydrationPromise;
 };
 
+// Background sync watermark — only docs updated after this are re-fetched.
+let lastSyncTime = 0;
+let lastDeleteSweep = 0;
+
 const refreshFromServer = async () => {
   try {
-    // 1) Light sweep: metadata + updated_at only (cheap in bandwidth/reads).
-    //    Never pull every doc's full data on every 30s tick.
+    const nowTs = Date.now();
+    const sinceIso = new Date(lastSyncTime || 0).toISOString();
+
+    // 1) Delta sweep: metadata of ONLY docs that changed remotely since the
+    //    last tick. Cost grows with real churn, never with total table size.
     const sweep = await supabase
       .from("documents")
-      .select("id, collection, path, updated_at");
+      .select("id, collection, path, updated_at")
+      .gt("updated_at", sinceIso)
+      .order("updated_at", { ascending: true })
+      .limit(5000);
     if (sweep.error) throw sweep.error;
+
     const seen = new Set<string>();
     const changed: string[] = [];
     (sweep.data || []).forEach(row => {
+      if (!row.path) return;
       seen.add(row.path);
       const prev = memoryDb.get(row.path);
       const changedRemote =
@@ -178,13 +190,21 @@ const refreshFromServer = async () => {
         changed.push(row.path);
       }
     });
-    // 2) Docs deleted remotely
-    Array.from(memoryDb.keys()).forEach(path => {
-      if (!seen.has(path)) {
-        changed.push(path);
-        memoryDb.delete(path);
-      }
-    });
+
+    // 2) Docs deleted remotely: full metadata sweep is expensive, so run it
+    //    only every 10 minutes.
+    if (nowTs - lastDeleteSweep > 10 * 60 * 1000) {
+      lastDeleteSweep = nowTs;
+      const full = await supabase.from("documents").select("path");
+      if (full.error) throw full.error;
+      const alive = new Set<string>((full.data || []).map((r: any) => r.path).filter(Boolean));
+      Array.from(memoryDb.keys()).forEach(path => {
+        if (!alive.has(path)) {
+          changed.push(path);
+          memoryDb.delete(path);
+        }
+      });
+    }
 
     // 3) Only fetch full payloads for docs that actually changed remotely
     if (changed.length > 0) {
@@ -215,6 +235,7 @@ const refreshFromServer = async () => {
       });
     }
 
+    lastSyncTime = nowTs;
     rebuildIndex();
     memoryHydrated = true;
     // Only re-render listeners whose data actually changed
@@ -774,7 +795,7 @@ export const onSnapshot = (
   };
 };
 
-// Global refresh: one gentle request every 30s (only while the window is focused)
+// Global refresh: one gentle request every 45s (only while the window is focused)
 // catches remote changes for all listeners at once instead of polling per listener.
 if (isRealSupabase) {
   setInterval(() => {
@@ -782,7 +803,7 @@ if (isRealSupabase) {
       return;
     }
     refreshFromServer();
-  }, 30000);
+  }, 45000);
 }
 
 // Transactions Support (Simple Lock-free execution wrapper)

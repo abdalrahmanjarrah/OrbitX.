@@ -326,8 +326,8 @@ function App() {
           return; // Guard against further quota errors when resource is exhausted
         }
         const now = Date.now();
-        if (now - lastActivityUpdate > 60000) {
-          // Throttle to 1 min
+        if (now - lastActivityUpdate > 180000) {
+          // Throttle to 3 min (presence radar treats < 5 min as "active")
           lastActivityUpdate = now;
           if (user.isAnonymous) return; // Guests don't write activity to avoid profiles docs
           updateDoc(doc(db, "profiles", user.uid), {
