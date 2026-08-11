@@ -703,6 +703,7 @@ export class ErrorBoundary extends Component<any, any> {
 
   render() {
     if (this.state.hasError) {
+      const errMsg = this.state.error?.message || String(this.state.error || "");
       return (
         <div className="min-h-screen bg-space-dark flex flex-col items-center justify-center p-6 text-center">
           <ShieldAlert className="w-20 h-20 text-red-500 mb-6" />
@@ -718,11 +719,15 @@ export class ErrorBoundary extends Component<any, any> {
           >
             إعادة تحميل الصفحة
           </button>
-          {process.env.NODE_ENV !== "production" && (
-            <pre className="mt-8 p-4 bg-white/5 shadow-inner rounded-xl text-left text-[10px] text-red-400 overflow-auto max-w-full">
-              {this.state.error?.message}
-            </pre>
-          )}
+          <pre className="mt-8 p-4 bg-white/5 shadow-inner rounded-xl text-left text-[10px] text-red-400 overflow-auto max-w-full" dir="ltr">
+            {errMsg}
+          </pre>
+          <button
+            onClick={() => navigator.clipboard?.writeText(errMsg).catch(() => {})}
+            className="mt-4 px-5 py-2 bg-white/5 rounded-xl text-xs font-bold text-gray-300 hover:bg-white/10 transition-all border border-white/5"
+          >
+            📋 نسخ تفاصيل الخطأ
+          </button>
         </div>
       );
     }
