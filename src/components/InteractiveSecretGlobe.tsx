@@ -199,7 +199,7 @@ export default function InteractiveSecretGlobe() {
               <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-indigo-500/10 to-purple-500/10 rounded-[2.5rem] blur-[30px] opacity-80 pointer-events-none" />
 
               {/* The Cloud Bubble Container - Highly Refined, glassy, deep shadow */}
-              <div className="bg-[#040513]/85 backdrop-blur-3xl border border-indigo-500/20 rounded-[2.5rem] p-6 md:p-8 text-center relative shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_35px_rgba(99,102,241,0.12)] overflow-hidden">
+              <div className="bg-[#040513]/85 backdrop-blur-xl border border-indigo-500/20 rounded-[2.5rem] p-6 md:p-8 text-center relative shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_35px_rgba(99,102,241,0.12)] overflow-hidden">
                 {/* Micro textures inside the cloud */}
                 <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />

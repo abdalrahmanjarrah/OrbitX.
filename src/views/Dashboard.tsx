@@ -627,7 +627,7 @@ export default function Dashboard({
         className={cn(
            "fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl rounded-full transition-all duration-500 px-2 py-2 flex items-center justify-between border",
            scrolled 
-             ? "bg-space-dark/80 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-white/10"
+             ? "bg-space-dark/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-white/10"
              : "bg-space-dark/40 backdrop-blur-md border-transparent shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         )}
       >
@@ -883,7 +883,7 @@ export default function Dashboard({
 
       {/* Floating Bottom Dock */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <div className="flex items-center gap-2 bg-space-dark/80 backdrop-blur-3xl p-2 rounded-full border border-white/12 shadow-[0_25px_65px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.06)] hover:border-white/20 transition-all duration-300 relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-gradient-to-t before:from-white/[0.04] before:to-transparent before:shadow-[inset_y_1px_rgba(255,255,255,0.15)]">
+        <div className="flex items-center gap-2 bg-space-dark/80 backdrop-blur-xl p-2 rounded-full border border-white/12 shadow-[0_25px_65px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.06)] hover:border-white/20 transition-all duration-300 relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-gradient-to-t before:from-white/[0.04] before:to-transparent before:shadow-[inset_y_1px_rgba(255,255,255,0.15)]">
           <DockButton
             icon={<Rocket size={20} />}
             label={t("cat.focus", "التركيز")}

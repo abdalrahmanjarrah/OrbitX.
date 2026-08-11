@@ -693,7 +693,7 @@ export default function LandingPage({
           STATS STRIP
          ============================================================= */}
       <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-3xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center ${s.color} mb-4 shadow-[0_0_15px_rgba(99,102,241,0.1)]`}>

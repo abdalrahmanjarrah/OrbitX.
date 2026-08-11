@@ -307,7 +307,7 @@ export default function ProfileView({
         animate={{ opacity: 1, y: 0 }}
         className="relative mb-12"
       >
-        <div className="bg-[#080b1a]/80 backdrop-blur-3xl border border-indigo-500/20 rounded-[3rem] p-8 md:p-12 shadow-[0_0_80px_rgba(30,27,75,0.8)] overflow-hidden relative group">
+        <div className="bg-[#080b1a]/80 backdrop-blur-xl border border-indigo-500/20 rounded-[3rem] p-8 md:p-12 shadow-[0_0_80px_rgba(30,27,75,0.8)] overflow-hidden relative group">
           {/* Subtle Grid Pattern Overlay */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] opacity-20 pointer-events-none" />
 

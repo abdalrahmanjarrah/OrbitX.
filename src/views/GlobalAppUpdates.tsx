@@ -80,7 +80,7 @@ export default function GlobalAppUpdates() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: -30 }}
           transition={{ type: "spring", damping: 25, stiffness: 180 }}
-          className="relative max-w-lg w-full p-6 rounded-2xl border border-fuchsia-500/40 bg-[#040615]/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(236,72,153,0.25),_inset_0_1px_2px_rgba(255,255,255,0.1)] overflow-hidden text-right flex flex-col z-[900]"
+          className="relative max-w-lg w-full p-6 rounded-2xl border border-fuchsia-500/40 bg-[#040615]/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(236,72,153,0.25),_inset_0_1px_2px_rgba(255,255,255,0.1)] overflow-hidden text-right flex flex-col z-[900]"
           id="updates-modal-card"
         >
           {/* Animated cosmic ring grid glow */}

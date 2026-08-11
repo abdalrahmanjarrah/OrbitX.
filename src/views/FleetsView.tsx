@@ -799,7 +799,7 @@ export default function FleetsView({ user }: { user: UserData }) {
       className="max-w-6xl mx-auto space-y-6 fade-in pb-20 mt-8 px-4"
       dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="bg-space-dark/85 backdrop-blur-3xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
+      <div className="bg-space-dark/85 backdrop-blur-xl rounded-3xl p-8 border border-white/12 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
         <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
 

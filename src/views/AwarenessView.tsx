@@ -11,7 +11,7 @@ import Markdown from "react-markdown";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Globe from "react-globe.gl";
+const Globe3D = React.lazy(() => import("react-globe.gl"));
 import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Leaf,
@@ -200,6 +200,29 @@ import AnalyticsView from "./AnalyticsView";
 import FleetsView from "./FleetsView";
 import { useLanguage } from "../context/LanguageContext";
 
+// Lightweight static fallback for low-end devices — pure CSS, no WebGL, no animation.
+function StaticGlobeFallback() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="relative w-[420px] h-[420px] max-w-[80vw] max-h-[80vh] rounded-full bg-[radial-gradient(circle_at_35%_30%,#0a1a3a_0%,#04081c_45%,#010207_100%)] shadow-[inset_0_0_80px_rgba(6,182,212,0.12),0_0_60px_rgba(6,182,212,0.08)] border border-cyan-900/30 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.08)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(rgba(6,182,212,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.10)_1px,transparent_1px)] bg-[size:34px_34px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_35%,#000108_100%)]" />
+        {[...Array(14)].map((_, i) => (
+          <span
+            key={i}
+            className="absolute w-1 h-1 rounded-full bg-cyan-300/70"
+            style={{
+              left: `${18 + ((i * 61) % 64)}%`,
+              top: `${14 + ((i * 47) % 72)}%`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AwarenessView({ user }: { user: UserData }) {
   const { isAr, t } = useLanguage();
   const [signals, setSignals] = useState<AwarenessSignal[]>([]);
@@ -215,6 +238,18 @@ export default function AwarenessView({ user }: { user: UserData }) {
   const [deletingSignalId, setDeletingSignalId] = useState<string | null>(null);
 
   const globeRef = useRef<any>(null);
+
+  // Only load the heavy WebGL globe on capable devices. Low-end / battery-saver
+  // users get a lightweight static starfield instead, keeping the site smooth.
+  const canRenderGlobe = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+    const conn = (navigator as any).connection;
+    if (conn?.saveData === true) return false;
+    const cores = navigator.hardwareConcurrency;
+    if (typeof cores === "number" && cores > 0 && cores < 4) return false;
+    return true;
+  }, []);
 
   // Generate deterministic but random-looking coordinates based on id
   const getCoordinates = (id: string, index: number) => {
@@ -363,33 +398,39 @@ export default function AwarenessView({ user }: { user: UserData }) {
     <div className="relative w-full h-[80vh] md:h-[calc(100vh-120px)] rounded-[2rem] overflow-hidden bg-[#000108] border border-cyan-900/30 block shadow-2xl">
       {/* 3D Globe Container */}
       <div className="absolute inset-0 cursor-crosshair">
-        <Globe
-          ref={globeRef}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-          bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-          pointsData={pointsData}
-          pointLat="lat"
-          pointLng="lng"
-          pointColor="color"
-          pointAltitude={0.02}
-          pointRadius={0.3}
-          pointsMerge={false}
-          onPointClick={(point: any) => handleReadSignal(point.signal)}
-          arcsData={arcsData}
-          arcColor="color"
-          arcDashLength={0.4}
-          arcDashGap={0.2}
-          arcDashAnimateTime={2500}
-          ringColor={(d: any) => d.color}
-          ringMaxRadius={2.5}
-          ringPropagationSpeed={3}
-          ringRepeatPeriod={800}
-          ringsData={pointsData}
-          ringLat="lat"
-          ringLng="lng"
-          atmosphereColor="#06b6d4"
-          atmosphereAltitude={0.2}
-        />
+        {canRenderGlobe ? (
+          <React.Suspense fallback={<StaticGlobeFallback />}>
+            <Globe3D
+              ref={globeRef}
+              globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+              bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+              pointsData={pointsData}
+              pointLat="lat"
+              pointLng="lng"
+              pointColor="color"
+              pointAltitude={0.02}
+              pointRadius={0.3}
+              pointsMerge={false}
+              onPointClick={(point: any) => handleReadSignal(point.signal)}
+              arcsData={arcsData}
+              arcColor="color"
+              arcDashLength={0.4}
+              arcDashGap={0.2}
+              arcDashAnimateTime={2500}
+              ringColor={(d: any) => d.color}
+              ringMaxRadius={2.5}
+              ringPropagationSpeed={3}
+              ringRepeatPeriod={800}
+              ringsData={pointsData}
+              ringLat="lat"
+              ringLng="lng"
+              atmosphereColor="#06b6d4"
+              atmosphereAltitude={0.2}
+            />
+          </React.Suspense>
+        ) : (
+          <StaticGlobeFallback />
+        )}
         {/* Transparent overlay for gradient edges */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#000108_100%)]"></div>
       </div>
