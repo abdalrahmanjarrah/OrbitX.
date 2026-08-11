@@ -858,7 +858,7 @@ export function useSessionEngine(
         const exists = participantsDataRef.current.some((p) => p.uid === uid);
         if (!exists && !pendingFetchesRef.current.has(uid)) {
           // Check session-level in-memory cache first
-          if (profileCache[uid] && profileCache[uid].uid === uid) {
+          if (profileCache[uid] && profileCache[uid].uid === uid && profileCache[uid].displayName) {
             const fetched = profileCache[uid];
             setParticipantsData((current) => {
               if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
@@ -871,18 +871,34 @@ export function useSessionEngine(
 
           pendingFetchesRef.current.add(uid);
           getDoc(doc(db, "profiles", uid))
-            .then((docSnap) => {
-              if (docSnap.exists()) {
-                const fetched = docSnap.data() as UserData;
-                if (!fetched || fetched.uid !== uid) return; // Skip broken/empty profiles
-                profileCache[uid] = fetched; // Cache the fetched profile
-                setParticipantsData((current) => {
-                  if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
-                    return [...current, fetched];
-                  }
-                  return current;
-                });
+            .then(async (docSnap) => {
+              let fetched = docSnap.exists() ? (docSnap.data() as UserData) : null;
+              // A profile can be incomplete (e.g. a partial write left it without a
+              // displayName). Fall back to the authoritative users doc so real members
+              // remain visible in the room even when their public profile is broken.
+              if (!fetched || fetched.uid !== uid || !fetched.displayName) {
+                const userSnap = await getDoc(doc(db, "users", uid));
+                if (userSnap.exists()) {
+                  const userData = userSnap.data() as UserData;
+                  // Keep good profile fields but never let null/undefined values
+                  // (e.g. a profile written with all-null fields) override the
+                  // authoritative users doc.
+                  const profileGood = fetched
+                    ? Object.fromEntries(
+                        Object.entries(fetched).filter(([, v]) => v != null && v !== ""),
+                      )
+                    : {};
+                  fetched = { ...userData, ...profileGood };
+                }
               }
+              if (!fetched || fetched.uid !== uid) return; // Skip broken/empty profiles
+              profileCache[uid] = fetched; // Cache the fetched profile
+              setParticipantsData((current) => {
+                if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
+                  return [...current, fetched];
+                }
+                return current;
+              });
             })
             .catch((e) => {
               console.warn(`[Participant Sync] Failed to fetch profile for ${uid}:`, e);
