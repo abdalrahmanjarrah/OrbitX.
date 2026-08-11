@@ -23,7 +23,11 @@ export const ChallengeLeaderboard: React.FC<ChallengeLeaderboardProps> = ({
         const q = query(collection(db, "profiles"), orderBy("xp", "desc"), limit(10));
         const snap = await getDocs(q);
         if (isMounted) {
-          setLeaders(snap.docs.map(doc => doc.data() as UserData));
+          setLeaders(
+            snap.docs
+              .map((doc) => doc.data() as UserData)
+              .filter((u) => u && u.displayName),
+          );
         }
       } catch (err) {
         console.warn("Failed fetching challenge leaderboard:", err);
@@ -117,7 +121,7 @@ export const ChallengeLeaderboard: React.FC<ChallengeLeaderboardProps> = ({
                 <div className="flex items-center gap-6">
                   <div className="text-left font-mono">
                     <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 to-fuchsia-400">
-                      {leader.xp.toLocaleString()} XP
+                      {(leader.xp ?? 0).toLocaleString()} XP
                     </span>
                   </div>
                 </div>

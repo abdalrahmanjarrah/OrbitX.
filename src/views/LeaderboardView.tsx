@@ -197,7 +197,11 @@ export default function LeaderboardView({
         );
         const snapshot = await getDocs(q);
         if (isMounted) {
-          setLeaders(snapshot.docs.map((doc) => doc.data() as UserData));
+          setLeaders(
+            snapshot.docs
+              .map((doc) => doc.data() as UserData)
+              .filter((u) => u && u.displayName),
+          );
         }
       } catch (e) {
         handleFirestoreError(e, OperationType.GET, "profiles_leaderboard");
@@ -308,7 +312,7 @@ export default function LeaderboardView({
                 <div className="col-span-3 flex justify-center">
                   <div className="flex items-center gap-1 font-mono font-bold text-yellow-400 whitespace-nowrap">
                     <Zap size={14} className="hidden sm:block" />
-                    {leader.xp.toLocaleString()}
+                    {(leader.xp ?? 0).toLocaleString()}
                   </div>
                 </div>
               </motion.div>
