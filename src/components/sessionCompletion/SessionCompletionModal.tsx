@@ -78,6 +78,11 @@ export const SessionCompletionModal: React.FC<SessionCompletionModalProps> = ({
 
             {/* Call to actions interactive buttons */}
             <CompletionActions
+              displayName={user.displayName || "رائد فضاء"}
+              uid={user.uid}
+              durationMinutes={completionData.durationMinutes}
+              xpGained={completionData.xpGained}
+              stationName={completionData.stationName}
               onStartNewRound={onStartNewRound}
               onTakeBreak={onClose}
               onExitToStations={onExitToStations}

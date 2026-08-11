@@ -76,7 +76,7 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search, Globe2, UserCircle, UserPlus,
 } from "lucide-react";
 import {
   LineChart,
@@ -93,6 +93,8 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
+import { showToast } from "../lib/cosmicUI";
+import { buildInviteLink } from "../lib/share";
 import {
   auth,
   db,
@@ -321,6 +323,20 @@ export default function Dashboard({
     if (cat === "focus") handleTabChange("home");
     if (cat === "community") handleTabChange(isGuest ? "leaderboard" : "search");
     if (cat === "profile") handleTabChange(isGuest ? "home" : "profile");
+  };
+
+  const handleInviteCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildInviteLink(user.uid));
+      showToast(
+        isAr
+          ? "تم نسخ رابط دعوتك — أرسله لصديق وانطلق نزالاً! 🚀"
+          : "Invite link copied — send it to a friend and launch a duel! 🚀",
+        "success",
+      );
+    } catch (err) {
+      console.warn("Failed copying invite link:", err);
+    }
   };
 
   const handleTabChange = (tab: typeof activeTab) => {
@@ -713,6 +729,19 @@ export default function Dashboard({
                 onOpenChallenges={() => handleTabChange("challenges")}
               />
             </div>
+          )}
+
+          {!isGuest && (
+            <button
+              onClick={handleInviteCopy}
+              className="p-2 hover:bg-white/10 text-gray-400 hover:text-fuchsia-400 rounded-full transition-colors flex items-center justify-center relative group"
+              title={isAr ? "ادعُ صديقاً إلى المجرة" : "Invite a friend to the galaxy"}
+            >
+              <UserPlus size={18} className="group-hover:scale-110 transition-transform" />
+              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all text-[10px] bg-indigo-950 text-fuchsia-300 border border-fuchsia-800/50 px-2 py-0.5 rounded whitespace-nowrap shadow-xl">
+                {isAr ? "ادعُ صديقاً 🚀" : "Invite a friend 🚀"}
+              </span>
+            </button>
           )}
 
           {activeTab === "home" && !isGuest && (

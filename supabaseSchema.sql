@@ -32,97 +32,24 @@ CREATE INDEX IF NOT EXISTS idx_documents_data_gin ON public.documents USING gin 
 
 -- 3. Enable Realtime Replication for the table
 -- This enables live instant chat updates, active study room timers, and visual focus metrics!
-ALTER PUBLICATION supabase_realtime ADD TABLE public.documents;
+-- (Guarded so re-running the migration doesn't fail when the table is already in the publication.)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+          AND schemaname = 'public'
+          AND tablename = 'documents'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.documents;
+    END IF;
+END $$;
 
 -- 4. Enable Row Level Security (RLS)
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
--- 5. SECURE access policies for the compat layer
--- -------------------------------------------------------------------------
--- Read: anyone may read (leaderboards and public metadata are client-rendered;
--- the anon key is visible in the browser anyway).
-DROP POLICY IF EXISTS "Allow public read access" ON public.documents;
-DROP POLICY IF EXISTS "Allow public write mutations" ON public.documents;
-DROP POLICY IF EXISTS "Allow public update mutations" ON public.documents;
-DROP POLICY IF EXISTS "Allow public delete mutations" ON public.documents;
-
-CREATE POLICY "allow_read_all"
-ON public.documents
-FOR SELECT
-USING (true);
-
--- MUTATIONS REQUIRE AUTHENTICATION. Anonymous visitors can no longer create,
--- edit or delete anything.
---
--- users/{uid} and profiles/{uid} top-level docs: owner (or admin) only.
-CREATE POLICY "mutate_users_owner"
-ON public.documents
-FOR ALL
-USING (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
-WITH CHECK (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
-
-CREATE POLICY "mutate_profiles_owner"
-ON public.documents
-FOR ALL
-USING (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
-WITH CHECK (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
-
--- users/{uid}/notifications, /friends, /schedule subcollections: any
--- authenticated user (friend requests and challenge notifications are
--- written cross-user by design).
-CREATE POLICY "mutate_users_subcollections"
-ON public.documents
-FOR ALL
-USING (path ~ '^users/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL)
-WITH CHECK (path ~ '^users/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL);
-
--- Admin-only collections (system settings, alerts, updates, announcements,
--- advice content). Only accounts listed in the admins table can touch them.
-CREATE POLICY "mutate_admin_collections"
-ON public.documents
-FOR ALL
-USING (public.is_admin_user() AND (
-  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
-  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
-  path LIKE 'advices/%'))
-WITH CHECK (public.is_admin_user() AND (
-  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
-  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
-  path LIKE 'advices/%'));
-
--- Admins may also manage any user/profile document (banning, XP fixes...).
-CREATE POLICY "mutate_admins_manage_users"
-ON public.documents
-FOR ALL
-USING (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'))
-WITH CHECK (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'));
-
--- Everything else (rooms, discussions, fleets, suggestions, support_tickets,
--- awareness_signals, exhibitions, challenges, worlds, global_chat, ...):
--- any authenticated user.
-CREATE POLICY "mutate_shared_collections"
-ON public.documents
-FOR ALL
-USING (auth.uid() IS NOT NULL
-  AND path NOT LIKE 'users/%'
-  AND path NOT LIKE 'profiles/%'
-  AND path NOT LIKE 'system/%'
-  AND path NOT LIKE 'admin_alerts/%'
-  AND path NOT LIKE 'app_updates/%'
-  AND path NOT LIKE 'global_notifications/%'
-  AND path NOT LIKE 'advices/%')
-WITH CHECK (auth.uid() IS NOT NULL
-  AND path NOT LIKE 'users/%'
-  AND path NOT LIKE 'profiles/%'
-  AND path NOT LIKE 'system/%'
-  AND path NOT LIKE 'admin_alerts/%'
-  AND path NOT LIKE 'app_updates/%'
-  AND path NOT LIKE 'global_notifications/%'
-  AND path NOT LIKE 'advices/%');
-
--- -------------------------------------------------------------------------
--- 5b. Admin accounts table + helper functions used by the policies above
--- -------------------------------------------------------------------------
+-- 4b. Admin accounts table + helper functions used by the policies below.
+-- MUST be created before the policies that reference them.
 CREATE TABLE IF NOT EXISTS public.admins (
     email TEXT PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -131,7 +58,8 @@ CREATE TABLE IF NOT EXISTS public.admins (
 INSERT INTO public.admins (email) VALUES
     ('lumafashionhq@gmail.com'),
     ('abdalrahmanjarrah94@gmail.com'),
-    ('abdalrahmanjarrah1@gmail.com')
+    ('abdalrahmanjarrah1@gmail.com'),
+    ('abdalrhmanmaaith24@gmail.com')
 ON CONFLICT (email) DO NOTHING;
 
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
@@ -155,6 +83,182 @@ AS $$
   )
 $$;
 
+-- 5. SECURE access policies for the compat layer
+-- -------------------------------------------------------------------------
+-- Read: anyone may read (leaderboards and public metadata are client-rendered;
+-- the anon key is visible in the browser anyway).
+DROP POLICY IF EXISTS "Allow public read access" ON public.documents;
+DROP POLICY IF EXISTS "Allow public write mutations" ON public.documents;
+DROP POLICY IF EXISTS "Allow public update mutations" ON public.documents;
+DROP POLICY IF EXISTS "Allow public delete mutations" ON public.documents;
+DROP POLICY IF EXISTS "mutate_shared_collections" ON public.documents;
+DROP POLICY IF EXISTS "mutate_users_subcollections" ON public.documents;
+DROP POLICY IF EXISTS "insert_users_subcollections" ON public.documents;
+DROP POLICY IF EXISTS "update_delete_users_sub_owner" ON public.documents;
+DROP POLICY IF EXISTS "insert_profiles_subcollections" ON public.documents;
+DROP POLICY IF EXISTS "update_delete_profiles_sub_owner" ON public.documents;
+DROP POLICY IF EXISTS "insert_shared_collections" ON public.documents;
+DROP POLICY IF EXISTS "update_delete_shared_collaborative" ON public.documents;
+DROP POLICY IF EXISTS "delete_shared_collaborative" ON public.documents;
+DROP POLICY IF EXISTS "update_delete_user_owned" ON public.documents;
+DROP POLICY IF EXISTS "delete_user_owned" ON public.documents;
+DROP POLICY IF EXISTS "allow_read_all" ON public.documents;
+DROP POLICY IF EXISTS "mutate_users_owner" ON public.documents;
+DROP POLICY IF EXISTS "mutate_profiles_owner" ON public.documents;
+DROP POLICY IF EXISTS "delete_users_sub_owner" ON public.documents;
+DROP POLICY IF EXISTS "delete_profiles_sub_owner" ON public.documents;
+DROP POLICY IF EXISTS "mutate_admin_collections" ON public.documents;
+DROP POLICY IF EXISTS "mutate_admins_manage_users" ON public.documents;
+
+CREATE POLICY "allow_read_all"
+ON public.documents
+FOR SELECT
+USING (true);
+
+-- MUTATIONS REQUIRE AUTHENTICATION. Anonymous visitors can no longer create,
+-- edit or delete anything.
+--
+-- users/{uid} and profiles/{uid} top-level docs: owner (or admin) only.
+CREATE POLICY "mutate_users_owner"
+ON public.documents
+FOR ALL
+USING (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
+WITH CHECK (path ~ '^users/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
+
+CREATE POLICY "mutate_profiles_owner"
+ON public.documents
+FOR ALL
+USING (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text)
+WITH CHECK (path ~ '^profiles/[^/]+$' AND public.doc_owner(path) = auth.uid()::text);
+
+-- users/{uid}/... and profiles/{uid}/... subcollections:
+--   INSERT is allowed cross-user by design (challenge/duel notifications are
+--   written to another user's inbox, friend requests arrive in a subcollection).
+--   UPDATE/DELETE are OWNER-ONLY so nobody can tamper with your notifications,
+--   friends list or schedule.
+CREATE POLICY "insert_users_subcollections"
+ON public.documents
+FOR INSERT
+WITH CHECK (path ~ '^users/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL);
+
+CREATE POLICY "update_delete_users_sub_owner"
+ON public.documents
+FOR UPDATE
+USING (path ~ '^users/[^/]+/[^/]+/' AND public.doc_owner(path) = auth.uid()::text);
+
+CREATE POLICY "delete_users_sub_owner"
+ON public.documents
+FOR DELETE
+USING (path ~ '^users/[^/]+/[^/]+/' AND public.doc_owner(path) = auth.uid()::text);
+
+CREATE POLICY "insert_profiles_subcollections"
+ON public.documents
+FOR INSERT
+WITH CHECK (path ~ '^profiles/[^/]+/[^/]+/' AND auth.uid() IS NOT NULL);
+
+CREATE POLICY "update_delete_profiles_sub_owner"
+ON public.documents
+FOR UPDATE
+USING (path ~ '^profiles/[^/]+/[^/]+/' AND public.doc_owner(path) = auth.uid()::text);
+
+CREATE POLICY "delete_profiles_sub_owner"
+ON public.documents
+FOR DELETE
+USING (path ~ '^profiles/[^/]+/[^/]+/' AND public.doc_owner(path) = auth.uid()::text);
+
+-- Admin-only collections (system settings, alerts, updates, announcements,
+-- advice content). Only accounts listed in the admins table can touch them.
+CREATE POLICY "mutate_admin_collections"
+ON public.documents
+FOR ALL
+USING (public.is_admin_user() AND (
+  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
+  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
+  path LIKE 'advices/%'))
+WITH CHECK (public.is_admin_user() AND (
+  path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
+  path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
+  path LIKE 'advices/%'));
+
+-- Admins may also manage any user/profile document (banning, XP fixes...).
+CREATE POLICY "mutate_admins_manage_users"
+ON public.documents
+FOR ALL
+USING (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'))
+WITH CHECK (public.is_admin_user() AND (path LIKE 'users/%' OR path LIKE 'profiles/%'));
+
+-- Shared collections split into two groups:
+--  (a) COLLABORATIVE docs (rooms, challenges, fleets, worlds, ...): any
+--      authenticated user may INSERT, UPDATE and DELETE. Rooms are updated by
+--      every participant, challenges by both duellists.
+--  (b) USER-OWNED docs (global_chat, discussions + replies, suggestions,
+--      exhibitions, awareness_signals, support_tickets): INSERT by any
+--      authenticated user, but UPDATE/DELETE only by the author (matched on
+--      the "userId" field) so nobody can erase/edit another user's content.
+CREATE POLICY "insert_shared_collections"
+ON public.documents
+FOR INSERT
+WITH CHECK (auth.uid() IS NOT NULL
+  AND path NOT LIKE 'users/%'
+  AND path NOT LIKE 'profiles/%'
+  AND path NOT LIKE 'system/%'
+  AND path NOT LIKE 'admin_alerts/%'
+  AND path NOT LIKE 'app_updates/%'
+  AND path NOT LIKE 'global_notifications/%'
+  AND path NOT LIKE 'advices/%');
+
+CREATE POLICY "update_delete_shared_collaborative"
+ON public.documents
+FOR UPDATE
+USING (auth.uid() IS NOT NULL
+  AND path NOT LIKE 'users/%'
+  AND path NOT LIKE 'profiles/%'
+  AND path NOT LIKE 'system/%'
+  AND path NOT LIKE 'admin_alerts/%'
+  AND path NOT LIKE 'app_updates/%'
+  AND path NOT LIKE 'global_notifications/%'
+  AND path NOT LIKE 'advices/%'
+  AND path NOT LIKE 'global_chat/%'
+  AND path NOT LIKE 'discussions/%'
+  AND path NOT LIKE 'suggestions/%'
+  AND path NOT LIKE 'exhibitions/%'
+  AND path NOT LIKE 'awareness_signals/%'
+  AND path NOT LIKE 'support_tickets/%');
+
+CREATE POLICY "delete_shared_collaborative"
+ON public.documents
+FOR DELETE
+USING (auth.uid() IS NOT NULL
+  AND path NOT LIKE 'users/%'
+  AND path NOT LIKE 'profiles/%'
+  AND path NOT LIKE 'system/%'
+  AND path NOT LIKE 'admin_alerts/%'
+  AND path NOT LIKE 'app_updates/%'
+  AND path NOT LIKE 'global_notifications/%'
+  AND path NOT LIKE 'advices/%'
+  AND path NOT LIKE 'global_chat/%'
+  AND path NOT LIKE 'discussions/%'
+  AND path NOT LIKE 'suggestions/%'
+  AND path NOT LIKE 'exhibitions/%'
+  AND path NOT LIKE 'awareness_signals/%'
+  AND path NOT LIKE 'support_tickets/%');
+
+CREATE POLICY "update_delete_user_owned"
+ON public.documents
+FOR UPDATE
+USING ((data ->> 'userId') = auth.uid()::text
+  AND (path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
+    OR path LIKE 'suggestions/%' OR path LIKE 'exhibitions/%'
+    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%'));
+
+CREATE POLICY "delete_user_owned"
+ON public.documents
+FOR DELETE
+USING ((data ->> 'userId') = auth.uid()::text
+  AND (path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
+    OR path LIKE 'suggestions/%' OR path LIKE 'exhibitions/%'
+    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%'));
+
 -- 6. Automatically update 'updated_at' column on row modification
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -164,6 +268,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS trigger_update_documents_timestamp ON public.documents;
 CREATE OR REPLACE TRIGGER trigger_update_documents_timestamp
     BEFORE UPDATE ON public.documents
     FOR EACH ROW

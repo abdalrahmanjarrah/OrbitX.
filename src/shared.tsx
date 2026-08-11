@@ -567,6 +567,9 @@ export interface UserData {
   challengeWins?: number;
   challengeChampExpiry?: number;
   isGuest?: boolean;
+  weekStart?: string;
+  weekFocusMinutes?: number;
+  weekSessions?: number;
 }
 
 export interface Fleet {

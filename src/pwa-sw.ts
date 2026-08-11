@@ -1,0 +1,103 @@
+/// <reference lib="webworker" />
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
+import { registerRoute, NavigationRoute } from "workbox-routing";
+import { CacheFirst } from "workbox-strategies";
+import { ExpirationPlugin } from "workbox-expiration";
+import { CacheableResponsePlugin } from "workbox-cacheable-response";
+import { RangeRequestsPlugin } from "workbox-range-requests";
+
+declare let self: ServiceWorkerGlobalScope;
+
+cleanupOutdatedCaches();
+precacheAndRoute(self.__WB_MANIFEST);
+
+const BASE = self.registration.scope;
+
+registerRoute(
+  ({ url }) => url.hostname === "api.dicebear.com",
+  new CacheFirst({
+    cacheName: "dicebear-avatars",
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+    ],
+  })
+);
+
+registerRoute(
+  ({ url }) => url.hostname === "images.unsplash.com",
+  new CacheFirst({
+    cacheName: "unsplash-images",
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+    ],
+  })
+);
+
+registerRoute(
+  ({ url }) =>
+    url.hostname.includes("mp3quran.net") || url.hostname === "archive.org" || url.hostname === "assets.mixkit.co",
+  new CacheFirst({
+    cacheName: "orbitx-audio",
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new RangeRequestsPlugin(),
+    ],
+  })
+);
+
+registerRoute(
+  ({ url }) =>
+    url.hostname === "raw.githubusercontent.com" ||
+    url.hostname === "www.transparenttextures.com" ||
+    url.hostname === "grainy-gradients.vercel.app",
+  new CacheFirst({
+    cacheName: "orbitx-assets",
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+    ],
+  })
+);
+
+const navigationHandler = new NavigationRoute(createHandlerBoundToURL("index.html"), {
+  denylist: [/\/assets\//, /\/sounds\//],
+});
+registerRoute(navigationHandler);
+
+self.addEventListener("push", (event) => {
+  let payload: { title?: string; body?: string; url?: string } = {};
+  try {
+    if (event.data) payload = event.data.json();
+  } catch {
+    payload = { body: event.data?.text() ?? "" };
+  }
+  const title = payload.title || "OrbitX";
+  const options: NotificationOptions = {
+    body: payload.body || "",
+    icon: `${BASE}pwa-192x192.png`,
+    badge: `${BASE}favicon.png`,
+    data: { url: payload.url || BASE },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || BASE;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});
+
+self.addEventListener("install", () => self.skipWaiting());

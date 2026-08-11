@@ -2,6 +2,7 @@ import { Joyride } from "react-joyride";
 import { playSound } from "./lib/sound";
 import { useRenderLog, authorizeDebugger } from "./firebaseDebug";
 import Markdown from "react-markdown";
+import { buildInviteLink } from "./lib/share";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -197,6 +198,53 @@ function App() {
   const lastSyncedProfileRef = useRef<string>("");
   const previousLevelRef = useRef<number | null>(null);
   const previousUserUidRef = useRef<string | null>(null);
+  const [inviteInfo, setInviteInfo] = useState<{
+    inviterId: string;
+    inviterName: string;
+  } | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  // Detect an invite link (?invite=UID) on load and welcome the newcomer
+  useEffect(() => {
+    let isMounted = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const inviterId = params.get("invite");
+      if (!inviterId) return;
+
+      getDoc(doc(db, "profiles", inviterId))
+        .then((snap) => {
+          if (!isMounted) return;
+          const name = snap.exists()
+            ? (snap.data() as { displayName?: string }).displayName || null
+            : null;
+          setInviteInfo({
+            inviterId,
+            inviterName: name || "رائد فضاء من مجرة OrbitX",
+          });
+        })
+        .catch(() => {
+          if (isMounted)
+            setInviteInfo({ inviterId, inviterName: "رائد فضاء من مجرة OrbitX" });
+        });
+    } catch (err) {
+      console.warn("Failed reading invite param:", err);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const copyInviteLink = async () => {
+    if (!userData) return;
+    try {
+      await navigator.clipboard.writeText(buildInviteLink(userData.uid));
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 2500);
+    } catch (err) {
+      console.warn("Failed copying invite link:", err);
+    }
+  };
 
   const handleLogin = async () => {
     try {
@@ -783,6 +831,31 @@ function App() {
       <Suspense fallback={null}>
         <QuranPlayer />
       </Suspense>
+      {inviteInfo && (
+        <div
+          className="bg-gradient-to-r from-indigo-600/90 via-fuchsia-600/90 to-indigo-600/90 text-white text-xs md:text-sm py-3 px-4 text-center font-semibold relative z-[120] shadow-md flex flex-wrap items-center justify-center gap-x-4 gap-y-2 select-none"
+          dir={isAr ? "rtl" : "ltr"}
+        >
+          <span>
+            🚀 <strong>{inviteInfo.inviterName}</strong> دعاك إلى مجرة OrbitX —
+            تبارزا في نزالات التركيز واصعدوا معاً في التصنيف!
+          </span>
+          <button
+            onClick={copyInviteLink}
+            className="underline hover:text-white/80 transition text-[10px] md:text-sm font-bold bg-white/10 px-2.5 py-0.5 rounded-full"
+          >
+            {inviteCopied
+              ? "تم النسخ ✓"
+              : "ادعُ صديقك أيضاً — انسخ رابطك"}
+          </button>
+          <button
+            onClick={() => setInviteInfo(null)}
+            className="underline hover:text-white/80 transition text-[10px] font-bold opacity-70"
+          >
+            إخفاء
+          </button>
+        </div>
+      )}
       <Dashboard user={userData} onLogout={logout} onLogin={handleLogin} />
     </>
   );

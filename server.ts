@@ -5,14 +5,27 @@ import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
+import crypto from "crypto";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, updateDoc, getDoc, arrayRemove, deleteField, deleteDoc, collection, addDoc } from "firebase/firestore";
 import * as admin from "firebase-admin";
 import { initializeApp as initializeAdminApp, getApps as getAdminApps } from "firebase-admin/app";
 import { getFirestore as getAdminFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import webpush from "web-push";
 
 dotenv.config();
+
+// Web Push (VAPID) configuration
+const vapidPublicKey = process.env.VITE_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+const vapidSubject = process.env.VAPID_SUBJECT || "mailto:orbitx@example.com";
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+  console.log("[SYSTEM] Web Push (VAPID) configured.");
+} else {
+  console.log("[SYSTEM] VAPID keys missing — Web Push disabled.");
+}
 
 // Initialize Supabase Admin client if credentials are provided
 import { createClient } from "@supabase/supabase-js";
@@ -286,6 +299,37 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // ── Security headers ──────────────────────────────────────────────
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader(
+      "Permissions-Policy",
+      "geolocation=(), payment=(), accelerometer=(), gyroscope=(), magnetometer=()"
+    );
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      res.setHeader(
+        "Content-Security-Policy",
+        [
+          "default-src 'self'",
+          "script-src 'self'",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "font-src 'self' https://fonts.gstatic.com data:",
+          "img-src 'self' data: blob: https://api.dicebear.com https://images.unsplash.com https://www.transparenttextures.com https://grainy-gradients.vercel.app https://raw.githubusercontent.com https://unpkg.com",
+          "media-src 'self' blob: https://server*.mp3quran.net https://archive.org https://assets.mixkit.co",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+          "worker-src 'self' blob:",
+          "base-uri 'self'",
+          "form-action 'self'",
+          "frame-ancestors 'none'",
+        ].join("; ")
+      );
+    }
+    next();
+  });
+
   // Helper to verify ID token and return user info
   async function verifyUserToken(req: express.Request) {
     const authHeader = req.headers.authorization;
@@ -315,6 +359,29 @@ async function startServer() {
       return decodedToken;
     } catch (e) {
       console.error("[Auth] Error verifying user token:", e);
+    }
+
+    // Last resort: verify a Supabase JWT using the public anon key as the HS256 secret.
+    // Works even when the service-role key is not configured (e.g. local/preview runs).
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return null;
+      const header = JSON.parse(Buffer.from(parts[0], "base64url").toString());
+      if (header.alg !== "HS256") return null;
+      const secret = process.env.VITE_SUPABASE_ANON_KEY || "";
+      if (!secret) return null;
+      const expected = crypto.createHmac("sha256", secret).update(`${parts[0]}.${parts[1]}`).digest("base64url");
+      if (expected !== parts[2]) return null;
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+      if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+      if (!payload.sub) return null;
+      return {
+        uid: payload.sub,
+        email: payload.email || null,
+        name: payload.user_metadata?.full_name || payload.user_metadata?.name || "رائد فضاء",
+        picture: payload.user_metadata?.avatar_url || "",
+      };
+    } catch (e) {
       return null;
     }
   }
@@ -727,9 +794,21 @@ async function startServer() {
 
   // API Route to leave a room immediately (used for keepalive beacon during tab close)
   app.post("/api/leave-room", async (req, res) => {
-    const { userId, roomId, userName } = req.body;
+    const { userId, roomId, userName, token } = req.body;
     if (!userId || !roomId) {
       return res.status(400).json({ error: "Missing userId or roomId" });
+    }
+
+    // Beacons can't set Authorization headers, so the token travels in the body.
+    if (token) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        req.headers.authorization = `Bearer ${token}`;
+      }
+    }
+    const verified = await verifyUserToken(req);
+    if (!verified || verified.uid !== userId) {
+      return res.status(403).json({ error: "Unauthorized: can only leave on your own behalf" });
     }
 
     try {
@@ -838,6 +917,84 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error creating Daily.co room:", error.response?.data || error.message);
       res.status(500).json({ error: "Failed to create voice room" });
+    }
+  });
+
+  // ── Web Push endpoints ─────────────────────────────────────────────
+  app.post("/api/push/subscribe", async (req, res) => {
+    try {
+      const verified = await verifyUserToken(req);
+      if (!verified) return res.status(401).json({ error: "Unauthorized" });
+      const { uid, subscription } = req.body || {};
+      if (verified.uid !== uid) return res.status(403).json({ error: "Can only subscribe your own uid" });
+      if (!subscription || !subscription.endpoint || !subscription.keys) {
+        return res.status(400).json({ error: "subscription is required" });
+      }
+      const docPath = `push_subscriptions/${uid}`;
+      const snap = await compatGetDoc(docPath as any);
+      const existing: any[] = snap?.data?.()?.subscriptions || [];
+      const filtered = existing.filter((s) => s.endpoint !== subscription.endpoint);
+      filtered.push(subscription);
+      await compatUpdateDoc(docPath as any, { subscriptions: filtered });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Push] subscribe failed:", error.message || error);
+      res.status(500).json({ error: "Failed to subscribe" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", async (req, res) => {
+    try {
+      const verified = await verifyUserToken(req);
+      if (!verified) return res.status(401).json({ error: "Unauthorized" });
+      const { uid, endpoint } = req.body || {};
+      if (verified.uid !== uid) return res.status(403).json({ error: "Can only unsubscribe your own uid" });
+      if (!endpoint) return res.status(400).json({ error: "endpoint is required" });
+      const docPath = `push_subscriptions/${uid}`;
+      const snap = await compatGetDoc(docPath as any);
+      const existing: any[] = snap?.data?.()?.subscriptions || [];
+      await compatUpdateDoc(docPath as any, {
+        subscriptions: existing.filter((s) => s.endpoint !== endpoint),
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Push] unsubscribe failed:", error.message || error);
+      res.status(500).json({ error: "Failed to unsubscribe" });
+    }
+  });
+
+  app.post("/api/push/send", async (req, res) => {
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      return res.status(503).json({ error: "Web Push not configured" });
+    }
+    try {
+      const verified = await verifyUserToken(req);
+      if (!verified) return res.status(401).json({ error: "Unauthorized" });
+      const { uid, title, body, url } = req.body || {};
+      if (!uid || !title) return res.status(400).json({ error: "uid and title are required" });
+      const docPath = `push_subscriptions/${uid}`;
+      const snap = await compatGetDoc(docPath as any);
+      const subscriptions: any[] = snap?.data?.()?.subscriptions || [];
+      if (subscriptions.length === 0) return res.json({ success: true, sent: 0 });
+
+      const payload = JSON.stringify({ title, body: body || "", url: url || "/OrbitX../" });
+      const results = await Promise.allSettled(
+        subscriptions.map((sub) =>
+          webpush.sendNotification(sub, payload).catch(async (err: any) => {
+            if (err?.statusCode === 404 || err?.statusCode === 410) {
+              await compatUpdateDoc(docPath as any, {
+                subscriptions: subscriptions.filter((s) => s.endpoint !== sub.endpoint),
+              });
+            }
+            throw err;
+          })
+        )
+      );
+      const sent = results.filter((r) => r.status === "fulfilled").length;
+      res.json({ success: true, sent });
+    } catch (error: any) {
+      console.error("[Push] send failed:", error.message || error);
+      res.status(500).json({ error: "Failed to send push" });
     }
   });
 

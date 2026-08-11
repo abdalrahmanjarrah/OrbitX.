@@ -30,6 +30,7 @@ import { showToast } from "./cosmicUI";
 import { Debugger } from "../firebaseDebug";
 import { Room, Challenge, Message, UserData } from "../shared";
 import { playSound } from "./sound";
+import { getWeekStartISO } from "./utils";
 
 // Custom onSnapshot wrapper to prevent unauthenticated read crashes and track active listener counts
 function safeOnSnapshot(
@@ -161,8 +162,14 @@ export function useSessionEngine(
 
   // STABILITY & SYNC SYSTEM CORES
   const userRef = useRef(user);
+  const authTokenRef = useRef("");
   useEffect(() => {
     userRef.current = user;
+    (user as any)?.getIdToken?.()
+      .then((t: string) => {
+        if (t) authTokenRef.current = t;
+      })
+      .catch(() => {});
   }, [user]);
 
   const instanceIdRef = useRef<string>("");
@@ -196,7 +203,8 @@ export function useSessionEngine(
         const payload = JSON.stringify({
           userId: userRef.current.uid,
           roomId: stationId,
-          userName: userRef.current.displayName || userRef.current.uid
+          userName: userRef.current.displayName || userRef.current.uid,
+          token: authTokenRef.current || undefined
         });
 
         // Use keepalive fetch which is fully supported by modern browsers for unload telemetry
@@ -1252,6 +1260,16 @@ export function useSessionEngine(
             totalFocusSessions: increment(1),
             lastStudyDate: new Date().toISOString().split("T")[0],
           };
+
+          // Weekly duel counters — auto-reset to the current Monday when the week flips
+          const minutesEarned = room.timerDuration / 60000;
+          const weekKey = getWeekStartISO();
+          const sameWeek = userRef.current.weekStart === weekKey;
+          updates.weekStart = weekKey;
+          updates.weekFocusMinutes =
+            (sameWeek ? userRef.current.weekFocusMinutes || 0 : 0) + minutesEarned;
+          updates.weekSessions =
+            (sameWeek ? userRef.current.weekSessions || 0 : 0) + 1;
 
           updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
 

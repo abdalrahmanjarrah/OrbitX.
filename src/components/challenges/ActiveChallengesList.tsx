@@ -5,6 +5,7 @@ import { db } from "../../firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { motion } from "motion/react";
 import { showToast } from "../../lib/cosmicUI";
+import { sendPushToUser } from "../../lib/pushManager";
 
 interface ActiveChallengesListProps {
   challenges: Challenge[];
@@ -122,6 +123,12 @@ export const ActiveChallengesList: React.FC<ActiveChallengesListProps> = ({
           read: false,
           timestamp: serverTimestamp(),
         });
+        sendPushToUser(
+          loserId,
+          "انتهى النزال! ⚔️",
+          `فاز ${winnerId === challenge.challengerId ? challenge.challengerName : challenge.challengedName} بـ ${Math.max(score1, score2)} دقيقة مقابل ${Math.min(score1, score2)}. عدّل النتيجة قريباً!`,
+          "/OrbitX../#/duels"
+        );
       } else {
         // Tie
         const msg = `🤝 انتهى السباق بالتعادل بين ${challenge.challengerName} و ${challenge.challengedName} بـ ${score1} دقيقة تركيز لكل منهما!`;

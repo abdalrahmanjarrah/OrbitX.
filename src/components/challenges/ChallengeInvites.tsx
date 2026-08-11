@@ -4,6 +4,7 @@ import { Challenge, UserData } from "../../shared";
 import { db } from "../../firebase";
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
+import { ensurePushSubscription, sendPushToUser } from "../../lib/pushManager";
 
 interface ChallengeInvitesProps {
   incomingInvites: Challenge[];
@@ -92,6 +93,12 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         read: false,
         timestamp: serverTimestamp(),
       }).catch(console.error);
+      sendPushToUser(
+        challenge.challengerId,
+        "قبل التحدي! ⚡",
+        `${currentUser.displayName} قبل تحديك — النزال بدأ الآن!`,
+        "/OrbitX../#/duels"
+      );
       onRefresh();
     } catch (err) {
       console.error("Failed accepting challenge:", err);
@@ -151,6 +158,14 @@ export const ChallengeInvites: React.FC<ChallengeInvitesProps> = ({
         read: false,
         timestamp: serverTimestamp(),
       });
+
+      ensurePushSubscription(currentUser.uid);
+      sendPushToUser(
+        selectedFriend.uid,
+        "تحدي جديد 🥊",
+        `${currentUser.displayName} تحدّاك: مين يجمع أكتر دقائق تركيز خلال ${formatDuration(duration)}؟`,
+        "/OrbitX../#/duels"
+      );
 
       setSelectedFriend(null);
       onRefresh();
