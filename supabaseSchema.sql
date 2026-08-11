@@ -246,18 +246,18 @@ USING (auth.uid() IS NOT NULL
 CREATE POLICY "update_delete_user_owned"
 ON public.documents
 FOR UPDATE
-USING ((data ->> 'userId') = auth.uid()::text
-  AND (path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
+USING ((path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
     OR path LIKE 'suggestions/%' OR path LIKE 'exhibitions/%'
-    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%'));
+    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%')
+  AND ((data ->> 'userId') = auth.uid()::text OR public.is_admin_user()));
 
 CREATE POLICY "delete_user_owned"
 ON public.documents
 FOR DELETE
-USING ((data ->> 'userId') = auth.uid()::text
-  AND (path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
+USING ((path LIKE 'global_chat/%' OR path LIKE 'discussions/%'
     OR path LIKE 'suggestions/%' OR path LIKE 'exhibitions/%'
-    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%'));
+    OR path LIKE 'awareness_signals/%' OR path LIKE 'support_tickets/%')
+  AND ((data ->> 'userId') = auth.uid()::text OR public.is_admin_user()));
 
 -- 6. Automatically update 'updated_at' column on row modification
 CREATE OR REPLACE FUNCTION update_updated_at_column()
