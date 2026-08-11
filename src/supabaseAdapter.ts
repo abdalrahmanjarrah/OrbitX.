@@ -764,18 +764,48 @@ const getListenerPath = (queryOrDoc: MockDocRef | MockColRef | MockQuery): strin
   return queryOrDoc.colRef.path;
 };
 
+// Diff-based docChanges() support: remembers the last set of doc ids per listener
+// path and reports added/removed docs on the next snapshot.
+const snapshotDocHistory = new Map<string, string[]>();
+
+const attachDocChanges = (path: string, snap: MockQuerySnapshot): MockQuerySnapshot => {
+  const prevIds = snapshotDocHistory.get(path) || [];
+  const curIds = snap.docs.map(d => d.id);
+  snapshotDocHistory.set(path, curIds);
+  (snap as any).docChanges = () => {
+    const changes: any[] = [];
+    curIds.forEach(id => {
+      if (!prevIds.includes(id)) {
+        const d = snap.docs.find(x => x.id === id);
+        changes.push({ type: "added", doc: { id, data: () => (d ? d.data() : null) } });
+      }
+    });
+    prevIds.forEach(id => {
+      if (!curIds.includes(id)) {
+        changes.push({ type: "removed", doc: { id, data: () => null } });
+      }
+    });
+    return changes;
+  };
+  return snap;
+};
+
 export const onSnapshot = (
   queryOrDoc: MockDocRef | MockColRef | MockQuery,
   onNext: (snap: any) => void,
   onError?: (err: any) => void
 ) => {
   const isDoc = queryOrDoc instanceof MockDocRef;
+  const listenerPath = getListenerPath(queryOrDoc);
 
   // 1. Fire initial data load
   if (isDoc) {
     getDoc(queryOrDoc as MockDocRef).then(onNext).catch(onError);
   } else {
-    getDocs(queryOrDoc as MockColRef | MockQuery).then(onNext).catch(onError);
+    getDocs(queryOrDoc as MockColRef | MockQuery)
+      .then((s) => attachDocChanges(listenerPath, s))
+      .then(onNext)
+      .catch(onError);
   }
 
   // Always register local callback to allow instant client-side updates upon local writes
@@ -783,10 +813,13 @@ export const onSnapshot = (
     if (isDoc) {
       getDoc(queryOrDoc as MockDocRef).then(onNext).catch(onError);
     } else {
-      getDocs(queryOrDoc as MockColRef | MockQuery).then(onNext).catch(onError);
+      getDocs(queryOrDoc as MockColRef | MockQuery)
+        .then((s) => attachDocChanges(listenerPath, s))
+        .then(onNext)
+        .catch(onError);
     }
   };
-  const listener = { cb: localCb, path: getListenerPath(queryOrDoc) };
+  const listener = { cb: localCb, path: listenerPath };
   listeners.add(listener);
 
   // Return unsubscribe handler

@@ -30,7 +30,9 @@ function StudyRoomParticipantsComponent({
   }, []);
 
   const sortedParticipants = React.useMemo(() => {
-    return [...participantsData]
+    return participantsData
+      .filter((p) => p && p.uid)
+      .map((p) => ({ ...p, displayName: p.displayName || "رائد فضاء" }))
       .sort((a, b) => a.uid.localeCompare(b.uid))
       .slice(0, 5);
   }, [participantsData]);

@@ -858,7 +858,7 @@ export function useSessionEngine(
         const exists = participantsDataRef.current.some((p) => p.uid === uid);
         if (!exists && !pendingFetchesRef.current.has(uid)) {
           // Check session-level in-memory cache first
-          if (profileCache[uid]) {
+          if (profileCache[uid] && profileCache[uid].uid === uid) {
             const fetched = profileCache[uid];
             setParticipantsData((current) => {
               if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
@@ -874,6 +874,7 @@ export function useSessionEngine(
             .then((docSnap) => {
               if (docSnap.exists()) {
                 const fetched = docSnap.data() as UserData;
+                if (!fetched || fetched.uid !== uid) return; // Skip broken/empty profiles
                 profileCache[uid] = fetched; // Cache the fetched profile
                 setParticipantsData((current) => {
                   if (!current.some((x) => x.uid === uid) && (roomSnapshotRef.current?.participants || []).includes(uid)) {
