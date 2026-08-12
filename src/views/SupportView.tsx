@@ -86,7 +86,7 @@ export default function SupportView({ user }: { user: UserData }) {
   
   // Admin search & filter states
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("open");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isAdminUser = user?.role === "admin";
