@@ -578,11 +578,8 @@ function App() {
         displayName: userData.displayName,
         photoURL: userData.photoURL,
         bio: userData.bio || "",
-        level: userData.level,
-        xp: userData.xp,
         totalFocusSessions: userData.totalFocusSessions || 0,
         friendsCount: userData.friendsCount || 0,
-        role: userData.role,
         banned: userData.banned || false,
         currentActivity: userData.currentActivity || "في المدار",
       };

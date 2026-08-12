@@ -401,6 +401,14 @@ BEGIN
     SET data = v_row.data, updated_at = now()
     WHERE path = v_row.path;
 
+    -- Mirror XP/level to the public profile so the leaderboard sees it too.
+    UPDATE public.documents
+    SET data = jsonb_set(
+            jsonb_set(data, '{xp}', to_jsonb(v_new_xp)),
+            '{level}', to_jsonb(v_level)
+        ), updated_at = now()
+    WHERE path = 'profiles/' || p_user_id;
+
     -- Fleet progress
     IF p_fleet_id IS NOT NULL THEN
         UPDATE public.documents
@@ -564,6 +572,13 @@ BEGIN
     UPDATE public.documents
     SET data = v_row.data, updated_at = now()
     WHERE path = v_row.path;
+
+    UPDATE public.documents
+    SET data = jsonb_set(
+            jsonb_set(data, '{xp}', to_jsonb(v_new_xp)),
+            '{level}', to_jsonb(v_level)
+        ), updated_at = now()
+    WHERE path = 'profiles/' || p_user_id;
 
     RETURN jsonb_build_object('success', true, 'xp', v_new_xp, 'level', v_level);
 END;
