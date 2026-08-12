@@ -222,6 +222,7 @@ import('firebase/firestore').then((firestore) => {
 
 import { LanguageProvider } from "./context/LanguageContext.tsx";
 import { supabase } from "./supabaseAdapter";
+import { installGlobalErrorCapture } from "./lib/errorReporter";
 
 // Determine if we are inside an OAuth popup window
 const isPopup = typeof window !== "undefined" && (
@@ -282,6 +283,7 @@ if (isPopup) {
     </div>
   );
 } else {
+  installGlobalErrorCapture();
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <LanguageProvider>

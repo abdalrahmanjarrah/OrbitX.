@@ -1,5 +1,6 @@
 import { Joyride } from "react-joyride";
 import { playSound } from "./lib/sound";
+import { reportError } from "./lib/errorReporter";
 import Markdown from "react-markdown";
 /**
  * @license
@@ -699,6 +700,9 @@ export class ErrorBoundary extends Component<any, any> {
 
   componentDidCatch(error: any, errorInfo: any) {
     console.error("ErrorBoundary caught an error", error, errorInfo);
+    void reportError("react-boundary", error, {
+      componentStack: errorInfo?.componentStack,
+    });
   }
 
   render() {

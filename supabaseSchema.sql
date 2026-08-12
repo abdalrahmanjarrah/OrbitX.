@@ -175,11 +175,11 @@ FOR ALL
 USING (public.is_admin_user() AND (
   path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
   path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
-  path LIKE 'advices/%'))
+  path LIKE 'advices/%' OR path LIKE 'errors/%'))
 WITH CHECK (public.is_admin_user() AND (
   path LIKE 'system/%' OR path LIKE 'admin_alerts/%' OR
   path LIKE 'app_updates/%' OR path LIKE 'global_notifications/%' OR
-  path LIKE 'advices/%'));
+  path LIKE 'advices/%' OR path LIKE 'errors/%'));
 
 -- Admins may also manage any user/profile document (banning, XP fixes...).
 CREATE POLICY "mutate_admins_manage_users"
@@ -242,7 +242,8 @@ USING (auth.uid() IS NOT NULL
   AND path NOT LIKE 'suggestions/%'
   AND path NOT LIKE 'exhibitions/%'
   AND path NOT LIKE 'awareness_signals/%'
-  AND path NOT LIKE 'support_tickets/%');
+  AND path NOT LIKE 'support_tickets/%'
+  AND path NOT LIKE 'errors/%');
 
 CREATE POLICY "update_delete_user_owned"
 ON public.documents

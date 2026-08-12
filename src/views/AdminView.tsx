@@ -66,6 +66,7 @@ let cachedExhibitions: any[] = [];
 let cachedDiscussions: Discussion[] = [];
 let cachedIsChatEnabled = true;
 let cachedSupportTickets: any[] = [];
+let cachedErrorLogs: any[] = [];
 
 import { useLanguage } from "../context/LanguageContext";
 
@@ -85,6 +86,8 @@ export default function AdminView({ user }: { user: UserData }) {
   const [supportTickets, setSupportTickets] = useState<any[]>(
     () => cachedSupportTickets,
   );
+  const [errorLogs, setErrorLogs] = useState<any[]>(() => cachedErrorLogs);
+  const [expandedErrorId, setExpandedErrorId] = useState<string | null>(null);
   const [isChatEnabled, setIsChatEnabled] = useState(() => cachedIsChatEnabled);
   const [announcementText, setAnnouncementText] = useState("");
   const [updateTitle, setUpdateTitle] = useState("");
@@ -176,6 +179,7 @@ export default function AdminView({ user }: { user: UserData }) {
           setDiscussions(cachedDiscussions);
           setIsChatEnabled(cachedIsChatEnabled);
           setSupportTickets(cachedSupportTickets);
+          setErrorLogs(cachedErrorLogs);
         }
         return;
       }
@@ -249,6 +253,20 @@ export default function AdminView({ user }: { user: UserData }) {
           ...doc.data(),
         }));
         if (isMounted) setSupportTickets(fetchedSupportTickets);
+
+        const errorSnap = await getDocs(
+          query(
+            collection(db, "errors"),
+            orderBy("ts", "desc"),
+            limit(50),
+          ),
+        );
+        const fetchedErrorLogs = errorSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        if (isMounted) setErrorLogs(fetchedErrorLogs);
+        cachedErrorLogs = fetchedErrorLogs;
 
         // Update in-memory session cache
         lastAdminFetchTime = now;
@@ -350,10 +368,48 @@ export default function AdminView({ user }: { user: UserData }) {
           cachedSupportTickets = next;
           return next;
         });
+      } else if (col === "errors") {
+        setErrorLogs((prev) => {
+          const next = prev.filter((item) => item.id !== id);
+          cachedErrorLogs = next;
+          return next;
+        });
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `${col}/${id}`);
     }
+  };
+
+  const handleClearErrorLog = async () => {
+    if (!(await confirmDialog(
+      isAr
+        ? "هل أنت متأكد من مسح سجل الأخطاء بالكامل؟"
+        : "Are you sure you want to clear the entire error log?",
+      { title: isAr ? "مسح سجل الأخطاء" : "Clear error log", danger: true },
+    ))) return;
+    try {
+      await Promise.allSettled(
+        errorLogs.map((e) => deleteDoc(doc(db, "errors", e.id))),
+      );
+      setErrorLogs([]);
+      cachedErrorLogs = [];
+      showToast(isAr ? "تم مسح سجل الأخطاء." : "Error log cleared.", "success");
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, "errors/*");
+    }
+  };
+
+  const formatErrorTime = (ts: any): string => {
+    if (!ts) return "—";
+    const n = typeof ts === "number" ? ts : Number(ts);
+    if (!Number.isFinite(n)) return String(ts);
+    const diff = Date.now() - n;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return new Date(n).toLocaleDateString();
   };
 
   return (
@@ -798,6 +854,118 @@ export default function AdminView({ user }: { user: UserData }) {
           </div>
         </div>
 */}
+
+        {/* Error Log — كاميرا الأمان للتطبيق */}
+        <div className="bg-[#050B14] border border-red-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(255,0,0,0.1)_inset] lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 className="text-red-400 font-bold uppercase tracking-widest flex items-center gap-2">
+              <AlertTriangle size={18} /> {isAr ? "سجل الأخطاء" : "Error Log"}
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-red-300/60">
+                {errorLogs.length} {isAr ? "خطأ مسجّل" : "errors"}
+              </span>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-[10px] bg-red-600/30 hover:bg-red-500/40 text-red-200 px-2 py-1 rounded font-bold transition-colors"
+              >
+                {isAr ? "تحديث" : "Refresh"}
+              </button>
+              <button
+                onClick={handleClearErrorLog}
+                disabled={errorLogs.length === 0}
+                className="text-[10px] bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded font-bold transition-colors disabled:opacity-30"
+              >
+                {isAr ? "مسح السجل" : "Clear"}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar pr-1">
+            {errorLogs.length === 0 && (
+              <div className="text-center py-8">
+                <Shield size={28} className="mx-auto mb-2 text-emerald-500" />
+                <p className="text-emerald-400 text-xs font-bold">
+                  {isAr ? "لا أخطاء مسجّلة. النظام يعمل بسلاسة 🚀" : "No errors logged. System running smooth 🚀"}
+                </p>
+              </div>
+            )}
+            {errorLogs.map((err) => (
+              <div
+                key={err.id}
+                className="bg-[#020308] border border-red-900/40 p-3 text-xs group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    onClick={() =>
+                      setExpandedErrorId(expandedErrorId === err.id ? null : err.id)
+                    }
+                    className="text-left flex-1 min-w-0"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 font-bold">
+                        {err.source || "unknown"}
+                      </span>
+                      {err.count > 1 && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold">
+                          ×{err.count}
+                        </span>
+                      )}
+                      <span className="text-[9px] text-gray-500">
+                        {formatErrorTime(err.ts)}
+                      </span>
+                      {err.userName && (
+                        <span className="text-[9px] text-cyan-500 truncate">
+                          {err.userName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-red-200 break-words leading-relaxed" dir="ltr">
+                      {err.message}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDoc("errors", err.id)}
+                    className="text-red-500 hover:text-red-400 shrink-0 mt-1"
+                    title={isAr ? "حذف" : "Delete"}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+                {expandedErrorId === err.id && (
+                  <div className="mt-2 pt-2 border-t border-red-900/40 space-y-1">
+                    {err.url && (
+                      <div className="text-[9px] text-gray-500 truncate" dir="ltr">
+                        {err.url}
+                      </div>
+                    )}
+                    {err.uid && (
+                      <div className="text-[9px] text-gray-500 truncate" dir="ltr">
+                        uid: {err.uid}
+                      </div>
+                    )}
+                    {err.stack && (
+                      <pre
+                        className="mt-1 p-2 bg-black/40 rounded text-[9px] text-orange-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto custom-scrollbar"
+                        dir="ltr"
+                      >
+                        {err.stack}
+                      </pre>
+                    )}
+                    {err.context && (
+                      <pre
+                        className="mt-1 p-2 bg-black/40 rounded text-[9px] text-cyan-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto custom-scrollbar"
+                        dir="ltr"
+                      >
+                        {JSON.stringify(err.context, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Media Surveillance */}
         <div className="bg-[#050B14] border border-cyan-500/30 p-6 rounded-xl shadow-[0_0_30px_rgba(0,255,255,0.1)_inset]">
