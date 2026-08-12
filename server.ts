@@ -318,7 +318,7 @@ async function startServer() {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' https://fonts.gstatic.com data:",
           "img-src 'self' data: blob: https://api.dicebear.com https://images.unsplash.com https://www.transparenttextures.com https://grainy-gradients.vercel.app https://raw.githubusercontent.com https://unpkg.com https://*.googleusercontent.com",
-          "media-src 'self' blob: https://server*.mp3quran.net https://archive.org https://assets.mixkit.co",
+          "media-src 'self' blob: https://*.mp3quran.net https://archive.org https://assets.mixkit.co",
           "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
           "worker-src 'self' blob:",
           "base-uri 'self'",
@@ -1007,7 +1007,20 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        setHeaders: (res, filePath) => {
+          if (filePath.includes(path.sep + "assets" + path.sep)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          }
+        },
+      })
+    );
+    // Missing file-like paths (e.g. a stale hashed chunk after a redeploy)
+    // must 404 instead of receiving index.html with the wrong MIME type.
+    app.get(/\.[a-z0-9]{1,10}$/i, (req, res) => {
+      res.status(404).type("text/plain").send("Not found");
+    });
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
