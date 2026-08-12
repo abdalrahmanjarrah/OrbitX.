@@ -1,7 +1,8 @@
-import { Joyride } from "react-joyride";
+const Joyride = React.lazy(() =>
+  import("react-joyride").then((m) => ({ default: m.Joyride })),
+);
 import { playSound } from "../lib/sound";
 import { useRenderLog } from "../firebaseDebug";
-import Markdown from "react-markdown";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -78,17 +79,6 @@ import {
   BarChart3,
   Search, Globe2, UserCircle, UserPlus,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
@@ -377,7 +367,8 @@ export default function Dashboard({
       <div className="fixed top-[-10%] -left-64 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen z-[-1]" />
       <div className="fixed top-1/2 -right-64 w-[800px] h-[800px] bg-fuchsia-600/5 rounded-full blur-[150px] pointer-events-none mix-blend-screen z-[-1]" />
 
-      <Joyride
+      <React.Suspense fallback={null}>
+        <Joyride
         steps={getTourSteps(window.innerWidth < 1024)}
         run={runTour}
         continuous
@@ -392,6 +383,7 @@ export default function Dashboard({
         }}
         locale={{ back: "السابق", close: "إغلاق", last: "إنهاء", next: "التالي", skip: "تخطي" }}
       />
+      </React.Suspense>
 
       <AnimatePresence>
         {showRoleModal && (

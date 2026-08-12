@@ -1,6 +1,4 @@
-import { Joyride } from "react-joyride";
 import { playSound } from "../lib/sound";
-import Markdown from "react-markdown";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -167,7 +165,6 @@ import FocusHeatmap from './FocusHeatmap';
 import ProfileView from './ProfileView';
 import DiscussionsView from './DiscussionsView';
 import ScheduleView from './ScheduleView';
-import AdminView from './AdminView';
 import BadgeCard from './BadgeCard';
 import CosmicDiary from './CosmicDiary';
 import UserModal from './UserModal';

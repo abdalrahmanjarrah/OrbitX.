@@ -1,7 +1,5 @@
-import { Joyride } from "react-joyride";
 import { playSound } from "./lib/sound";
 import { useRenderLog, authorizeDebugger } from "./firebaseDebug";
-import Markdown from "react-markdown";
 import { buildInviteLink } from "./lib/share";
 /**
  * @license
@@ -83,17 +81,6 @@ import {
   Globe2,
   UserCircle,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "./components/StarBackground";
 

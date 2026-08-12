@@ -1,4 +1,3 @@
-import { Joyride } from "react-joyride";
 import { playSound } from "../lib/sound";
 import Markdown from "react-markdown";
 /**
@@ -81,17 +80,6 @@ import {
   Globe2,
   UserCircle,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
@@ -189,14 +177,12 @@ import FocusHeatmap from "./FocusHeatmap";
 import ProfileView from "./ProfileView";
 import DiscussionsView from "./DiscussionsView";
 import ScheduleView from "./ScheduleView";
-import AdminView from "./AdminView";
 import BadgeCard from "./BadgeCard";
 import CosmicDiary from "./CosmicDiary";
 
 import UserModal from "./UserModal";
 import NavLink from "./NavLink";
 import BlackHolesView from "./BlackHolesView";
-import AnalyticsView from "./AnalyticsView";
 import FleetsView from "./FleetsView";
 import { useLanguage } from "../context/LanguageContext";
 

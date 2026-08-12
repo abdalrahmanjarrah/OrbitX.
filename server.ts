@@ -5,6 +5,7 @@ import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
+import zlib from "zlib";
 import crypto from "crypto";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, updateDoc, getDoc, arrayRemove, deleteField, deleteDoc, collection, addDoc } from "firebase/firestore";
@@ -13,6 +14,7 @@ import { initializeApp as initializeAdminApp, getApps as getAdminApps } from "fi
 import { getFirestore as getAdminFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import webpush from "web-push";
+import compression from "compression";
 
 dotenv.config();
 
@@ -298,6 +300,18 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
+
+  // ── Compression (gzip + brotli) ───────────────────────────────────
+  // Shrinks the JS/CSS assets dramatically on the wire (e.g. index-*.js
+  // drops from ~800KB raw to ~200KB). Vary: Accept-Encoding is set
+  // automatically so CDNs/caches never serve a mangled encoding.
+  app.use(compression({
+    threshold: 1024,
+    level: 9,
+    brotli: {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
+    },
+  }));
 
   // ── Security headers ──────────────────────────────────────────────
   app.use((req, res, next) => {

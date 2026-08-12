@@ -36,15 +36,10 @@ export default defineConfig(({mode}) => {
       })
     ],
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'motion'],
-            'vendor-charts': ['recharts'],
-            'vendor-three': ['three', 'react-globe.gl'],
-          },
-        },
-      },
+      // NOTE: manualChunks removed on purpose. The previous grouping forced
+      // recharts (+ a duplicated copy of React) into the initial page load,
+      // wrecking the Total Blocking Time. Vite/Rollup now auto-splits lazy
+      // routes so heavy libs only load when their view actually opens.
     },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY ?? ''),
