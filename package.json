@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "node copy-icons.js && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --tsconfig-raw='{\"compilerOptions\":{\"target\":\"ES2022\",\"moduleResolution\":\"bundler\"}}' --outfile=dist/server.cjs",
+    "build": "node copy-icons.js && vite build && node precompress.mjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --tsconfig-raw='{\"compilerOptions\":{\"target\":\"ES2022\",\"moduleResolution\":\"bundler\"}}' --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
@@ -24,7 +24,6 @@
     "autoprefixer": "^10.4.21",
     "axios": "^1.15.0",
     "clsx": "^2.1.1",
-    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "ecctrl": "^1.0.97",
@@ -53,7 +52,6 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "@types/compression": "^1.8.1",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/web-push": "^3.6.4",

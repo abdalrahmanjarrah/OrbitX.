@@ -5,7 +5,6 @@ import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
-import zlib from "zlib";
 import crypto from "crypto";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, updateDoc, getDoc, arrayRemove, deleteField, deleteDoc, collection, addDoc } from "firebase/firestore";
@@ -14,7 +13,6 @@ import { initializeApp as initializeAdminApp, getApps as getAdminApps } from "fi
 import { getFirestore as getAdminFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import webpush from "web-push";
-import compression from "compression";
 
 dotenv.config();
 
@@ -300,18 +298,6 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
-
-  // ── Compression (gzip + brotli) ───────────────────────────────────
-  // Shrinks the JS/CSS assets dramatically on the wire (e.g. index-*.js
-  // drops from ~800KB raw to ~200KB). Vary: Accept-Encoding is set
-  // automatically so CDNs/caches never serve a mangled encoding.
-  app.use(compression({
-    threshold: 1024,
-    level: 9,
-    brotli: {
-      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
-    },
-  }));
 
   // ── Security headers ──────────────────────────────────────────────
   app.use((req, res, next) => {
@@ -1021,6 +1007,42 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    // ── Precompressed assets ─────────────────────────────────────────
+    // JS/CSS are compressed once at build time (see precompress.mjs).
+    // Streaming the prebuilt .br/.gz here costs nothing at runtime, unlike
+    // on-the-fly brotli which pegged the single-core server on every request.
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") return next();
+      if (!req.path.startsWith("/assets/")) return next();
+      const accept = req.headers["accept-encoding"] as string | undefined;
+      if (!accept) return next();
+      const filePath = path.join(distPath, req.path);
+      let encodedPath: string | null = null;
+      let encoding: "br" | "gzip" | null = null;
+      if (accept.includes("br")) {
+        const candidate = filePath + ".br";
+        if (fs.existsSync(candidate)) {
+          encodedPath = candidate;
+          encoding = "br";
+        }
+      }
+      if (!encodedPath && accept.includes("gzip")) {
+        const candidate = filePath + ".gz";
+        if (fs.existsSync(candidate)) {
+          encodedPath = candidate;
+          encoding = "gzip";
+        }
+      }
+      if (!encodedPath) return next();
+      res.setHeader("Content-Encoding", encoding);
+      res.setHeader("Vary", "Accept-Encoding");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.type(path.extname(req.path));
+      if (req.method === "HEAD") {
+        return res.end();
+      }
+      fs.createReadStream(encodedPath).pipe(res);
+    });
     app.use(
       express.static(distPath, {
         setHeaders: (res, filePath) => {
