@@ -7,6 +7,10 @@
 
 ## 3. Plain-Language Accountability
 - **Explain like a beginner**: Every completed task must be explained to the user in plain colloquial Arabic: "What was the problem? Why did I do it? What do you get out of it?" — no unexplained technical terms. If a technical term is unavoidable, define it in one simple sentence on the spot.
+- **The "يعني ×3" rule**: When explaining any concept, unpack it in three layers, each starting with "يعني..." going from simplest to deeper:
+  1. يعني... → one ultra-simple sentence (as if to a child).
+  2. يعني... → clear everyday analogy.
+  3. يعني... → how it actually works / why it matters in this project.
 - **When the user says they don't understand**: stop the tech talk, re-explain from scratch in simple language, and reassure — never make them feel it's their fault.
 - **Keep the plain-language log updated**: After every finished phase/task, update the repo file `ماذا-حدث.md` (the plain-language history) so the user always has a simple record of what happened and why.
 

@@ -144,6 +144,9 @@ export default function LandingPage({
       audio.pause();
       setIsSoundOn(false);
     } else {
+      if (!audio.getAttribute("src")) {
+        audio.src = `${import.meta.env.BASE_URL}sounds/spaceship.wav`;
+      }
       audio.currentTime = 0;
       audio.play().catch(() => {
         setIsSoundOn(false);
@@ -604,9 +607,8 @@ export default function LandingPage({
             </button>
             <audio
               ref={audioRef}
-              src={`${import.meta.env.BASE_URL}sounds/spaceship.wav`}
               loop
-              preload="auto"
+              preload="none"
               className="hidden"
             />
             <button

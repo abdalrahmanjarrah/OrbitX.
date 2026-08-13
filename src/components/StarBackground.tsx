@@ -29,10 +29,29 @@ export default function StarBackground() {
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#05050A]">
-      {/* Dynamic Nebulas */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-violet-600/20 blur-[120px] rounded-full mix-blend-screen opacity-50 animate-[pulse_8s_ease-in-out_infinite]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-fuchsia-600/10 blur-[150px] rounded-full mix-blend-screen opacity-50 animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-      <div className="absolute top-[30%] left-[60%] w-[40vw] h-[40vw] bg-blue-600/10 blur-[130px] rounded-full mix-blend-screen opacity-40 animate-[pulse_12s_ease-in-out_infinite]" />
+      {/* Dynamic Nebulas (radial gradients — no blur filter, no blend mode,
+          so they animate purely on the GPU compositor) */}
+      <div
+        className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full opacity-50 animate-[pulse_8s_ease-in-out_infinite]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0.12) 40%, rgba(139,92,246,0) 70%)"
+        }}
+      />
+      <div
+        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full opacity-50 animate-[pulse_10s_ease-in-out_infinite_reverse]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(217,70,239,0.25) 0%, rgba(217,70,239,0.08) 45%, rgba(217,70,239,0) 70%)"
+        }}
+      />
+      <div
+        className="absolute top-[30%] left-[60%] w-[40vw] h-[40vw] rounded-full opacity-40 animate-[pulse_12s_ease-in-out_infinite]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0.08) 45%, rgba(59,130,246,0) 70%)"
+        }}
+      />
 
       {/* Twinkling Stars */}
       <div className="absolute inset-0">

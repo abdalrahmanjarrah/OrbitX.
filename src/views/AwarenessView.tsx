@@ -10,7 +10,6 @@ import Markdown from "react-markdown";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const Globe3D = React.lazy(() => import("react-globe.gl"));
 import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Leaf,
@@ -77,7 +76,6 @@ import {
   Bell,
   BarChart3,
   Search,
-  Globe2,
   UserCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -141,7 +139,7 @@ function onSnapshot(...args: any[]) {
   return (originalOnSnapshot as any)(...args);
 }
 
-import { DEFAULT_SIGNALS, DEFAULT_COORDS } from "../data/AwarenessDefaults";
+import { DEFAULT_SIGNALS } from "../data/AwarenessDefaults";
 import {
   SURAHS,
   getAstronautRank,
@@ -223,31 +221,6 @@ export default function AwarenessView({ user }: { user: UserData }) {
   const [isCreating, setIsCreating] = useState(false);
   const [deletingSignalId, setDeletingSignalId] = useState<string | null>(null);
 
-  const globeRef = useRef<any>(null);
-
-  // Only load the heavy WebGL globe on capable devices. Low-end / battery-saver
-  // users get a lightweight static starfield instead, keeping the site smooth.
-  const canRenderGlobe = React.useMemo(() => {
-    if (typeof window === "undefined") return false;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
-    const conn = (navigator as any).connection;
-    if (conn?.saveData === true) return false;
-    const cores = navigator.hardwareConcurrency;
-    if (typeof cores === "number" && cores > 0 && cores < 4) return false;
-    return true;
-  }, []);
-
-  // Generate deterministic but random-looking coordinates based on id
-  const getCoordinates = (id: string, index: number) => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++)
-      hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    // ensure we scatter them nicely
-    const lat = (hash % 140) - 70; // avoid poles
-    const lng = ((hash * Math.max(1, index)) % 360) - 180;
-    return { lat, lng };
-  };
-
   useEffect(() => {
     let isMounted = true;
     const fetchSignals = async () => {
@@ -281,14 +254,6 @@ export default function AwarenessView({ user }: { user: UserData }) {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
-
-  // auto rotate globe
-  useEffect(() => {
-    if (globeRef.current && !selectedSignal) {
-      globeRef.current.controls().autoRotate = true;
-      globeRef.current.controls().autoRotateSpeed = 1.0;
-    }
-  }, [selectedSignal]);
 
   const handleCreate = async () => {
     if (!newTitle || !newContent || !isAdmin) return;
@@ -324,20 +289,6 @@ export default function AwarenessView({ user }: { user: UserData }) {
 
   const handleReadSignal = async (sig: AwarenessSignal) => {
     setSelectedSignal(sig);
-    if (globeRef.current) {
-      globeRef.current.controls().autoRotate = false;
-      let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
-      if (!coords) {
-        coords = getCoordinates(
-          sig.id,
-          signals.findIndex((s) => s.id === sig.id),
-        );
-      }
-      globeRef.current.pointOfView(
-        { lat: coords.lat, lng: coords.lng, altitude: 2 },
-        1000,
-      );
-    }
     try {
       if (!sig.id.startsWith("default-"))
         await updateDoc(doc(db, "awareness_signals", sig.id), {
@@ -352,71 +303,11 @@ export default function AwarenessView({ user }: { user: UserData }) {
     }
   };
 
-  const pointsData = React.useMemo(() => {
-    return signals.map((sig, i) => {
-      let coords = DEFAULT_COORDS[sig.id as keyof typeof DEFAULT_COORDS];
-      if (!coords) {
-        coords = getCoordinates(sig.id, i);
-      }
-
-      let color = "#00ffcc"; // target blue-green color
-      return {
-        lat: coords.lat,
-        lng: coords.lng,
-        size: 1,
-        color: color,
-        signal: sig,
-      };
-    });
-  }, [signals]);
-
-  const arcsData = React.useMemo(() => {
-    return Array.from({ length: 15 }).map((_, i) => ({
-      startLat: (Math.random() - 0.5) * 160,
-      startLng: (Math.random() - 0.5) * 360,
-      endLat: (Math.random() - 0.5) * 160,
-      endLng: (Math.random() - 0.5) * 360,
-      color: ["rgba(6, 182, 212, 0.4)", "rgba(16, 185, 129, 0.4)"][i % 2],
-    }));
-  }, []);
-
   return (
     <div className="relative w-full h-[80vh] md:h-[calc(100vh-120px)] rounded-[2rem] overflow-hidden bg-[#000108] border border-cyan-900/30 block shadow-2xl">
       {/* 3D Globe Container */}
       <div className="absolute inset-0 cursor-crosshair">
-        {canRenderGlobe ? (
-          <React.Suspense fallback={<StaticGlobeFallback />}>
-            <Globe3D
-              ref={globeRef}
-              globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-              bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-              pointsData={pointsData}
-              pointLat="lat"
-              pointLng="lng"
-              pointColor="color"
-              pointAltitude={0.02}
-              pointRadius={0.3}
-              pointsMerge={false}
-              onPointClick={(point: any) => handleReadSignal(point.signal)}
-              arcsData={arcsData}
-              arcColor="color"
-              arcDashLength={0.4}
-              arcDashGap={0.2}
-              arcDashAnimateTime={2500}
-              ringColor={(d: any) => d.color}
-              ringMaxRadius={2.5}
-              ringPropagationSpeed={3}
-              ringRepeatPeriod={800}
-              ringsData={pointsData}
-              ringLat="lat"
-              ringLng="lng"
-              atmosphereColor="#06b6d4"
-              atmosphereAltitude={0.2}
-            />
-          </React.Suspense>
-        ) : (
-          <StaticGlobeFallback />
-        )}
+        <StaticGlobeFallback />
         {/* Transparent overlay for gradient edges */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#000108_100%)]"></div>
       </div>
@@ -570,9 +461,6 @@ export default function AwarenessView({ user }: { user: UserData }) {
                   <button
                     onClick={() => {
                       setSelectedSignal(null);
-                      if (globeRef.current) {
-                        globeRef.current.controls().autoRotate = true;
-                      }
                     }}
                     className="text-cyan-500 hover:text-cyan-300 font-mono text-sm"
                   >

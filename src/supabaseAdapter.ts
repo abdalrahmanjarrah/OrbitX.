@@ -431,27 +431,65 @@ export class MockQuerySnapshot {
 
 // 5. Database CRUD APIs (Using Single 'documents' JSONB Table) with Offline Fallback
 export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
-  if (!isRealSupabase) {
+  const fromLocal = (): MockDocSnapshot => {
     const local = getLocalDocs().find(d => d.path === docRef.path);
     if (!local) {
       return new MockDocSnapshot(false, docRef.id, null, docRef);
     }
-      return new MockDocSnapshot(true, docRef.id, local.data, docRef);
+    return new MockDocSnapshot(true, docRef.id, local.data, docRef);
+  };
+
+  if (!isRealSupabase) {
+    return fromLocal();
   }
 
-  await ensureHydrated();
+  // Fast path: single-doc read must NOT download the whole table. Fetch just
+  // this one path directly, and let full hydration continue in the background.
   const cached = memoryDb.get(docRef.path);
-  if (cached) {
+  if (cached && cached.data != null) {
     return new MockDocSnapshot(true, docRef.id, cached.data, docRef);
   }
   if (memoryHydrated) {
     return new MockDocSnapshot(false, docRef.id, null, docRef);
   }
-  const local = getLocalDocs().find(d => d.path === docRef.path);
-  if (!local) {
-    return new MockDocSnapshot(false, docRef.id, null, docRef);
+
+  try {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from("documents")
+      .select("id, collection, path, data, updated_at")
+      .eq("path", docRef.path)
+      .maybeSingle();
+    if (!error && data) {
+      setCached({
+        path: data.path,
+        collection: data.collection,
+        id: data.id,
+        data: data.data,
+        updated_at: data.updated_at || ""
+      });
+      return new MockDocSnapshot(true, docRef.id, data.data, docRef);
+    }
+    // If this doc truly does not exist server-side, record the miss so the
+    // exact doc we queried won't block the next read; a global refresh or a
+    // write to this path will correct it.
+    if (!error) {
+      memoryDb.set(docRef.path, {
+        path: docRef.path,
+        collection: docRef.collectionName,
+        id: docRef.id,
+        data: null,
+        updated_at: ""
+      });
+    }
+  } catch (e) {
+    console.warn(`[Supabase Compatibility] direct getDoc failed for ${docRef.path}:`, e);
   }
-    return new MockDocSnapshot(true, docRef.id, local.data, docRef);
+
+  // Kick off full hydration in the background (non-blocking) for collection
+  // queries and future reads.
+  ensureHydrated();
+  return fromLocal();
 };
 
 export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQuerySnapshot> => {
