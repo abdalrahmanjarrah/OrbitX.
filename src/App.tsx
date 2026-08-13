@@ -160,8 +160,8 @@ import {
   ErrorBoundary,
 } from "./shared";
 import LandingPage from "./components/LandingPage";
-import Dashboard from "./views/Dashboard";
 
+const Dashboard = lazy(() => import("./views/Dashboard"));
 const QuranPlayer = lazy(() => import("./views/QuranPlayer"));
 const MissionRoleWizard = lazy(() =>
   import("./views/MissionRoleWizard"),
@@ -840,19 +840,25 @@ function App() {
           </button>
         </div>
       )}
-      <Dashboard user={userData} onLogout={logout} onLogin={handleLogin} />
+      <Suspense fallback={null}>
+        <Dashboard user={userData} onLogout={logout} onLogin={handleLogin} />
+      </Suspense>
     </>
   );
 }
 
-import GlobalAdminAlert from "./views/GlobalAdminAlert";
-import GlobalAppUpdates from "./views/GlobalAppUpdates";
+const GlobalAdminAlert = lazy(() => import("./views/GlobalAdminAlert"));
+const GlobalAppUpdates = lazy(() => import("./views/GlobalAppUpdates"));
 
 export default function WrappedApp() {
   return (
     <ErrorBoundary>
-      <GlobalAdminAlert />
-      <GlobalAppUpdates />
+      <Suspense fallback={null}>
+        <GlobalAdminAlert />
+      </Suspense>
+      <Suspense fallback={null}>
+        <GlobalAppUpdates />
+      </Suspense>
       <App />
     </ErrorBoundary>
   );

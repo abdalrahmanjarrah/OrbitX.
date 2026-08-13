@@ -1,5 +1,5 @@
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-import { supabase } from "../firebase";
+import { authClient } from "../supabaseAuth";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -12,7 +12,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 async function getAccessToken(): Promise<string> {
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await authClient.getSession();
     return data.session?.access_token || "";
   } catch {
     return "";

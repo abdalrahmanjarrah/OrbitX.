@@ -221,7 +221,7 @@ import('firebase/firestore').then((firestore) => {
 // -------------------------------------------------------------
 
 import { LanguageProvider } from "./context/LanguageContext.tsx";
-import { supabase } from "./supabaseAdapter";
+import { authClient } from "./supabaseAuth";
 import { installGlobalErrorCapture } from "./lib/errorReporter";
 
 // Determine if we are inside an OAuth popup window
@@ -234,7 +234,7 @@ const isPopup = typeof window !== "undefined" && (
 
 if (isPopup) {
   // Let Supabase process the hash fragment and session state asynchronously
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  authClient.getSession().then(({ data: { session } }) => {
     // Notify the main parent window via postMessage if available
     if (window.opener) {
       try {

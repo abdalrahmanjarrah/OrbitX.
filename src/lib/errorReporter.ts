@@ -17,7 +17,7 @@ import {
   doc,
   increment,
 } from "../supabaseAdapter";
-import { supabase } from "../supabaseAdapter";
+import { authClient } from "../supabaseAuth";
 
 const ERRORS_COLLECTION = "errors";
 
@@ -131,14 +131,14 @@ export function installGlobalErrorCapture(): void {
   captureInstalled = true;
 
   try {
-    supabase.auth.getUser().then(({ data }) => {
+    authClient.getUser().then(({ data }) => {
       currentUser = {
         uid: data.user?.id,
         name: data.user?.user_metadata?.full_name || data.user?.user_metadata?.name,
         email: data.user?.email,
       };
     });
-    supabase.auth.onAuthStateChange((_event, session) => {
+    authClient.onAuthStateChange((_event, session) => {
       currentUser = {
         uid: session?.user?.id,
         name: session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name,
