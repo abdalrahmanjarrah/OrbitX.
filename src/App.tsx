@@ -569,6 +569,8 @@ function App() {
         friendsCount: userData.friendsCount || 0,
         banned: userData.banned || false,
         currentActivity: userData.currentActivity || "في المدار",
+        xp: userData.xp || 0,
+        level: userData.level || 1,
       };
 
       const serialized = JSON.stringify(publicData);
