@@ -40,6 +40,7 @@ let isInitialized = false;
 let diagnosticChannel: BroadcastChannel | null = null;
 
 export function authorizeDebugger(isAuthorized: boolean) {
+  if (!diagnosticsEnabled) return;
   isAuthorizedUser = diagnosticsEnabled && isAuthorized;
   if (isAuthorizedUser) {
     initializeDiagnostics();
@@ -95,6 +96,7 @@ const driftHistory: { timestamp: number; driftMs: number; deltaMs: number }[] = 
 
 // Intercept window.setInterval and window.clearInterval
 function initializeDiagnostics() {
+  if (!diagnosticsEnabled) return;
   if (typeof window === "undefined" || isInitialized) return;
   isInitialized = true;
 
@@ -222,6 +224,7 @@ function initializeDiagnostics() {
 let lastOfflineTime = 0;
 
 function pushTrace(trace: Omit<DiagnosticTrace, "id" | "timestamp">) {
+  if (!diagnosticsEnabled) return;
   if (!isAuthorizedUser) return;
   const completeTrace: DiagnosticTrace = {
     ...trace,
@@ -236,6 +239,7 @@ function pushTrace(trace: Omit<DiagnosticTrace, "id" | "timestamp">) {
 }
 
 function triggerUIRefresh() {
+  if (!diagnosticsEnabled) return;
   if (!isAuthorizedUser) return;
   if (typeof window !== "undefined" && (window as any).__onDiagnosticUpdate) {
     try {
@@ -264,6 +268,7 @@ export const Debugger = {
   },
   // Renders tracking
   trackRender: (componentName: string, reason?: string) => {
+    if (!diagnosticsEnabled) return;
     if (!isAuthorizedUser) return;
     if (!renderTracker[componentName]) {
       renderTracker[componentName] = { count: 0, lastRender: Date.now(), history: [] };
@@ -279,42 +284,50 @@ export const Debugger = {
 
   // Firestore DB Usage Monitor
   trackGetDoc: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.getDoc++;
     dbCounters.estimatedReads++;
     pushTrace({ category: "io", severity: "info", message: `getDoc call: ${path}` });
   },
   trackGetDocs: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.getDocs++;
     dbCounters.estimatedReads += 5; // projected bulk size estimate
     pushTrace({ category: "io", severity: "info", message: `getDocs call: ${path}` });
   },
   trackAddDoc: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.addDoc++;
     dbCounters.estimatedWrites++;
     pushTrace({ category: "io", severity: "info", message: `addDoc call: ${path}` });
   },
   trackUpdateDoc: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.updateDoc++;
     dbCounters.estimatedWrites++;
     pushTrace({ category: "io", severity: "info", message: `updateDoc call: ${path}` });
   },
   trackDeleteDoc: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.deleteDoc++;
     dbCounters.estimatedWrites++;
     pushTrace({ category: "io", severity: "info", message: `deleteDoc call: ${path}` });
   },
   trackSetDoc: (path: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.setDoc++;
     dbCounters.estimatedWrites++;
     pushTrace({ category: "io", severity: "info", message: `setDoc call: ${path}` });
   },
   trackTransaction: (origin: string) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.runTransaction++;
     dbCounters.estimatedReads++;
     dbCounters.estimatedWrites++;
     pushTrace({ category: "io", severity: "info", message: `runTransaction: ${origin}` });
   },
   trackOnSnapshotTrigger: (path: string, numDocs: number = 1) => {
+    if (!diagnosticsEnabled) return;
     dbCounters.onSnapshot++;
     dbCounters.estimatedReads += numDocs;
     triggerUIRefresh();
@@ -322,6 +335,7 @@ export const Debugger = {
 
   // XP systems telemetry
   logInterval: (name: string, id: any) => {
+    if (!diagnosticsEnabled) return;
     // Legacy support
     pushTrace({
       category: "state",
@@ -332,6 +346,7 @@ export const Debugger = {
   },
 
   logClearInterval: (name: string, id: any) => {
+    if (!diagnosticsEnabled) return;
     // Legacy support
     pushTrace({
       category: "state",
@@ -342,6 +357,7 @@ export const Debugger = {
   },
 
   logXP: (amount: number, reason: string, oldXp?: number, newXp?: number) => {
+    if (!diagnosticsEnabled) return;
     xpHistory.unshift({
       timestamp: Date.now(),
       amount,
@@ -360,6 +376,7 @@ export const Debugger = {
   },
 
   logXPBlocked: (amount: number, reason: string, details?: string) => {
+    if (!diagnosticsEnabled) return;
     xpHistory.unshift({
       timestamp: Date.now(),
       amount,
@@ -378,6 +395,7 @@ export const Debugger = {
   },
 
   logDrift: (driftMs: number, deltaMs: number) => {
+    if (!diagnosticsEnabled) return;
     pushTrace({
       category: "state",
       severity: driftMs > 300 ? "warning" : "info",
@@ -387,6 +405,7 @@ export const Debugger = {
   },
 
   logWrite: (collectionName: string, docId: string, action: string) => {
+    if (!diagnosticsEnabled) return;
     pushTrace({
       category: "io",
       severity: "info",
@@ -396,6 +415,7 @@ export const Debugger = {
   },
 
   logCleanupError: (message: string) => {
+    if (!diagnosticsEnabled) return;
     pushTrace({
       category: "lifecycle",
       severity: "critical",
@@ -404,6 +424,7 @@ export const Debugger = {
   },
 
   logSuspicious: (message: string) => {
+    if (!diagnosticsEnabled) return;
     pushTrace({
       category: "security",
       severity: "warning",
@@ -412,6 +433,7 @@ export const Debugger = {
   },
 
   logLatency: (operation: string, startMs: number, successPlan: boolean, errorSnippet?: string) => {
+    if (!diagnosticsEnabled) return;
     const elapsed = performance.now() - startMs;
     
     // Ensure quota-exhausted fallback mode does not continue inflating RTT metrics
@@ -500,6 +522,7 @@ export const Debugger = {
   },
 
   logError: (origin: string, error: any) => {
+    if (!diagnosticsEnabled) return;
     const message = error instanceof Error ? error.message : String(error);
     pushTrace({
       category: "error",
@@ -509,6 +532,7 @@ export const Debugger = {
   },
 
   logLifecycle: (event: string, msg: string) => {
+    if (!diagnosticsEnabled) return;
     pushTrace({
       category: "lifecycle",
       severity: "info",
@@ -518,6 +542,7 @@ export const Debugger = {
   },
 
   getConnectionState: () => {
+    if (!diagnosticsEnabled) return "Healthy";
     const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
     if (!isOnline) return "Offline";
 
@@ -622,6 +647,7 @@ export const Debugger = {
   },
 
   getDiagnosticsMetrics: () => {
+    if (!diagnosticsEnabled) return { tabInstanceId, averageLatencyMs: 0, connectionState: "Healthy" };
     const activeListeners = Object.entries(listenerTracker)
       .filter(([_, data]) => data.count > 0)
       .map(([path, data]) => ({ path, count: data.count, age: Math.round((Date.now() - data.createdAt) / 1000) }));
@@ -672,6 +698,7 @@ export const Debugger = {
 
 // React render logging hook
 export function useRenderLog(componentName: string, props: any = {}) {
+  if (!diagnosticsEnabled) return;
   const renderCountRef = useRef(0);
   const prevPropsRef = useRef<any>(props);
   renderCountRef.current++;
@@ -700,6 +727,7 @@ if (typeof window !== "undefined") {
 }
 
 function createVisualDiagnosticsPanel() {
+  if (!diagnosticsEnabled) return;
   if (typeof document === "undefined") return;
 
   const styleId = "astro-diagnostic-style";
