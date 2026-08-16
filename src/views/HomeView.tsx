@@ -147,6 +147,7 @@ import ChallengeModal from './ChallengeModal';
 import ArticleModal from './ArticleModal';
 import StationCard from './StationCard';
 import { getGreetingForTime } from '../lib/dashboardGreetings';
+import { DailyHabitCard } from '../components/DailyHabitCard';
 import ExhibitionGallery from './ExhibitionGallery';
 import SuggestionsSection from './SuggestionsSection';
 import QuranPlayer from './QuranPlayer';
@@ -501,6 +502,8 @@ export default function HomeView({
                 </span>
                 <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-xs font-semibold text-gray-500">{getAstronautRank(user.xp, undefined, lang).title}</span></div>
              </div>
+
+             <DailyHabitCard user={user} />
           </div>
         </motion.div>
 

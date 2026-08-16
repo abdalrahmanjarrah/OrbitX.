@@ -357,6 +357,19 @@ BEGIN
         RAISE EXCEPTION 'forbidden';
     END IF;
 
+    -- ANTI-CHEAT: per-call cap — no client can inflate XP wholesale
+    -- (used to be: grant_xp(self, 999999999, p_force => true)).
+    IF NOT public.is_admin_user() AND abs(p_amount) > 500 THEN
+        RAISE EXCEPTION 'exceeds_grant_limit';
+    END IF;
+
+    -- ANTI-CHEAT: p_force (bypass-lock) is reserved for small one-time rewards
+    -- (≤ 120 XP, matching MAX_XP_PER_SESSION) or penalties (negative amounts).
+    -- Large forced grants are admin-only.
+    IF NOT public.is_admin_user() AND p_force AND p_amount > 120 THEN
+        RAISE EXCEPTION 'force_bypass_forbidden';
+    END IF;
+
     SELECT * INTO v_row
     FROM public.documents
     WHERE path = 'users/' || p_user_id
@@ -381,6 +394,14 @@ BEGIN
         END IF;
     END IF;
 
+    -- ANTI-CHEAT: forced (bypass-lock) positive grants from non-admins are
+    -- throttled to one per minute as well, so a script cannot farm XP endlessly.
+    IF NOT v_blocked AND NOT public.is_admin_user() AND p_force AND p_amount > 0 THEN
+        IF v_now - COALESCE((v_row.data ->> 'lastForcedGrantAt')::bigint, 0) < 60000 THEN
+            v_blocked := true;
+        END IF;
+    END IF;
+
     IF v_blocked THEN
         RETURN jsonb_build_object('success', false, 'blocked', true, 'amount', p_amount);
     END IF;
@@ -394,6 +415,9 @@ BEGIN
         v_row.data := jsonb_set(v_row.data, '{lastXpUpdate}', to_jsonb(v_now));
         IF v_is_focus THEN
             v_row.data := jsonb_set(v_row.data, '{lastFocusXpUpdate}', to_jsonb(v_now));
+        END IF;
+        IF p_force AND NOT public.is_admin_user() THEN
+            v_row.data := jsonb_set(v_row.data, '{lastForcedGrantAt}', to_jsonb(v_now));
         END IF;
     END IF;
 
@@ -483,6 +507,18 @@ BEGIN
         RAISE EXCEPTION 'invalid_winner';
     END IF;
 
+    -- ANTI-CHEAT: rewards only after the challenge is truly completed, only for
+    -- the recorded winner, and only once.
+    IF (v_ch.data ->> 'status') <> 'completed' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'not_completed');
+    END IF;
+    IF (v_ch.data ->> 'winnerId') <> p_winner_id THEN
+        RETURN jsonb_build_object('success', false, 'error', 'not_winner');
+    END IF;
+    IF (v_ch.data ->> 'rewardClaimedAt') IS NOT NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'already_rewarded');
+    END IF;
+
     PERFORM public.grant_xp(p_winner_id, NULL, NULL, false, 100, 'challenge_win', true);
 
     PERFORM set_config('app.progression_allowed', '1', true);
@@ -517,6 +553,12 @@ BEGIN
             END
         ), updated_at = now()
     WHERE path = 'profiles/' || p_winner_id;
+
+    -- ANTI-CHEAT: mark the reward as claimed so the winner cannot double-claim.
+    UPDATE public.documents
+    SET data = jsonb_set(data, '{rewardClaimedAt}', to_jsonb((extract(epoch FROM now()) * 1000)::bigint)),
+        updated_at = now()
+    WHERE path = 'challenges/' || p_challenge_id;
 
     RETURN jsonb_build_object('success', true);
 END;

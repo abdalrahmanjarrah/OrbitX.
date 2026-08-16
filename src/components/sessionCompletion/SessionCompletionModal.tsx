@@ -15,7 +15,7 @@ interface SessionCompletionModalProps {
   completionData: SessionCompletionData | null;
   user: UserData | null;
   onClose: () => void;
-  onStartNewRound: () => void;
+  onContinue: () => void;
   onExitToStations: () => void;
 }
 
@@ -24,7 +24,7 @@ export const SessionCompletionModal: React.FC<SessionCompletionModalProps> = ({
   completionData,
   user,
   onClose,
-  onStartNewRound,
+  onContinue,
   onExitToStations
 }) => {
   // Memoize the cosmic message to prevent it from cycling/shuffling on re-renders
@@ -83,8 +83,7 @@ export const SessionCompletionModal: React.FC<SessionCompletionModalProps> = ({
               durationMinutes={completionData.durationMinutes}
               xpGained={completionData.xpGained}
               stationName={completionData.stationName}
-              onStartNewRound={onStartNewRound}
-              onTakeBreak={onClose}
+              onContinue={onContinue}
               onExitToStations={onExitToStations}
             />
           </div>

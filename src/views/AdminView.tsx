@@ -45,14 +45,12 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  setDoc,
   addDoc,
   serverTimestamp,
   query,
   orderBy,
   limit,
   getDocs,
-  getDoc,
 } from "firebase/firestore";
 import { UserData, Discussion } from "../shared";
 import { adminSetXP } from "../lib/xpSystem";
@@ -64,7 +62,6 @@ let cachedUsers: UserData[] = [];
 let cachedSuggestions: any[] = [];
 let cachedExhibitions: any[] = [];
 let cachedDiscussions: Discussion[] = [];
-let cachedIsChatEnabled = true;
 let cachedSupportTickets: any[] = [];
 let cachedErrorLogs: any[] = [];
 
@@ -88,7 +85,6 @@ export default function AdminView({ user }: { user: UserData }) {
   );
   const [errorLogs, setErrorLogs] = useState<any[]>(() => cachedErrorLogs);
   const [expandedErrorId, setExpandedErrorId] = useState<string | null>(null);
-  const [isChatEnabled, setIsChatEnabled] = useState(() => cachedIsChatEnabled);
   const [announcementText, setAnnouncementText] = useState("");
   const [updateTitle, setUpdateTitle] = useState("");
   const [updateVersion, setUpdateVersion] = useState("");
@@ -177,7 +173,6 @@ export default function AdminView({ user }: { user: UserData }) {
           setSuggestions(cachedSuggestions);
           setExhibitions(cachedExhibitions);
           setDiscussions(cachedDiscussions);
-          setIsChatEnabled(cachedIsChatEnabled);
           setSupportTickets(cachedSupportTickets);
           setErrorLogs(cachedErrorLogs);
         }
@@ -235,12 +230,6 @@ export default function AdminView({ user }: { user: UserData }) {
         );
         if (isMounted) setDiscussions(fetchedDiscussions);
 
-        const settingsSnap = await getDoc(doc(db, "system", "settings"));
-        const fetchedIsChatEnabled = settingsSnap.exists()
-          ? settingsSnap.data().isChatEnabled !== false
-          : true;
-        if (isMounted) setIsChatEnabled(fetchedIsChatEnabled);
-
         const supportSnap = await getDocs(
           query(
             collection(db, "support_tickets"),
@@ -274,7 +263,6 @@ export default function AdminView({ user }: { user: UserData }) {
         cachedSuggestions = fetchedSuggestions;
         cachedExhibitions = fetchedExhibitions;
         cachedDiscussions = fetchedDiscussions;
-        cachedIsChatEnabled = fetchedIsChatEnabled;
         cachedSupportTickets = fetchedSupportTickets;
       } catch (e) {
         console.warn(e);
@@ -286,21 +274,6 @@ export default function AdminView({ user }: { user: UserData }) {
       isMounted = false;
     };
   }, []);
-
-  const toggleChat = async () => {
-    try {
-      const nextSetting = !isChatEnabled;
-      await updateDoc(doc(db, "system", "settings"), {
-        isChatEnabled: nextSetting,
-      }).catch(async () => {
-        await setDoc(doc(db, "system", "settings"), {
-          isChatEnabled: nextSetting,
-        });
-      });
-      setIsChatEnabled(nextSetting);
-      cachedIsChatEnabled = nextSetting;
-    } catch (e) {}
-  };
 
   const activeUsers = users.filter(
     (u) => Date.now() - (u.lastActiveTime || 0) < 300000,
@@ -501,22 +474,6 @@ export default function AdminView({ user }: { user: UserData }) {
                   Incoming Ideas
                 </span>
                 <span className="text-fuchsia-400 font-bold">{openSuggestions}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-cyan-600 uppercase text-xs">
-                  Global Chat
-                </span>
-                <button
-                  onClick={toggleChat}
-                  className={cn(
-                    "px-3 py-1 rounded text-xs font-bold uppercase transition-all shadow-[0_0_10px_currentColor]",
-                    isChatEnabled
-                      ? "bg-green-500/20 text-green-400 border border-green-500"
-                      : "bg-red-500/20 text-red-400 border border-red-500",
-                  )}
-                >
-                  {isChatEnabled ? (isAr ? "متصل" : "Online") : isAr ? "غير متصل" : "Offline"}
-                </button>
               </div>
             </div>
           </div>

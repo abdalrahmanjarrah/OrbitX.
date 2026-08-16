@@ -116,6 +116,36 @@ function resolveStartTimeMs(startTime: any): number | null {
   return secs * 1000;
 }
 
+// Generate a randomized AFK check schedule for one focus round:
+// - No checks during the first 10 minutes (users are getting settled).
+// - Up to 3 checks per round, placed with long random gaps between them
+//   (never back-to-back), each time chosen at random.
+function generateAfkSchedule(durationSeconds: number): number[] {
+  const minStart = 600; // 10 minutes in
+  const count = 3;
+  const minGap = 300; // at least 5 minutes between consecutive checks
+  const endMargin = 60; // never trigger inside the last minute
+  const latestStart = durationSeconds - endMargin;
+  if (latestStart <= minStart) return [];
+
+  const schedule: number[] = [];
+  let t = minStart;
+  for (let i = 0; i < count; i++) {
+    const remaining = count - i - 1;
+    const lo = t + (i === 0 ? 0 : minGap);
+    const hi = latestStart - remaining * minGap;
+    if (hi <= lo) break;
+    t = lo + Math.random() * (hi - lo);
+    schedule.push(Math.floor(t));
+  }
+
+  // Very short rounds can't fit spaced checks — still guarantee one random check.
+  if (schedule.length === 0) {
+    schedule.push(Math.floor(minStart + Math.random() * (latestStart - minStart)));
+  }
+  return schedule;
+}
+
 export function useSessionEngine(
   stationId: string,
   user: UserData,
@@ -267,7 +297,8 @@ export function useSessionEngine(
   const unsubChallengeRef = useRef<(() => void) | null>(null);
   const fuelLeakIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const localLeakedRef = useRef<number>(0);
-  const afkCheckedForThisCycleRef = useRef<number | null>(null);
+  const afkScheduleRef = useRef<number[]>([]);
+  const afkTriggeredRef = useRef<Set<number>>(new Set());
   const autoJoinAttempted = useRef(false);
   const participantsCountRef = useRef(0);
   const isWatchingClassRef = useRef(false);
@@ -998,6 +1029,8 @@ export function useSessionEngine(
         lastXpUpdateTimeRef.current = null;
         sessionXpCountRef.current = 0;
         afkFailCountRef.current = 0;
+        afkTriggeredRef.current = new Set();
+        afkScheduleRef.current = generateAfkSchedule((room?.timerDuration || 25) * 60);
         nextMissionDismissedRef.current = false;
       }
     }
@@ -1025,8 +1058,8 @@ export function useSessionEngine(
     xpIntervalRef.current = setInterval(async () => {
       const now = Date.now() + clockOffsetRef.current;
       
-      if (isDistractedRef.current || showAFKCheck) {
-        // Distracted or AFK-checked users do not earn Focus XP!
+      if (isDistractedRef.current || showAFKCheck || isWatchingClassRef.current) {
+        // Distracted, AFK-checked, or class-watching users do not earn Focus XP!
         lastXpUpdateTimeRef.current = now;
         return;
       }
@@ -1150,24 +1183,24 @@ export function useSessionEngine(
     };
   }, [isJoined, room?.timerStatus, isSpectator]);
 
-  // AFK checking triggers
+  // AFK checking triggers (randomized schedule: up to 3 checks, none before
+  // the first 10 minutes, with long random gaps between them)
   useEffect(() => {
     if (isSpectator) return;
     if (room?.timerStatus !== "focus" || timeLeft <= 0 || !isJoined) {
       setShowAFKCheck(false);
       setIsWatchingClass(false);
-      afkCheckedForThisCycleRef.current = null;
       return;
     }
 
     if (isWatchingClass) return;
 
     const durationSeconds = room.timerDuration * 60;
-    const checkThresholds = [900, 600, 300].filter((t) => t < durationSeconds - 60);
+    const elapsed = durationSeconds - timeLeft;
 
-    checkThresholds.forEach((threshold) => {
-      if (Math.abs(timeLeft - threshold) <= 2 && afkCheckedForThisCycleRef.current !== threshold) {
-        afkCheckedForThisCycleRef.current = threshold;
+    afkScheduleRef.current.forEach((at) => {
+      if (Math.abs(elapsed - at) <= 2 && !afkTriggeredRef.current.has(at)) {
+        afkTriggeredRef.current.add(at);
         if (!showAFKCheck) {
           setShowAFKCheck(true);
           setAfkTimeLeft(60);
@@ -1247,68 +1280,78 @@ export function useSessionEngine(
         try { playSound("timer"); } catch (e) {}
       }
 
-      // CLIENT-SIDE PROGRESS REWARDS (Safe, independent, and strictly bounded)
-      if (room.timerStatus === "focus" && isLegitEnd) {
-        const sessionStartVal = resolveStartTimeMs(room.startTime) ?? 0;
-        const transitionLockKey = `processed_transition_${stationId}_${sessionStartVal}`;
-        if (localStorage.getItem(transitionLockKey)) {
-          console.log("[Collision Shield] Rewards already granted in another tab/instance for this session");
-        } else {
-          localStorage.setItem(transitionLockKey, "true");
-          
-          // Clean up old obsolete transition lock keys for this room to avoid filling storage
-          try {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith(`processed_transition_${stationId}_`) && key !== transitionLockKey) {
-                localStorage.removeItem(key);
+          // CLIENT-SIDE PROGRESS REWARDS (Safe, independent, and strictly bounded)
+          if (room.timerStatus === "focus" && isLegitEnd) {
+            const sessionStartVal = resolveStartTimeMs(room.startTime) ?? 0;
+            const transitionLockKey = `processed_transition_${stationId}_${sessionStartVal}`;
+            if (localStorage.getItem(transitionLockKey)) {
+              console.log("[Collision Shield] Rewards already granted in another tab/instance for this session");
+            } else {
+              localStorage.setItem(transitionLockKey, "true");
+              
+              // Clean up old obsolete transition lock keys for this room to avoid filling storage
+              try {
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith(`processed_transition_${stationId}_`) && key !== transitionLockKey) {
+                    localStorage.removeItem(key);
+                  }
+                }
+              } catch (e) {}
+
+              // ANTI-CHEAT: "أُشاهد حصة" (watching class) mode earns nothing —
+              // no refund, no session stats, no challenge credit. The user chose
+              // to watch instead of focus, and gets no progression for it.
+              if (!isWatchingClassRef.current) {
+                const refund = remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
+                const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
+
+                currentBetRef.current = 0;
+                remainingShieldRef.current = 0;
+                setShieldPercent(0);
+
+                const updates: any = {
+                  totalFocusSessions: increment(1),
+                  lastStudyDate: new Date().toISOString().split("T")[0],
+                };
+
+                // Weekly duel counters — auto-reset to the current Monday when the week flips
+                const minutesEarned = room.timerDuration / 60000;
+                const weekKey = getWeekStartISO();
+                const sameWeek = userRef.current.weekStart === weekKey;
+                updates.weekStart = weekKey;
+                updates.weekFocusMinutes =
+                  (sameWeek ? userRef.current.weekFocusMinutes || 0 : 0) + minutesEarned;
+                updates.weekSessions =
+                  (sameWeek ? userRef.current.weekSessions || 0 : 0) + 1;
+
+                updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
+
+                let totalXpToGive = 0;
+                if (safeXpEarned > 0) totalXpToGive += safeXpEarned;
+
+                if (totalXpToGive > 0) {
+                  requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, totalXpToGive, `on_exit_session (refund)`, true);
+                }
+
+                if (userRef.current.fleetId) {
+                  updateDoc(doc(db, "fleets", userRef.current.fleetId), {
+                    totalFocusHours: increment(room.timerDuration / 60),
+                  }).catch(() => {});
+                }
+
+                // Non-synchronous race: every completed focus session feeds the user's active challenges
+                creditFocusToActiveChallenges(userRef.current.uid, room.timerDuration / 60000);
               }
             }
-          } catch (e) {}
-
-          const refund = remainingShieldRef.current > 0 ? remainingShieldRef.current : 0;
-          const safeXpEarned = Math.min(refund, Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current));
-
-          currentBetRef.current = 0;
-          remainingShieldRef.current = 0;
-          setShieldPercent(0);
-
-          const updates: any = {
-            totalFocusSessions: increment(1),
-            lastStudyDate: new Date().toISOString().split("T")[0],
-          };
-
-          // Weekly duel counters — auto-reset to the current Monday when the week flips
-          const minutesEarned = room.timerDuration / 60000;
-          const weekKey = getWeekStartISO();
-          const sameWeek = userRef.current.weekStart === weekKey;
-          updates.weekStart = weekKey;
-          updates.weekFocusMinutes =
-            (sameWeek ? userRef.current.weekFocusMinutes || 0 : 0) + minutesEarned;
-          updates.weekSessions =
-            (sameWeek ? userRef.current.weekSessions || 0 : 0) + 1;
-
-          updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
-
-          let totalXpToGive = 0;
-          if (safeXpEarned > 0) totalXpToGive += safeXpEarned;
-
-          if (totalXpToGive > 0) {
-            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, totalXpToGive, `on_exit_session (refund)`, true);
           }
-
-          if (userRef.current.fleetId) {
-            updateDoc(doc(db, "fleets", userRef.current.fleetId), {
-              totalFocusHours: increment(room.timerDuration / 60),
-            }).catch(() => {});
-          }
-
-          // Non-synchronous race: every completed focus session feeds the user's active challenges
-          creditFocusToActiveChallenges(userRef.current.uid, room.timerDuration / 60000);
-        }
-      }
 
       // AUTHORITATIVE WRITE ROUTING
+      // The round follows a natural cycle: a completed focus segment moves to
+      // break, and a completed break moves back to focus (or idle when the host
+      // stops the round). The host (creator) is the primary authorized writer;
+      // the alphabetical backup chain only heals the timer if the host's write
+      // never lands.
       const nextStatus = room.timerStatus === "focus" ? "break" : "idle";
       const focusToAdd = room.timerStatus === "focus" ? room.timerDuration * 60 : 0;
 
@@ -1328,13 +1371,25 @@ export function useSessionEngine(
         ? 0 
         : (myAlphabeticalRank === 0 ? 5000 : 8000 + Math.random() * 4000);
 
+      // Snapshot the identity of the session we are about to transition OUT of.
+      // If another client starts a brand-new round (timerStatus back to "focus"
+      // with a fresh startTime) before this delayed write runs, the old session
+      // must NOT be transitioned anymore — otherwise it would wipe the new round.
+      const scheduledSessionStart = resolveStartTimeMs(room.startTime);
+
       setTimeout(async () => {
         try {
           // Re-fetch room instantly to verify no other client completed the transition first
           const snapCheck = await getDoc(roomRef);
           if (snapCheck.exists()) {
             const currentR = snapCheck.data() as Room;
-            if (currentR.timerStatus === room.timerStatus) {
+            const sameSession =
+              currentR.timerStatus === room.timerStatus &&
+              // Only treat the room as still in our old session when its startTime
+              // is unchanged (a new round always carries a fresh startTime).
+              (scheduledSessionStart === null ||
+                resolveStartTimeMs(currentR.startTime) === scheduledSessionStart);
+            if (sameSession) {
               // Room is still in the old status! It's our job to transition.
               const updateData: any = {
                 timerStatus: nextStatus,

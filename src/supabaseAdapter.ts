@@ -104,8 +104,28 @@ const saveLocalDocs = (docs: FallbackDoc[]) => {
 // and persist to the network in the background.
 const memoryDb = new Map<string, FallbackDoc>();
 const collectionIndex = new Map<string, FallbackDoc[]>();
-let memoryHydrated = false;
-let hydrationPromise: Promise<void> | null = null;
+// Per-collection lazy hydration. Instead of downloading the entire documents
+// table on first access, only the collections the app actually reads are
+// fetched, each exactly once. This keeps logins light and bandwidth bounded
+// as the table grows (sessions, messages, typing docs, ...).
+const loadedScopes = new Set<string>();
+const scopeLoadPromises = new Map<string, Promise<boolean>>();
+const missingPaths = new Set<string>();
+
+const scopeKeyOfPath = (path: string): string => {
+  const i = path.lastIndexOf("/");
+  return i === -1 ? path : path.slice(0, i);
+};
+
+const isPathInLoadedScopes = (path: string): boolean => {
+  for (const scope of loadedScopes) {
+    if (path.startsWith(scope + "/")) return true;
+  }
+  return false;
+};
+
+const loadedCollectionNames = (): string[] =>
+  Array.from(new Set(Array.from(loadedScopes).map((s) => s.slice(s.lastIndexOf("/") + 1))));
 
 const rebuildIndex = () => {
   collectionIndex.clear();
@@ -121,6 +141,7 @@ const rebuildIndex = () => {
 
 const setCached = (doc: FallbackDoc) => {
   memoryDb.set(doc.path, doc);
+  missingPaths.delete(doc.path);
   const list = collectionIndex.get(doc.collection);
   if (list) {
     const i = list.findIndex(d => d.path === doc.path);
@@ -142,19 +163,30 @@ const removeCached = (doc: FallbackDoc) => {
   if (i !== -1) list.splice(i, 1);
 };
 
-const ensureHydrated = (): Promise<void> => {
-  if (memoryHydrated) return Promise.resolve();
-  if (hydrationPromise) return hydrationPromise;
-  hydrationPromise = (async () => {
+// Fetch exactly one collection (not the whole table) and cache it in memory.
+// Top-level collections are filtered by the collection column; nested ones are
+// also filtered by their path prefix so we never pull sibling subcollections.
+const ensureScopeLoaded = (colRef: MockColRef): Promise<boolean> => {
+  const scope = colRef.path;
+  if (loadedScopes.has(scope)) return Promise.resolve(true);
+  const running = scopeLoadPromises.get(scope);
+  if (running) return running;
+
+  const p = (async (): Promise<boolean> => {
     try {
       const supabase = await getSupabase();
-      const { data, error } = await supabase
+      let builder: any = supabase
         .from("documents")
-        .select("id, collection, path, data, updated_at");
+        .select("id, collection, path, data, updated_at")
+        .eq("collection", colRef.collectionName);
+      if (scope.includes("/")) {
+        builder = builder.like("path", scope + "/%");
+      }
+      const { data, error } = await builder;
       if (error) throw error;
-      memoryDb.clear();
-      (data || []).forEach(row => {
-        memoryDb.set(row.path, {
+      (data || []).forEach((row: any) => {
+        if (!row.path) return;
+        setCached({
           path: row.path,
           collection: row.collection,
           id: row.id,
@@ -162,13 +194,39 @@ const ensureHydrated = (): Promise<void> => {
           updated_at: row.updated_at || ""
         });
       });
-      rebuildIndex();
-      memoryHydrated = true;
+      loadedScopes.add(scope);
+      Array.from(missingPaths).forEach((pth) => {
+        if (pth.startsWith(scope + "/")) missingPaths.delete(pth);
+      });
+      return true;
     } catch (e) {
-      console.warn("[Supabase Compatibility] cache hydration failed, reads will fall back to local DB:", e);
+      console.warn(`[Supabase Compatibility] failed to load collection ${scope}:`, e);
+      return false;
+    } finally {
+      scopeLoadPromises.delete(scope);
     }
   })();
-  return hydrationPromise;
+
+  scopeLoadPromises.set(scope, p);
+  return p;
+};
+
+// Single-doc server read used to merge writes safely when the doc isn't
+// already in memory, so a partial update never wipes fields on the server.
+const getServerDocData = async (path: string): Promise<any> => {
+  try {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from("documents")
+      .select("data")
+      .eq("path", path)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.data ?? null;
+  } catch (e) {
+    console.warn(`[Supabase Compatibility] server read failed for ${path}:`, e);
+    return null;
+  }
 };
 
 // Background sync watermark — only docs updated after this are re-fetched.
@@ -177,15 +235,18 @@ let lastDeleteSweep = 0;
 
 const refreshFromServer = async () => {
   try {
+    if (loadedScopes.size === 0) return;
     const supabase = await getSupabase();
     const nowTs = Date.now();
     const sinceIso = new Date(lastSyncTime || 0).toISOString();
+    const scopeCollections = loadedCollectionNames();
 
     // 1) Delta sweep: metadata of ONLY docs that changed remotely since the
     //    last tick. Cost grows with real churn, never with total table size.
     const sweep = await supabase
       .from("documents")
       .select("id, collection, path, updated_at")
+      .in("collection", scopeCollections)
       .gt("updated_at", sinceIso)
       .order("updated_at", { ascending: true })
       .limit(5000);
@@ -194,7 +255,7 @@ const refreshFromServer = async () => {
     const seen = new Set<string>();
     const changed: string[] = [];
     (sweep.data || []).forEach(row => {
-      if (!row.path) return;
+      if (!row.path || !isPathInLoadedScopes(row.path)) return;
       seen.add(row.path);
       const prev = memoryDb.get(row.path);
       const changedRemote =
@@ -209,13 +270,21 @@ const refreshFromServer = async () => {
     //    only every 10 minutes.
     if (nowTs - lastDeleteSweep > 10 * 60 * 1000) {
       lastDeleteSweep = nowTs;
-      const full = await supabase.from("documents").select("path");
+      const full = await supabase
+        .from("documents")
+        .select("path")
+        .in("collection", scopeCollections);
       if (full.error) throw full.error;
-      const alive = new Set<string>((full.data || []).map((r: any) => r.path).filter(Boolean));
+      const alive = new Set<string>();
+      (full.data || []).forEach((r: any) => {
+        const p = r && r.path;
+        if (p && isPathInLoadedScopes(p)) alive.add(p);
+      });
       Array.from(memoryDb.keys()).forEach(path => {
-        if (!alive.has(path)) {
+        if (isPathInLoadedScopes(path) && !alive.has(path)) {
           changed.push(path);
           memoryDb.delete(path);
+          missingPaths.add(path);
         }
       });
     }
@@ -226,7 +295,8 @@ const refreshFromServer = async () => {
       if (changed.length > 500) {
         const all = await supabase
           .from("documents")
-          .select("id, collection, path, data, updated_at");
+          .select("id, collection, path, data, updated_at")
+          .in("collection", scopeCollections);
         if (all.error) throw all.error;
         fetched = all.data || [];
       } else {
@@ -246,12 +316,12 @@ const refreshFromServer = async () => {
           data: row.data,
           updated_at: row.updated_at || ""
         });
+        missingPaths.delete(row.path);
       });
     }
 
     lastSyncTime = nowTs;
     rebuildIndex();
-    memoryHydrated = true;
     // Only re-render listeners whose data actually changed
     notifyListeners(changed.length > 30 ? undefined : changed);
   } catch (e) {
@@ -444,12 +514,13 @@ export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
   }
 
   // Fast path: single-doc read must NOT download the whole table. Fetch just
-  // this one path directly, and let full hydration continue in the background.
+  // this one path directly; the collection it belongs to loads lazily when the
+  // app actually queries it.
   const cached = memoryDb.get(docRef.path);
   if (cached && cached.data != null) {
     return new MockDocSnapshot(true, docRef.id, cached.data, docRef);
   }
-  if (memoryHydrated) {
+  if (missingPaths.has(docRef.path) || loadedScopes.has(scopeKeyOfPath(docRef.path))) {
     return new MockDocSnapshot(false, docRef.id, null, docRef);
   }
 
@@ -471,24 +542,15 @@ export const getDoc = async (docRef: MockDocRef): Promise<MockDocSnapshot> => {
       return new MockDocSnapshot(true, docRef.id, data.data, docRef);
     }
     // If this doc truly does not exist server-side, record the miss so the
-    // exact doc we queried won't block the next read; a global refresh or a
-    // write to this path will correct it.
+    // exact doc we queried won't hit the network again; a scope load, a
+    // refresh or a write to this path will correct it.
     if (!error) {
-      memoryDb.set(docRef.path, {
-        path: docRef.path,
-        collection: docRef.collectionName,
-        id: docRef.id,
-        data: null,
-        updated_at: ""
-      });
+      missingPaths.add(docRef.path);
     }
   } catch (e) {
     console.warn(`[Supabase Compatibility] direct getDoc failed for ${docRef.path}:`, e);
   }
 
-  // Kick off full hydration in the background (non-blocking) for collection
-  // queries and future reads.
-  ensureHydrated();
   return fromLocal();
 };
 
@@ -559,8 +621,8 @@ export const getDocs = async (queryOrCol: MockColRef | MockQuery): Promise<MockQ
     return runInMemoryFilter(getLocalDocs());
   }
 
-  await ensureHydrated();
-  if (memoryHydrated) {
+  const loaded = await ensureScopeLoaded(colRef);
+  if (loaded) {
     return runInMemoryFilter(getCachedDocs(colRef));
   }
   return runInMemoryFilter(getLocalDocs());
@@ -659,12 +721,15 @@ export const setDoc = async (docRef: MockDocRef, data: any, options?: { merge?: 
     return;
   }
 
-  await ensureHydrated();
-
   let finalData = data;
   if (options?.merge) {
     const current = memoryDb.get(docRef.path);
-    finalData = applyFieldValues(current?.data || {}, data);
+    let base = current?.data;
+    if (base == null && !missingPaths.has(docRef.path)) {
+      const serverData = await getServerDocData(docRef.path);
+      base = serverData != null ? serverData : getLocalDocs().find(d => d.path === docRef.path)?.data;
+    }
+    finalData = applyFieldValues(base || {}, data);
   } else {
     finalData = applyFieldValues({}, data);
   }
@@ -731,11 +796,13 @@ export const updateDoc = async (docRef: MockDocRef, updates: any): Promise<void>
     return;
   }
 
-  await ensureHydrated();
-
   const current = memoryDb.get(docRef.path);
-  const currentData = current?.data || {};
-  const finalData = applyFieldValues(currentData, updates);
+  let currentData = current?.data;
+  if (currentData == null && !missingPaths.has(docRef.path)) {
+    const serverData = await getServerDocData(docRef.path);
+    currentData = serverData != null ? serverData : getLocalDocs().find(d => d.path === docRef.path)?.data;
+  }
+  const finalData = applyFieldValues(currentData || {}, updates);
 
   // Optimistic commit: update UI instantly, persist to network in the background
   setCached({
@@ -788,8 +855,6 @@ export const deleteDoc = async (docRef: MockDocRef): Promise<void> => {
     return;
   }
 
-  await ensureHydrated();
-
   // Optimistic delete: update UI instantly, persist to network in the background
   const existing = memoryDb.get(docRef.path);
   if (existing) {
@@ -797,6 +862,7 @@ export const deleteDoc = async (docRef: MockDocRef): Promise<void> => {
   } else {
     memoryDb.delete(docRef.path);
   }
+  missingPaths.add(docRef.path);
   notifyListeners(docRef.path);
 
   try {

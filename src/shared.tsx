@@ -545,6 +545,7 @@ export interface UserData {
   currentActivity?: string;
   streak?: number;
   lastActiveDate?: string;
+  lastDailyReward?: string;
   lastStudyDate?: string;
   totalFocusTime?: number;
   focusSessions?: number;
@@ -729,14 +730,9 @@ export class ErrorBoundary extends Component<any, any> {
 export const getTourSteps = (isMobile: boolean): any[] => {
   const commonSteps = [
     {
-      target: ".tour-step-profile",
-      content:
-        "هذا ملفك الشخصي. يمكنك تعديل معلوماتك ومتابعة تقدمك وإظهار الأوسمة التي حصلت عليها.",
-    },
-    {
       target: ".tour-step-stats",
       content:
-        "هنا يمكنك متابعة مستوى الحماس (القلوب) التي تكسبها بالتركيز. حافظ عليها من خلال الاستمرار وعدم الهروب من المهام!",
+        "هذا ملفك الشخصي ودرعك المداري: من هنا تتابع مستوى الحماس (القلوب) التي تكسبها بالتركيز، وتصل لملفك الكامل. حافظ على القلوب بالاستمرار وعدم الهروب من المهام!",
     },
     {
       target: ".tour-step-notifications",
@@ -755,7 +751,7 @@ export const getTourSteps = (isMobile: boolean): any[] => {
         disableBeacon: true,
       },
       {
-        target: ".tour-step-menu",
+        target: ".tour-step-menu-mobile",
         content:
           "من هذه القائمة الجانبية يمكنك التنقل بين كل الأقسام بكل سهولة (بحيث يمكنك الوصول للغرف الدراسية، الشات العام، المتصدرين، والنقاشات...).",
         disableBeacon: true,
@@ -792,11 +788,6 @@ export const getTourSteps = (isMobile: boolean): any[] => {
       target: ".tour-step-leaderboard",
       content:
         "لوحة المتصدرين: هنا يظهر أمهر الرواد وأكثرهم إنجازاً! اجتهد لتصل إلى المركز الأول.",
-    },
-    {
-      target: ".tour-step-awareness",
-      content:
-        "الوعي الكوني: قسم خاص لحل الألغاز وفك الشيفرات وكسب نقاط خبرة إضافية.",
     },
     ...commonSteps,
   ];

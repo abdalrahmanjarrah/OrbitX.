@@ -189,18 +189,6 @@ export default function FleetsView({ user }: { user: UserData }) {
   const [isConfirmingDisband, setIsConfirmingDisband] = useState(false);
   const [isConfirmingLeave, setIsConfirmingLeave] = useState(false);
 
-  useEffect(() => {
-    if (user.email === "lumafashionhq@gmail.com") {
-      const q = query(
-        collection(db, "fleets"),
-        where("name", "==", "رواد التميز"),
-      );
-      getDocs(q)
-        .then((snap) => snap.forEach((d) => deleteDoc(d.ref).catch(() => {})))
-        .catch(() => {});
-    }
-  }, [user.email]);
-
   const [activeFleet, setActiveFleet] = useState<Fleet | null>(null);
   const [allFleets, setAllFleets] = useState<Fleet[]>([]);
   const [fleetMembers, setFleetMembers] = useState<UserData[]>([]);

@@ -17,7 +17,6 @@ import React, { useState, useEffect, useRef, Component } from "react";
 import {
   Leaf,
   Swords,
-  ChevronLeft,
   Rocket,
   Timer,
   Users,
@@ -54,7 +53,6 @@ import {
   PauseCircle,
   CheckCircle,
   Info,
-  Keyboard,
   Waves,
   TrainFront,
   Mic,
@@ -219,12 +217,6 @@ export default function Dashboard({
   }, [user?.uid]);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [showRoleModal, setShowRoleModal] = useState(
-    !user?.isGuest && !user?.missionRole && !localStorage.getItem("hasSkippedRoleModal"),
-  );
-  const [onboardingStep, setOnboardingStep] = useState(0);
-  const [dailyFocusTarget, setDailyFocusTarget] = useState("2 ساعتان");
-  const [customRole, setCustomRole] = useState("");
   const [runTour, setRunTour] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const activityTimeoutRef = useRef<any>(null);
@@ -249,33 +241,26 @@ export default function Dashboard({
   // Optional button in top bar triggers tour manually.
 
   const handleJoyrideCallback = (data: any) => {
-    const { status } = data;
+    const { status, index } = data;
     if (["finished", "skipped"].includes(status)) {
       setRunTour(false);
       localStorage.setItem("hasSeenTour_v3", "true");
+      return;
+    }
+    // Sub-nav pills are grouped by category, so switch the active tab to the
+    // category that contains the upcoming step's target element.
+    if (typeof index === "number") {
+      const tabForStep: Record<number, string> = {
+        2: "discussions",
+        3: "schedule",
+        4: "leaderboard",
+      };
+      const tab = tabForStep[index];
+      if (tab && tab !== activeTab) handleTabChange(tab as typeof activeTab);
     }
   };
 
   if (!user) return null;
-
-  const handleSelectRole = async (roleObjOrString: string) => {
-    let roleTitle = roleObjOrString;
-    if (!roleTitle.trim()) return;
-
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        missionRole: roleTitle.trim(),
-      });
-      setShowRoleModal(false);
-    } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-    }
-  };
-
-  const handleSkipRole = () => {
-    localStorage.setItem("hasSkippedRoleModal", "true");
-    setShowRoleModal(false);
-  };
 
   if (activeStation) {
     return (
@@ -386,233 +371,15 @@ export default function Dashboard({
       </React.Suspense>
 
       <AnimatePresence>
-        {showRoleModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-[#000108]/90 backdrop-blur-xl" />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-space-dark/95 border border-indigo-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-xl shadow-[0_0_100px_rgba(99,102,241,0.25)] text-center relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
-                <Rocket size={240} className="text-indigo-500" />
-              </div>
-
-              {/* Progress Bar inside Wizard */}
-              <div className="relative z-10 flex items-center justify-center gap-2 mb-8" dir={isAr ? "rtl" : "ltr"}>
-                {[0, 1, 2].map((s) => (
-                  <div
-                    key={s}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-300",
-                      onboardingStep === s ? "w-8 bg-indigo-500" : "w-2 bg-indigo-950/80 border border-white/5"
-                    )}
-                  />
-                ))}
-              </div>
-
-              {/* STEP 0: Introduction Card */}
-              {onboardingStep === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="relative z-10 rtl:text-right ltr:text-left"
-                  dir={isAr ? "rtl" : "ltr"}
-                >
-                  <h2 className="text-2xl md:text-3xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-l from-indigo-300 via-cyan-300 to-white leading-tight">
-                    {t("onboarding.welcome", "أهلاً بك على متن المدار، يا قائد 🚀")}
-                  </h2>
-                  <p className="text-sm text-indigo-200/60 mb-6 leading-relaxed">
-                    {t("onboarding.desc", "تم رصد تفويضك بنجاح. يستعد البروتوكول المداري لإعداد وحدة التحكم الخاصة بك وعزل المؤثرات الحركية المحيطة لضمان أقصى مستويات التركيز البشري.")}
-                  </p>
-
-                  <div className="bg-space-dark border border-white/5 rounded-2xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden">
-                    <img 
-                      src={user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"} 
-                      className="w-16 h-16 rounded-2xl border border-indigo-500/30 object-cover shadow-[0_0_15px_rgba(99,102,241,0.2)]"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="flex-1 text-right ltr:text-left">
-                      <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1">{t("onboarding.identity_id", "ASTRONAUT REGISTRY ID")}</div>
-                      <div className="text-base font-bold text-white mb-0.5">{user.displayName || (isAr ? "رائد مستكشف" : "Explorer Scientist")}</div>
-                      <div className="text-xs text-indigo-300/60 leading-relaxed font-sans mt-0.5">
-                        {t("onboarding.identity_sub", "تبدأ رحلتك الآن بمستوى 1 ومخزون 0 XP. استعد للارتقاء بالرتب والمجموعات المجرية!")}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      playSound("message");
-                      setOnboardingStep(1);
-                    }}
-                    className="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 rounded-2xl font-black text-sm text-white shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all flex items-center justify-center gap-3 group"
-                  >
-                    <span>{t("onboarding.identity_btn", "لوحة الهوية والبدء بيولوجياً")}</span>
-                    <ChevronLeft className={cn("w-4 h-4 transition-transform", isAr ? "group-hover:-translate-x-1" : "group-hover:translate-x-1 rotate-180")} />
-                  </button>
-                </motion.div>
-              )}
-
-              {/* STEP 1: Select/Input Specialist designation */}
-              {onboardingStep === 1 && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="relative z-10 rtl:text-right ltr:text-left"
-                  dir={isAr ? "rtl" : "ltr"}
-                >
-                  <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
-                    {t("onboarding.specialty_title", "تحديد التخصص والوظيفة المدارية 🔬")}
-                  </h2>
-                  <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
-                    {t("onboarding.specialty_sub", "اختر هويتك العلمية أو الأكاديمية. ستعرض هذه الهوية في الملف التعريفي وقائمة تصنيفات المدار العامة.")}
-                  </p>
-
-                  {/* Predefined Beautiful Sector Badges */}
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    {[
-                      { label: isAr ? "🔬 باحث ومحلل بيانات" : "🔬 Data Analyst & Researcher", icon: "🔬", value: "🔬 باحث ومحلل بيانات" },
-                      { label: isAr ? "💻 مهندس برمجيات مداري" : "💻 Orbital Software Engineer", icon: "💻", value: "💻 مهندس برمجيات مداري" },
-                      { label: isAr ? "📚 طالب علم ومعرفة" : "📚 Knowledge Student", icon: "📚", value: "📚 طالب علم ومعرفة" },
-                      { label: isAr ? "✍️ منشئ عوالم وصانع محتوى" : "✍️ Content Creator & Designer", icon: "✍️", value: "✍️ منشئ عوالم وصانع محتوى" },
-                    ].map((badge) => (
-                      <button
-                        key={badge.value}
-                        onClick={() => {
-                          setCustomRole(badge.label);
-                          playSound("message");
-                        }}
-                        className={cn(
-                          "p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-3 relative overflow-hidden rtl:text-right ltr:text-left",
-                          customRole === badge.label
-                            ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                            : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200 hover:border-white/10"
-                        )}
-                      >
-                        <span className="text-xl">{badge.icon}</span>
-                        <span className="text-xs font-bold leading-tight">{badge.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom Slot */}
-                  <div className="flex w-full gap-2 mb-6">
-                    <input
-                      type="text"
-                      value={customRole}
-                      onChange={(e) => setCustomRole(e.target.value)}
-                      placeholder={t("onboarding.custom_placeholder", "أو اكتب تخصصاً مخصصاً بنفسك...")}
-                      className="flex-1 bg-space-dark border border-white/10 rounded-2xl px-5 py-4 text-right ltr:text-left focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 text-white text-xs transition-all"
-                    />
-                  </div>
-
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setOnboardingStep(0)}
-                      className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
-                    >
-                      {t("onboarding.prev", "السابق")}
-                    </button>
-                    <button
-                      onClick={() => {
-                        playSound("message");
-                        setOnboardingStep(2);
-                      }}
-                      disabled={!customRole.trim()}
-                      className="flex-1 py-4 bg-indigo-500 hover:bg-indigo-600 disabled:bg-[#131526] disabled:text-gray-500 transition-colors rounded-2xl font-black text-xs text-white shadow-[0_0_20px_rgba(99,102,241,0.15)] disabled:shadow-none"
-                    >
-                      {isAr ? "وقود والالتزام المداري" : "Fuel & Orbit Commitment"}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* STEP 2: Goal target setting */}
-              {onboardingStep === 2 && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="relative z-10 rtl:text-right ltr:text-left"
-                  dir={isAr ? "rtl" : "ltr"}
-                >
-                  <h2 className="text-xl md:text-2xl font-black mb-2 text-white">
-                    {t("onboarding.fuel", "كمية شحن مولد الوقود اليومي 🔋")}
-                  </h2>
-                  <p className="text-xs text-indigo-200/50 mb-6 leading-relaxed">
-                    {t("onboarding.commit_sub", "اضبط غايتك اليومية من ساعات العمل والتركيز الفعال. سيعتمد النظام على هذا التارجت لمنحك المكافآت.")}
-                  </p>
-
-                  <div className="space-y-3 mb-8">
-                    {[
-                      { 
-                        title: isAr ? "⏱️ 1 ساعة: حارس المدار الهادئ (المرحلة الأساسية)" : "⏱️ 1 Hour: Peaceful Orbital Guardian", 
-                        rate: "1 ساعة" 
-                      },
-                      { 
-                        title: isAr ? "🚀 2 ساعتان: كابتن الأنظمة وداعم الطاقة" : "🚀 2 Hours: Systems Captain & Energy Booster", 
-                        rate: "2 ساعتان" 
-                      },
-                      { 
-                        title: isAr ? "🌌 4 ساعات: بطل المجرة السحيقة والجاذبية المطلقة" : "🌌 4 Hours: Deep Galaxy Hero & Absolute Gravity", 
-                        rate: "4 ساعات" 
-                      },
-                    ].map((target) => (
-                      <button
-                        key={target.rate}
-                        onClick={() => {
-                          setDailyFocusTarget(target.rate);
-                          playSound("message");
-                        }}
-                        className={cn(
-                          "w-full p-4 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold font-sans rtl:text-right ltr:text-left",
-                          dailyFocusTarget === target.rate
-                            ? "bg-indigo-500/10 border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]"
-                            : "bg-black/20 border-white/5 text-gray-400 hover:text-gray-200"
-                        )}
-                      >
-                        <span>{target.title}</span>
-                        {dailyFocusTarget === target.rate ? (
-                          <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-mono">SELECTED</span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setOnboardingStep(1)}
-                      className="px-6 py-4 bg-white/5 hover:bg-white/10 select-none transition-colors rounded-2xl font-bold text-xs text-gray-400"
-                    >
-                      {t("onboarding.prev", "السابق")}
-                    </button>
-                    <button
-                      onClick={() => {
-                        playSound("levelup");
-                        handleSelectRole(customRole);
-                      }}
-                      className="flex-1 py-4 bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all rounded-2xl font-black text-xs text-white"
-                    >
-                      {t("onboarding.launch", "تفعيل بروتوكول الإقلاع وعزل التشتت 👨‍🚀")}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          </div>
+        {selectedUserId && (
+          <UserModal
+            userId={selectedUserId}
+            currentUserId={user.uid}
+            currentUser={user}
+            onClose={() => setSelectedUserId(null)}
+          />
         )}
       </AnimatePresence>
-
-      {selectedUserId && (
-        <UserModal
-          userId={selectedUserId}
-          currentUserId={user.uid}
-          currentUser={user}
-          onClose={() => setSelectedUserId(null)}
-        />
-      )}
 
       {/* Modern Floating Top Nav */}
       <nav 
@@ -736,16 +503,6 @@ export default function Dashboard({
             </button>
           )}
 
-          {activeTab === "home" && !isGuest && (
-            <button
-               onClick={() => setShowRoleModal(true)}
-               className="hidden md:flex p-2 hover:bg-white/10 rounded-full transition-colors relative group"
-               title="تعديل الهوية"
-            >
-               <Keyboard size={18} className="text-gray-400 group-hover:text-indigo-400 transition-colors" />
-            </button>
-          )}
-
           <div
             className="tour-step-stats flex items-center gap-2.5 bg-gradient-to-r from-indigo-500/10 to-transparent hover:bg-indigo-500/20 transition-all border border-indigo-500/20 rounded-full p-1 pl-4 cursor-pointer backdrop-blur-xl group"
             onClick={() => handleTabChange("profile")}
@@ -842,7 +599,7 @@ export default function Dashboard({
       </main>
 
       {/* Mobile Contextual Nav Helper */}
-      <div className="md:hidden fixed bottom-[90px] left-1/2 -translate-x-1/2 z-40 w-max pointer-events-none">
+      <div className="tour-step-menu-mobile md:hidden fixed bottom-[90px] left-1/2 -translate-x-1/2 z-40 w-max pointer-events-none">
           <div className="pointer-events-auto flex gap-2 overflow-x-auto px-4 no-scrollbar">
             {currentCategory === "focus" && (
                 <>

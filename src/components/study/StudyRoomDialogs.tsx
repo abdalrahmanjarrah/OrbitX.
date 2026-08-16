@@ -288,7 +288,7 @@ function StudyRoomDialogsComponent({
                   }}
                   className="w-full bg-white/5 hover:bg-white/10 text-indigo-300 font-bold py-3 px-8 rounded-xl transition-all border border-white/10 text-sm"
                 >
-                  أُشاهد حصة 📺 (إلغاء التحذيرات)
+                  أُشاهد حصة 📺 (بدون كسب نقاط)
                 </button>
               </div>
             </motion.div>
@@ -354,7 +354,7 @@ function StudyRoomDialogsComponent({
                   }}
                   className="w-full bg-white/5 hover:bg-white/10 text-orange-200 font-bold py-3 px-8 rounded-xl transition-all border border-white/10 text-sm"
                 >
-                  أُشاهد حصة 📺 (إلغاء التحذيرات)
+                  أُشاهد حصة 📺 (بدون كسب نقاط)
                 </button>
               </div>
             </motion.div>

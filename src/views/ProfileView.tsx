@@ -196,7 +196,6 @@ export default function ProfileView({
         try {
           await updateDoc(doc(db, "users", user.uid), { photoURL: dataUrl });
           const collectionsToUpdate = [
-            "global_chat",
             "discussions",
             "suggestions",
           ];

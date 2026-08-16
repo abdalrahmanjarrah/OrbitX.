@@ -339,12 +339,8 @@ function StudyRoomContent({
         completionData={completionData}
         user={user}
         onClose={closeCompletion}
-        onStartNewRound={() => {
+        onContinue={() => {
           closeCompletion();
-          safeUpdateRoom({
-            timerStatus: "focus",
-            startTime: serverTimestamp(),
-          });
         }}
         onExitToStations={() => {
           closeCompletion();

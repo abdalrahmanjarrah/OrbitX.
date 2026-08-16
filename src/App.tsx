@@ -377,7 +377,32 @@ function App() {
             };
 
             const initUser = async () => {
-              await setDoc(userRef, newUserData).catch((e) =>
+              // Restore from an existing public profile so returning users keep
+              // their real XP/level/role instead of being reset to a fresh user.
+              let restored: UserData | null = null;
+              if (!isGuest) {
+                const existingSnap = await getDoc(
+                  doc(db, "profiles", user.uid),
+                ).catch(() => null);
+                if (existingSnap?.exists()) {
+                  const p = existingSnap.data() as Partial<UserData>;
+                  restored = {
+                    ...newUserData,
+                    ...p,
+                    uid: user.uid,
+                    displayName: p.displayName || newUserData.displayName,
+                    level: typeof p.level === "number" ? p.level : 1,
+                    xp: typeof p.xp === "number" ? p.xp : 0,
+                    role: p.role || newUserData.role,
+                    friendsCount: p.friendsCount ?? 0,
+                    banned: p.banned ?? false,
+                    currentActivity: newUserData.currentActivity,
+                  };
+                }
+              }
+
+              const userData = restored ?? newUserData;
+              await setDoc(userRef, userData).catch((e) =>
                 handleFirestoreError(
                   e,
                   OperationType.WRITE,
@@ -386,7 +411,8 @@ function App() {
               );
 
               // Guests stay invisible on the public leaderboard: no profiles doc is created for them.
-              if (!isGuest) {
+              // An existing profile is never overwritten (that would reset its XP/level).
+              if (!isGuest && !restored) {
                 const profileRef = doc(db, "profiles", user.uid);
                 await setDoc(
                   profileRef,
@@ -416,7 +442,7 @@ function App() {
               }
 
               // Immediately transition user state to prevent lockouts on realtime subscription delays
-              setUserData(newUserData);
+              setUserData(userData);
               setView("dashboard");
             };
             initUser();
@@ -439,19 +465,8 @@ function App() {
 
   // Hearts recovery logic removed
 
-  useEffect(() => {
-    if (userData && userData.uid) {
-      const today = new Date().toISOString().split("T")[0];
-      const lastActive = userData.lastActiveDate;
-
-      if (lastActive !== today) {
-        const userRef = doc(db, "users", userData.uid);
-        updateDoc(userRef, {
-          lastActiveDate: today,
-        }).catch((e) => console.error("Active date update failed", e));
-      }
-    }
-  }, [userData?.uid, userData?.lastActiveDate]);
+  // Daily streak handling now lives in src/lib/streak.ts (applyDailyStreak),
+  // called by DailyHabitCard on the home view. It also writes lastActiveDate.
 
   useEffect(() => {
     if (userData) {

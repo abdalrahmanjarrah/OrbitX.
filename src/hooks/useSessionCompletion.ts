@@ -36,22 +36,30 @@ export function useSessionCompletion(
     const prevStatus = prevStatusRef.current;
     const prevStartTime = prevStartTimeRef.current;
 
-    // We compute focusStartVal using the start time of the session that was JUST CURRENT (the completed focus session).
-    // This is because the new currentStartTime will be overwritten with the break's start time, 
-    // which starts out as an unresolved local serverTimestamp() placeholder (null).
-    // Using the stable historical prevStartTime ensures a 100% correct, non-null identifier.
+    // We compute focusStartVal using the start time of the segment that was JUST CURRENT
+    // (the completed focus segment). Using the stable historical prevStartTime ensures a
+    // 100% correct, non-null identifier for the segment that actually finished.
     const completedSessionStartTime = prevStartTime || currentStartTime;
 
-    const focusStartVal = completedSessionStartTime 
-      ? (typeof completedSessionStartTime.toDate === 'function' 
-          ? completedSessionStartTime.toDate().getTime() 
-          : typeof completedSessionStartTime === 'string'
-            ? new Date(completedSessionStartTime).getTime()
-            : (completedSessionStartTime.seconds ? completedSessionStartTime.seconds * 1000 : Number(completedSessionStartTime))) 
-      : 0;
+    const resolveMs = (v: any): number =>
+      v
+        ? typeof v.toDate === "function"
+          ? v.toDate().getTime()
+          : typeof v === "string"
+            ? new Date(v).getTime()
+            : v.seconds
+              ? v.seconds * 1000
+              : Number(v)
+        : 0;
 
-    const isTransitioningToRest = (currentStatus === "break" || currentStatus === "idle") && prevStatus === "focus";
-    const isEligible = isTransitioningToRest && focusStartVal > 0;
+    const focusStartVal = resolveMs(completedSessionStartTime);
+
+    // A focus segment is considered completed when the room leaves "focus":
+    // either it moves to break (the round continues through a natural rest)
+    // or it moves to idle (the round was stopped).
+    const segmentCompleted =
+      prevStatus === "focus" && (currentStatus === "break" || currentStatus === "idle");
+    const isEligible = segmentCompleted && focusStartVal > 0;
     const storageKey = `celebrated_completion_${stationId}_${focusStartVal}`;
     const hasCelebrated = isEligible ? sessionStorage.getItem(storageKey) : null;
 
