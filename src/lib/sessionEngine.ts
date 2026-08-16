@@ -1036,6 +1036,101 @@ export function useSessionEngine(
     }
   }
 
+  // Shared focus-XP grant logic used by the 1s interval AND by the settle-up
+  // that fires when a focus phase legitimately ends. Extracting it guarantees
+  // the final partial minute is never lost when the timer flips to break.
+  const grantPendingFocusXp = useCallback(
+    async (allowPartial = false, afkActive = false) => {
+      if (isSpectator) return;
+      const now = Date.now() + clockOffsetRef.current;
+      if (isDistractedRef.current || afkActive || isWatchingClassRef.current) {
+        lastXpUpdateTimeRef.current = now;
+        return;
+      }
+
+      const secondsSpent = Math.floor(
+        (now - (lastXpUpdateTimeRef.current || now)) / 1000,
+      );
+
+      if (secondsSpent < 60) {
+        // On a legit focus-phase end, credit the partial minute once we have
+        // at least half a minute of real focus since the last grant.
+        if (!allowPartial || secondsSpent < 30) return;
+      }
+
+      let elapsedMinutes = Math.floor(secondsSpent / 60);
+      if (elapsedMinutes < 1 && allowPartial) elapsedMinutes = 1;
+
+      // HARD MATHEMATICAL BOUNDARY: Reject anomalies that exceed realistic parameters
+      // A single tick of our 1s loop should grant at most 5 minutes of accrued XP (safety catch-up)
+      const boundedMinutes = Math.min(elapsedMinutes, 5);
+      const prevLastXpUpdateTime = lastXpUpdateTimeRef.current;
+      lastXpUpdateTimeRef.current =
+        (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
+
+      let globalLastGrant =
+        (userRef.current as any).lastFocusXpUpdate !== undefined
+          ? (userRef.current as any).lastFocusXpUpdate
+          : (userRef.current as any).lastXpUpdate || 0;
+
+      if (globalLastGrant && typeof globalLastGrant.toDate === "function") {
+        globalLastGrant = globalLastGrant.toDate().getTime();
+      } else if (
+        globalLastGrant &&
+        typeof globalLastGrant === "object" &&
+        "seconds" in globalLastGrant
+      ) {
+        globalLastGrant = globalLastGrant.seconds * 1000;
+      } else if (typeof globalLastGrant !== "number") {
+        globalLastGrant = Number(globalLastGrant) || 0;
+      }
+
+      const lastGrant = Math.max(
+        lastXpGrantTimestampRef.current || 0,
+        globalLastGrant,
+      );
+      const globalElapsedMinutes = Math.max(
+        0,
+        Math.floor((now - lastGrant + 5000) / 60000),
+      );
+
+      const maxAllowedXp = Math.max(
+        0,
+        MAX_XP_PER_SESSION - sessionXpCountRef.current,
+      );
+      let xpToGrant = Math.min(boundedMinutes, globalElapsedMinutes, maxAllowedXp);
+
+      const currentRoom = roomSnapshotRef.current;
+      if (xpToGrant > 0 && currentRoom) {
+        sessionXpCountRef.current += xpToGrant;
+
+        const result = await requestXpGrant(
+          userRef.current.uid,
+          userRef.current.fleetId,
+          currentRoom.isChallenge ? currentRoom.challengeId : null,
+          challengeDataRef.current
+            ? userRef.current.uid === challengeDataRef.current.challengerId
+            : false,
+          xpToGrant,
+          `Focus Interval Loop (Minutes: ${xpToGrant})`,
+          false, // Enforce Transaction lock!
+        );
+
+        if (result === -1) {
+          // Blocked by cooldown. Rollback state so we retry on subsequent ticks
+          lastXpUpdateTimeRef.current = prevLastXpUpdateTime;
+          sessionXpCountRef.current -= xpToGrant;
+          return 0;
+        } else {
+          lastXpGrantTimestampRef.current = now;
+          return xpToGrant;
+        }
+      }
+      return 0;
+    },
+    [stationId, isSpectator],
+  );
+
   // Interactive interval positive XP progression loop
   useEffect(() => {
     if (isSpectator) return;
@@ -1057,118 +1152,63 @@ export function useSessionEngine(
 
     xpIntervalRef.current = setInterval(async () => {
       const now = Date.now() + clockOffsetRef.current;
-      
-      if (isDistractedRef.current || showAFKCheck || isWatchingClassRef.current) {
-        // Distracted, AFK-checked, or class-watching users do not earn Focus XP!
-        lastXpUpdateTimeRef.current = now;
-        return;
-      }
+      const xpGranted = await grantPendingFocusXp(false, showAFKCheck);
 
-      const secondsSpent = Math.floor((now - (lastXpUpdateTimeRef.current || now)) / 1000);
-
-      // Check if a minute actually elapsed
-      if (secondsSpent >= 60) {
-        const elapsedMinutes = Math.floor(secondsSpent / 60);
-
-        // HARD MATHEMATICAL BOUNDARY: Reject anomalies that exceed realistic parameters
-        // A single tick of our 1s loop should grant at most 5 minutes of accrued XP (safety catch-up)
-        const boundedMinutes = Math.min(elapsedMinutes, 5);
-        const prevLastXpUpdateTime = lastXpUpdateTimeRef.current;
-        lastXpUpdateTimeRef.current = (lastXpUpdateTimeRef.current || now) + elapsedMinutes * 60000;
-
-        let globalLastGrant = (userRef.current as any).lastFocusXpUpdate !== undefined 
-          ? (userRef.current as any).lastFocusXpUpdate 
-          : ((userRef.current as any).lastXpUpdate || 0);
-
-        if (globalLastGrant && typeof globalLastGrant.toDate === "function") {
-          globalLastGrant = globalLastGrant.toDate().getTime();
-        } else if (globalLastGrant && typeof globalLastGrant === "object" && "seconds" in globalLastGrant) {
-          globalLastGrant = globalLastGrant.seconds * 1000;
-        } else if (typeof globalLastGrant !== "number") {
-          globalLastGrant = Number(globalLastGrant) || 0;
-        }
-
-        const lastGrant = Math.max(lastXpGrantTimestampRef.current || 0, globalLastGrant);
-        const globalElapsedMinutes = Math.max(0, Math.floor((now - lastGrant + 5000) / 60000));
-
-        const maxAllowedXp = Math.max(0, MAX_XP_PER_SESSION - sessionXpCountRef.current);
-        let xpToGrant = Math.min(boundedMinutes, globalElapsedMinutes, maxAllowedXp);
-
+      // Challenge tracking milestones (only fire when XP was actually granted)
+      if (xpGranted > 0) {
         const currentRoom = roomSnapshotRef.current;
-        if (xpToGrant > 0 && currentRoom) {
-          sessionXpCountRef.current += xpToGrant;
+        if (currentRoom?.isChallenge && currentRoom.challengeId) {
+          checkChallengeCompletion(currentRoom.challengeId).catch(() => {});
 
-          const result = await requestXpGrant(
-            userRef.current.uid,
-            userRef.current.fleetId,
-            currentRoom.isChallenge ? currentRoom.challengeId : null,
-            challengeDataRef.current ? (userRef.current.uid === challengeDataRef.current.challengerId) : false,
-            xpToGrant,
-            `Focus Interval Loop (Minutes: ${xpToGrant})`,
-            false // Enforce Transaction lock!
-          );
+          if (challengeDataRef.current) {
+            const c = challengeDataRef.current;
+            const isMeP1 = userRef.current.uid === c.challengerId;
 
-          if (result === -1) {
-            // Blocked by cooldown. Rollback state so we retry on subsequent ticks
-            lastXpUpdateTimeRef.current = prevLastXpUpdateTime;
-            sessionXpCountRef.current -= xpToGrant;
-          } else {
-            lastXpGrantTimestampRef.current = now;
-            if (currentRoom.isChallenge && currentRoom.challengeId) {
-              checkChallengeCompletion(currentRoom.challengeId).catch(() => {});
+            const oldMyProgress = isMeP1 ? (c.progressPlayer1 || 0) : (c.progressPlayer2 || 0);
+            const oppProgress = isMeP1 ? (c.progressPlayer2 || 0) : (c.progressPlayer1 || 0);
 
-              // Challenge tracking milestones
-              if (challengeDataRef.current) {
-                const c = challengeDataRef.current;
-                const isMeP1 = userRef.current.uid === c.challengerId;
+            const myNewProgress = oldMyProgress + xpGranted;
+            const oppName = isMeP1 ? c.challengedName : c.challengerName;
+            const myName = isMeP1 ? c.challengerName : c.challengedName;
 
-                const oldMyProgress = isMeP1 ? (c.progressPlayer1 || 0) : (c.progressPlayer2 || 0);
-                const oppProgress = isMeP1 ? (c.progressPlayer2 || 0) : (c.progressPlayer1 || 0);
+            // 1. Check if we reached a multiple of 10 minutes
+            if (Math.floor(myNewProgress / 10) > Math.floor(oldMyProgress / 10) && myNewProgress >= 10) {
+              addDoc(collection(db, "rooms", stationId, "messages"), {
+                text: `⚔️ الخصم ${myName} يتقدّم بثبات! لقد حقق الآن ${myNewProgress} دقائق تركيز فعلي متراكم!`,
+                userId: "system",
+                userName: "نظام التحديات",
+                userPhoto: "",
+                timestamp: serverTimestamp(),
+                type: "text",
+              }).catch((e) => console.error("Failed to add milestone msg:", e));
 
-                const myNewProgress = oldMyProgress + xpToGrant;
-                const oppName = isMeP1 ? c.challengedName : c.challengerName;
-                const myName = isMeP1 ? c.challengerName : c.challengedName;
+              const oppId = isMeP1 ? c.challengedId : c.challengerId;
+              addDoc(collection(db, "users", oppId, "notifications"), {
+                type: "challenge_push",
+                content: `⚔️ خصمك ${myName} يتقدّم بثبات! لقد حقق ${myNewProgress} دقيقة تركيز فعلي في النزال!`,
+                read: false,
+                timestamp: serverTimestamp(),
+              }).catch(() => {});
+            }
 
-                // 1. Check if we reached a multiple of 10 minutes
-                if (Math.floor(myNewProgress / 10) > Math.floor(oldMyProgress / 10) && myNewProgress >= 10) {
-                  addDoc(collection(db, "rooms", stationId, "messages"), {
-                    text: `⚔️ الخصم ${myName} يتقدّم بثبات! لقد حقق الآن ${myNewProgress} دقائق تركيز فعلي متراكم!`,
-                    userId: "system",
-                    userName: "نظام التحديات",
-                    userPhoto: "",
-                    timestamp: serverTimestamp(),
-                    type: "text",
-                  }).catch((e) => console.error("Failed to add milestone msg:", e));
+            // 2. Check if we just took the lead
+            if (oldMyProgress <= oppProgress && myNewProgress > oppProgress && oppProgress > 0) {
+              addDoc(collection(db, "rooms", stationId, "messages"), {
+                text: `🔥 الصدارة تتغير! لقد انتزع ${myName} القيادة في نزال التركيز بـ ${myNewProgress} دقيقة مقابل ${oppProgress} دقيقة لـ ${oppName}!`,
+                userId: "system",
+                userName: "نظام التحديات",
+                userPhoto: "",
+                timestamp: serverTimestamp(),
+                type: "text",
+              }).catch((e) => console.error("Failed to add lead change msg:", e));
 
-                  const oppId = isMeP1 ? c.challengedId : c.challengerId;
-                  addDoc(collection(db, "users", oppId, "notifications"), {
-                    type: "challenge_push",
-                    content: `⚔️ خصمك ${myName} يتقدّم بثبات! لقد حقق ${myNewProgress} دقيقة تركيز فعلي في النزال!`,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                  }).catch(() => {});
-                }
-
-                // 2. Check if we just took the lead
-                if (oldMyProgress <= oppProgress && myNewProgress > oppProgress && oppProgress > 0) {
-                  addDoc(collection(db, "rooms", stationId, "messages"), {
-                    text: `🔥 الصدارة تتغير! لقد انتزع ${myName} القيادة في نزال التركيز بـ ${myNewProgress} دقيقة مقابل ${oppProgress} دقيقة لـ ${oppName}!`,
-                    userId: "system",
-                    userName: "نظام التحديات",
-                    userPhoto: "",
-                    timestamp: serverTimestamp(),
-                    type: "text",
-                  }).catch((e) => console.error("Failed to add lead change msg:", e));
-
-                  const oppId = isMeP1 ? c.challengedId : c.challengerId;
-                  addDoc(collection(db, "users", oppId, "notifications"), {
-                    type: "challenge_push",
-                    content: `🔥 لقد انتزع ${myName} الصدارة في نزال التركيز بـ ${myNewProgress} دقيقة محققة!`,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                  }).catch(() => {});
-                }
-              }
+              const oppId = isMeP1 ? c.challengedId : c.challengerId;
+              addDoc(collection(db, "users", oppId, "notifications"), {
+                type: "challenge_push",
+                content: `🔥 لقد انتزع ${myName} الصدارة في نزال التركيز بـ ${myNewProgress} دقيقة محققة!`,
+                read: false,
+                timestamp: serverTimestamp(),
+              }).catch(() => {});
             }
           }
         }
@@ -1289,6 +1329,10 @@ export function useSessionEngine(
             } else {
               localStorage.setItem(transitionLockKey, "true");
               
+              // SETTLE-UP: credit the final partial focus minute before the
+              // timer flips to break. The 1s interval only grants full minutes,
+              // so without this the tail of the session is silently lost.
+              grantPendingFocusXp(true, false).catch(() => {});
               // Clean up old obsolete transition lock keys for this room to avoid filling storage
               try {
                 for (let i = 0; i < localStorage.length; i++) {
@@ -1316,7 +1360,8 @@ export function useSessionEngine(
                 };
 
                 // Weekly duel counters — auto-reset to the current Monday when the week flips
-                const minutesEarned = room.timerDuration / 60000;
+                // NOTE: room.timerDuration is already in MINUTES (e.g. 25).
+                const minutesEarned = room.timerDuration;
                 const weekKey = getWeekStartISO();
                 const sameWeek = userRef.current.weekStart === weekKey;
                 updates.weekStart = weekKey;
@@ -1341,7 +1386,8 @@ export function useSessionEngine(
                 }
 
                 // Non-synchronous race: every completed focus session feeds the user's active challenges
-                creditFocusToActiveChallenges(userRef.current.uid, room.timerDuration / 60000);
+                // room.timerDuration is already in minutes.
+                creditFocusToActiveChallenges(userRef.current.uid, room.timerDuration);
               }
             }
           }

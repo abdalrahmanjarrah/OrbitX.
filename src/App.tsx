@@ -1,6 +1,7 @@
 import { playSound } from "./lib/sound";
 import { useRenderLog, authorizeDebugger } from "./firebaseDebug";
 import { buildInviteLink } from "./lib/share";
+import { checkAndRewardReferrals, REFERRAL_REWARD_XP } from "./lib/referrals";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -160,6 +161,7 @@ import {
   ErrorBoundary,
 } from "./shared";
 import LandingPage from "./components/LandingPage";
+import { showToast } from "./lib/cosmicUI";
 
 const Dashboard = lazy(() => import("./views/Dashboard"));
 const QuranPlayer = lazy(() => import("./views/QuranPlayer"));
@@ -444,6 +446,18 @@ function App() {
               // Immediately transition user state to prevent lockouts on realtime subscription delays
               setUserData(userData);
               setView("dashboard");
+
+              // Record who invited this brand-new user so the inviter earns
+              // 100 XP (see checkAndRewardReferrals). Self-invites are skipped,
+              // guests are never attributed.
+              const inviteParam = new URLSearchParams(
+                window.location.search,
+              ).get("invite");
+              if (!isGuest && !restored && inviteParam && inviteParam !== user.uid) {
+                updateDoc(doc(db, "profiles", user.uid), {
+                  invitedBy: inviteParam,
+                }).catch(() => {});
+              }
             };
             initUser();
           }
@@ -467,6 +481,21 @@ function App() {
 
   // Daily streak handling now lives in src/lib/streak.ts (applyDailyStreak),
   // called by DailyHabitCard on the home view. It also writes lastActiveDate.
+
+  // Referral rewards: when a friend who joined through this user's invite link
+  // shows up in profiles, credit the inviter 100 XP once per friend.
+  const referralCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!userData?.uid || userData.isGuest) return;
+    if (referralCheckedRef.current) return;
+    referralCheckedRef.current = true;
+    checkAndRewardReferrals(userData, (count) => {
+      showToast(
+        `🎁 ربحت +${REFERRAL_REWARD_XP} XP عن كل صديق دُعيتَه! وصلت ${count} مكافأة`,
+        "success",
+      );
+    }).catch(() => {});
+  }, [userData?.uid, userData?.isGuest]);
 
   useEffect(() => {
     if (userData) {
@@ -618,7 +647,15 @@ function App() {
   if (view === "landing" && !user) {
     return (
       <>
-        <LandingPage onLogin={handleLogin} onGuest={handleGuestLogin} />
+        <LandingPage
+          onLogin={handleLogin}
+          onGuest={handleGuestLogin}
+          inviterName={
+            inviteInfo && inviteInfo.inviterId !== userData?.uid
+              ? inviteInfo.inviterName
+              : undefined
+          }
+        />
         {loginError && (
           <div
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-[fade-in_0.2s_ease]"
@@ -832,7 +869,7 @@ function App() {
       <Suspense fallback={null}>
         <QuranPlayer />
       </Suspense>
-      {inviteInfo && (
+      {inviteInfo && userData && inviteInfo.inviterId !== userData.uid && (
         <div
           className="bg-gradient-to-r from-indigo-600/90 via-fuchsia-600/90 to-indigo-600/90 text-white text-xs md:text-sm py-3 px-4 text-center font-semibold relative z-[120] shadow-md flex flex-wrap items-center justify-center gap-x-4 gap-y-2 select-none"
           dir={isAr ? "rtl" : "ltr"}

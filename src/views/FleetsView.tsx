@@ -423,9 +423,27 @@ export default function FleetsView({ user }: { user: UserData }) {
     if (!activeFleet) return;
     try {
       const updates: any = { members: arrayRemove(user.uid) };
-      if (activeFleet.coAdmins?.includes(user.uid)) {
+      const isCoAdmin = activeFleet.coAdmins?.includes(user.uid);
+      if (isCoAdmin) {
         updates.coAdmins = arrayRemove(user.uid);
       }
+
+      // Owner handover: if the fleet owner leaves, hand leadership to a deputy
+      // (first co-admin) if one exists, otherwise to the oldest remaining
+      // member (members[] keeps join order, so the first entry is the oldest).
+      if (activeFleet.ownerId === user.uid) {
+        const remaining = (activeFleet.members || []).filter(
+          (m) => m !== user.uid,
+        );
+        const deputies = (activeFleet.coAdmins || []).filter(
+          (m) => m !== user.uid && remaining.includes(m),
+        );
+        const heir = deputies[0] || remaining[0];
+        if (heir) {
+          updates.ownerId = heir;
+        }
+      }
+
       await updateDoc(doc(db, "fleets", activeFleet.id), updates);
       await updateDoc(doc(db, "users", user.uid), { fleetId: deleteField() });
       setActiveFleet(null);

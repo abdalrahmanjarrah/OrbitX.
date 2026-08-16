@@ -253,99 +253,41 @@ export const SURAHS = [
   "الناس",
 ];
 
+export interface RankTier {
+  ar: string;
+  en: string;
+  color: string;
+  icon: string;
+  planet: string;
+  minXp: number;
+}
+
+// The 9 astronaut ranks (shared source of truth). getAstronautRank derives the
+// current rank from this list, and the profile page renders the full ladder so
+// the level system is always explained on the profile itself.
+export const RANK_TIERS: RankTier[] = [
+  { ar: "أول خطوة", en: "First Step", color: "text-gray-400", icon: "👨‍🚀", planet: "bg-gray-500 shadow-gray-500/50", minXp: 0 },
+  { ar: "مستكشف كوني", en: "Cosmic Explorer", color: "text-green-400", icon: "🛰️", planet: "bg-green-500 shadow-green-500/50", minXp: 2000 },
+  { ar: "عاشق النجوم", en: "Star Lover", color: "text-blue-400", icon: "🚀", planet: "bg-blue-500 shadow-blue-500/50", minXp: 5000 },
+  { ar: "رحالة فضائي", en: "Space Voyager", color: "text-purple-400", icon: "☄️", planet: "bg-purple-500 shadow-purple-500/50", minXp: 10000 },
+  { ar: "منضبط كوني", en: "Cosmic Disciplined", color: "text-red-400", icon: "👨‍🚀", planet: "bg-red-500 shadow-red-500/50", minXp: 15000 },
+  { ar: "فارس الثقوب السوداء", en: "Black Hole Knight", color: "text-orange-400", icon: "⚔️", planet: "bg-orange-500 shadow-orange-500/50", minXp: 22000 },
+  { ar: "خبير المجرة", en: "Galaxy Expert", color: "text-indigo-500", icon: "👑", planet: "bg-indigo-500/20 shadow-indigo-400/50", minXp: 30000 },
+  { ar: "حاكم سديم", en: "Nebula Sovereign", color: "text-sky-400", icon: "⚡", planet: "bg-sky-500 shadow-sky-400/50", minXp: 40000 },
+  { ar: "أسطورة OrbitX", en: "OrbitX Legend", color: "text-fuchsia-500", icon: "🌟", planet: "bg-fuchsia-500/20 shadow-fuchsia-400/50", minXp: 50000 },
+];
+
 export const getAstronautRank = (xp: number, missionRole?: string, lang: "ar" | "en" = "ar") => {
   const roleSuffix = missionRole ? ` · ${missionRole}` : "";
   const isEn = lang === "en";
 
-  const arTitles = [
-    "أول خطوة",
-    "مستكشف كوني",
-    "عاشق النجوم",
-    "رحالة فضائي",
-    "منضبط كوني",
-    "فارس الثقوب السوداء",
-    "خبير المجرة",
-    "حاكم سديم",
-    "أسطورة OrbitX"
-  ];
-
-  const enTitles = [
-    "First Step",
-    "Cosmic Explorer",
-    "Star Lover",
-    "Space Voyager",
-    "Cosmic Disciplined",
-    "Black Hole Knight",
-    "Galaxy Expert",
-    "Nebula Sovereign",
-    "OrbitX Legend"
-  ];
-
-  const ranks = [
-    {
-      title: `${isEn ? enTitles[0] : arTitles[0]}${roleSuffix}`,
-      color: "text-gray-400",
-      icon: "👨‍🚀",
-      planet: "bg-gray-500 shadow-gray-500/50",
-      minXp: 0,
-    },
-    {
-      title: `${isEn ? enTitles[1] : arTitles[1]}${roleSuffix}`,
-      color: "text-green-400",
-      icon: "🛰️",
-      planet: "bg-green-500 shadow-green-500/50",
-      minXp: 2000,
-    },
-    {
-      title: `${isEn ? enTitles[2] : arTitles[2]}${roleSuffix}`,
-      color: "text-blue-400",
-      icon: "🚀",
-      planet: "bg-blue-500 shadow-blue-500/50",
-      minXp: 5000,
-    },
-    {
-      title: `${isEn ? enTitles[3] : arTitles[3]}${roleSuffix}`,
-      color: "text-purple-400",
-      icon: "☄️",
-      planet: "bg-purple-500 shadow-purple-500/50",
-      minXp: 10000,
-    },
-    {
-      title: `${isEn ? enTitles[4] : arTitles[4]}${roleSuffix}`,
-      color: "text-red-400",
-      icon: "👨‍🚀",
-      planet: "bg-red-500 shadow-red-500/50",
-      minXp: 15000,
-    },
-    {
-      title: `${isEn ? enTitles[5] : arTitles[5]}${roleSuffix}`,
-      color: "text-orange-400",
-      icon: "⚔️",
-      planet: "bg-orange-500 shadow-orange-500/50",
-      minXp: 22000,
-    },
-    {
-      title: `${isEn ? enTitles[6] : arTitles[6]}${roleSuffix}`,
-      color: "text-indigo-500",
-      icon: "👑",
-      planet: "bg-indigo-500/20 shadow-indigo-400/50",
-      minXp: 30000,
-    },
-    {
-      title: `${isEn ? enTitles[7] : arTitles[7]}${roleSuffix}`,
-      color: "text-sky-400",
-      icon: "⚡",
-      planet: "bg-sky-500 shadow-sky-400/50",
-      minXp: 40000,
-    },
-    {
-      title: `${isEn ? enTitles[8] : arTitles[8]}${roleSuffix}`,
-      color: "text-fuchsia-500",
-      icon: "🌟",
-      planet: "bg-fuchsia-500/20 shadow-fuchsia-400/50",
-      minXp: 50000,
-    },
-  ];
+  const ranks = RANK_TIERS.map((tier) => ({
+    title: `${isEn ? tier.en : tier.ar}${roleSuffix}`,
+    color: tier.color,
+    icon: tier.icon,
+    planet: tier.planet,
+    minXp: tier.minXp,
+  }));
 
   let currentRankIndex = 0;
   for (let i = ranks.length - 1; i >= 0; i--) {
@@ -376,6 +318,19 @@ export const getAstronautRank = (xp: number, missionRole?: string, lang: "ar" | 
     nextRankMinXp: nextRank ? nextRank.minXp : currentRank.minXp,
   };
 };
+
+// Rank emblems: one badge per rank, sharing the exact XP thresholds and icons
+// of RANK_TIERS. This is the "level system tied to badges" — reaching a new
+// rank unlocks its emblem automatically. (Distinct from BADGES below, which are
+// the special extra achievements: sessions, streaks, challenge wins, ...)
+export const RANK_BADGES = RANK_TIERS.map((tier, i) => ({
+  id: `rank_badge_${i}`,
+  title: tier.ar,
+  emoji: tier.icon,
+  icon: tier.icon,
+  description: `${tier.ar} — تحتاج ${tier.minXp.toLocaleString()} XP`,
+  minXp: tier.minXp,
+}));
 
 export const BADGES = [
   {
@@ -559,6 +514,8 @@ export interface UserData {
   weekStart?: string;
   weekFocusMinutes?: number;
   weekSessions?: number;
+  invitedBy?: string;
+  referralsRewarded?: string[];
 }
 
 export interface Fleet {

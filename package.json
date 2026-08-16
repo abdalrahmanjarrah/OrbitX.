@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "tsx --tsconfig tsconfig.server.json server.ts",
     "build": "node copy-icons.js && vite build && node precompress.mjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --tsconfig-raw='{\"compilerOptions\":{\"target\":\"ES2022\",\"moduleResolution\":\"bundler\"}}' --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",

@@ -126,9 +126,11 @@ function SectionHead({
 export default function LandingPage({
   onLogin,
   onGuest,
+  inviterName,
 }: {
   onLogin: () => void;
   onGuest?: () => void;
+  inviterName?: string;
 }) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -621,6 +623,18 @@ export default function LandingPage({
           </div>
         </div>
       </header>
+
+      {/* Invite welcome banner (shown when arriving through a friend's link) */}
+      {inviterName && (
+        <div className="fixed top-[74px] left-0 right-0 z-[60] flex justify-center px-4">
+          <div className="w-full max-w-3xl bg-gradient-to-r from-indigo-600/80 via-fuchsia-600/80 to-indigo-600/80 backdrop-blur-md border border-white/10 text-white text-xs md:text-sm py-3 px-4 text-center font-semibold shadow-lg rounded-2xl">
+            🚀 <strong>{inviterName}</strong>{" "}
+            {isAr
+              ? "دعاك إلى مجرة OrbitX — أنشئ حسابك، تبارزا في نزالات التركيز، واربح كلٌّ منكما 100 XP!"
+              : "invited you to OrbitX — create your account, duel in focus battles, and you both earn 100 XP!"}
+          </div>
+        </div>
+      )}
 
       {/* =============================================================
           HERO

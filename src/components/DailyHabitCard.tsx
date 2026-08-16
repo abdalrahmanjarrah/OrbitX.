@@ -57,6 +57,9 @@ export function DailyHabitCard({ user }: { user: UserData }) {
           {streak === 1 ? "يوم" : "أيام متتالية"}
         </span>
       </div>
+      <p className="text-[10px] text-gray-500 font-mono leading-relaxed mt-1">
+        كل يوم تركّز = +1 في السلسلة. فاتك يوم؟ ترجع من الأول.
+      </p>
       {!isGuest &&
         (rewardDue ? (
           <button
