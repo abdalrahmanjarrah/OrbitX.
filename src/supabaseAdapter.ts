@@ -1,16 +1,53 @@
 // The full Supabase SDK (auth + postgrest + realtime + storage) is lazy-loaded
 // only when a data call actually happens, keeping it out of the initial bundle.
-// Auth lives in ./supabaseAuth (auth-js only) and both share the localStorage
-// session token, so a login is immediately visible to the data layer.
+// Auth lives in ./supabaseAuth (auth-js only). The data client must be handed
+// the SAME session as the auth client so PostgREST requests carry the user's
+// access token; otherwise every read runs as an anonymous visitor and RLS
+// policies that target the `authenticated` role return nothing.
+import { authClient } from "./supabaseAuth";
 let _sbPromise: Promise<any> | null = null;
+let _sbClient: any = null;
+
+const syncSessionToDataClient = async (): Promise<void> => {
+  try {
+    const client = _sbClient;
+    if (!client) return;
+    const {
+      data: { session },
+    } = await authClient.getSession();
+    if (session) {
+      await client.auth.setSession(session);
+    }
+  } catch (e) {
+    console.warn("[Supabase Compatibility] failed to sync auth session:", e);
+  }
+};
+
 const getSupabase = (): Promise<any> => {
   if (!_sbPromise) {
-    _sbPromise = import("@supabase/supabase-js").then(({ createClient }) => {
-      return createClient(supabaseUrl, supabaseAnonKey);
-    });
+    _sbPromise = (async () => {
+      const { createClient } = await import("@supabase/supabase-js");
+      const client = createClient(supabaseUrl, supabaseAnonKey);
+      _sbClient = client;
+      await syncSessionToDataClient();
+      return client;
+    })();
   }
   return _sbPromise;
 };
+
+// Keep the data client's session in lockstep with the auth client so a login,
+// logout or token refresh is immediately visible to all data reads.
+if (typeof window !== "undefined") {
+  authClient.onAuthStateChange((_event, session) => {
+    if (!_sbClient) return;
+    if (session) {
+      _sbClient.auth.setSession(session).catch((e: any) =>
+        console.warn("[Supabase Compatibility] session refresh failed:", e),
+      );
+    }
+  });
+}
 
 // 1. Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://your-project-id.supabase.co";
