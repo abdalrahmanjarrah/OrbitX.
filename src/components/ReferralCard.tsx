@@ -22,37 +22,28 @@ export function ReferralCard({ user }: ReferralCardProps) {
   }, [user.uid]);
 
   return (
-    <div className="fixed top-20 right-5 z-[55] hidden lg:block">
+    <div className="fixed top-20 right-0 z-[55] hidden lg:block">
       <motion.button
         onClick={handleCopy}
-        whileHover={{ scale: 1.04, y: -2 }}
-        whileTap={{ scale: 0.96 }}
+        whileHover={{ x: -6 }}
+        whileTap={{ scale: 0.95 }}
         className="relative group"
       >
-        {/* Outer glow pulse */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-fuchsia-500/30 via-purple-400/20 to-fuchsia-500/30 rounded-2xl blur-[6px] opacity-50 group-hover:opacity-90 transition-opacity animate-[pulse_3s_ease-in-out_infinite]" />
+        {/* Glow */}
+        <div className="absolute inset-0 rounded-l-xl blur-md bg-fuchsia-500/25 opacity-50 group-hover:opacity-90 transition-opacity" />
 
-        {/* Button body */}
-        <div className="relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0c0f20]/90 backdrop-blur-xl border border-fuchsia-500/25 shadow-[0_0_20px_rgba(192,132,252,0.1)] group-hover:shadow-[0_0_30px_rgba(192,132,252,0.2)] transition-all">
-          {/* Icon */}
-          <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-500/15 to-purple-500/10 border border-fuchsia-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <UserPlus size={14} className="text-fuchsia-400" />
-            {/* Sparkle */}
-            <Sparkles size={8} className="absolute -top-1 -right-1 text-amber-400 animate-pulse" />
+        {/* Tab body — right edge flat, left side rounded */}
+        <div className="relative flex items-center gap-2 pl-4 pr-1 py-3 rounded-l-xl border border-r-0 border-fuchsia-500/25 bg-[#0c0f20]/95 backdrop-blur-xl shadow-[0_0_15px_rgba(192,132,252,0.1)] group-hover:shadow-[0_0_25px_rgba(192,132,252,0.2)] transition-all">
+          <div className="w-7 h-7 rounded-lg bg-fuchsia-500/15 border border-fuchsia-500/20 flex items-center justify-center shrink-0">
+            <UserPlus size={12} className="text-fuchsia-400" />
           </div>
-
-          {/* Text */}
           <div className="flex flex-col items-start leading-none">
-            <span className="text-[9px] font-bold text-fuchsia-400/60 uppercase tracking-wider">
-              {isAr ? "ادعُ صديق" : "INVITE"}
-            </span>
-            <span className="text-[11px] font-black text-white mt-0.5">
-              {copied
-                ? (isAr ? "تم النسخ ✓" : "COPIED ✓")
-                : (isAr ? "+100 XP" : "+100 XP")
-              }
+            <span className="text-[8px] font-bold text-fuchsia-400/60 uppercase tracking-wider">{isAr ? "ادعُ صديق" : "INVITE"}</span>
+            <span className="text-[10px] font-black text-white mt-0.5">
+              {copied ? (isAr ? "تم ✓" : "DONE ✓") : "+100 XP"}
             </span>
           </div>
+          <Sparkles size={8} className="text-amber-400 animate-pulse ml-1" />
         </div>
       </motion.button>
     </div>
