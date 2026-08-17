@@ -135,7 +135,8 @@ function onSnapshot(...args: any[]) {
 }
 
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { getLevelFromXp, getLevelProgress, getLevelColor, getXpToNextLevel } from '../lib/levelConfig';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';
 import NavPill from './NavPill';
@@ -372,10 +373,7 @@ export default function UserModal({
                   <div
                     className={cn(
                       "absolute inset-0 rounded-full blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500",
-                      getAstronautRank(userData.xp).color.replace(
-                        "text-",
-                        "bg-",
-                      ),
+                      getLevelColor(getLevelFromXp(userData.xp)).bg,
                     )}
                   ></div>
 
@@ -389,11 +387,8 @@ export default function UserModal({
                   <div
                     className={cn(
                       "absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold border-2 border-[#0a0b16] z-20 whitespace-nowrap shadow-xl",
-                      getAstronautRank(userData.xp)
-                        .color.replace("text-", "bg-")
-                        .replace("300", "500")
-                        .replace("400", "500"),
-                      getAstronautRank(userData.xp).color === "text-white"
+                      getLevelColor(getLevelFromXp(userData.xp)).bg,
+                      getLevelColor(getLevelFromXp(userData.xp)).text === "text-white"
                         ? "text-black"
                         : "text-white",
                     )}
@@ -447,12 +442,10 @@ export default function UserModal({
                     <span
                       className={cn(
                         "text-sm px-3 py-1 rounded-full border border-current",
-                        getAstronautRank(userData.xp)
-                          .color.replace("text-", "bg-")
-                          .replace("400", "500/20"),
+                        getLevelColor(getLevelFromXp(userData.xp)).bg,
                       )}
                     >
-                      {getAstronautRank(userData.xp).title}
+                      {'Level ' + getLevelFromXp(userData.xp)}
                     </span>
                   </h2>
                 </div>
@@ -534,22 +527,22 @@ export default function UserModal({
             {/* XP Progress Bar */}
             <div className="mt-8 space-y-2">
               <div className="flex justify-between items-center text-xs font-bold text-gray-400">
-                <span className={getAstronautRank(userData.xp).color}>
-                  {getAstronautRank(userData.xp).title}
+                <span className={getLevelColor(getLevelFromXp(userData.xp)).text}>
+                  {'Level ' + getLevelFromXp(userData.xp)}
                 </span>
                 <span>التقدم للرتبة التالية</span>
-                <span>{getAstronautRank(userData.xp).nextRankTitle}</span>
+                <span>{'Level ' + (getLevelFromXp(userData.xp) + 1)}</span>
               </div>
               <div className="h-6 bg-space-dark shadow-inner shadow-black/80 rounded-full overflow-hidden border border-white/10 relative">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${getAstronautRank(userData.xp).progressPercentage}%`,
+                    width: `${getLevelProgress(userData.xp, getLevelFromXp(userData.xp))}%`,
                   }}
                   className="h-full bg-gradient-to-l from-indigo-500 to-blue-400"
                 />
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                  {Math.round(getAstronautRank(userData.xp).progressPercentage)}
+                  {Math.round(getLevelProgress(userData.xp, getLevelFromXp(userData.xp)))}
                   %
                 </div>
               </div>

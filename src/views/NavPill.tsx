@@ -134,7 +134,7 @@ function onSnapshot(...args: any[]) {
 }
 
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';
 import MobileNavPill from './MobileNavPill';

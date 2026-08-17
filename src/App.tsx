@@ -147,7 +147,6 @@ function onSnapshot(...args: any[]) {
 
 import {
   SURAHS,
-  getAstronautRank,
   BADGES,
   MeteorEffect,
   RECITERS,
@@ -164,6 +163,7 @@ import {
 } from "./shared";
 
 import { showToast } from "./lib/cosmicUI";
+import { getLevelFromXp } from "./lib/levelConfig";
 
 const Dashboard = lazy(() => import("./views/Dashboard"));
 const QuranPlayer = lazy(() => import("./views/QuranPlayer"));
@@ -171,6 +171,7 @@ const MissionRoleWizard = lazy(() =>
   import("./views/MissionRoleWizard"),
 );
 const WhatsNewModal = lazy(() => import("./components/WhatsNewModal"));
+const LevelUpEffects = lazy(() => import("./components/LevelUpEffects"));
 
 
 import { useLanguage } from "./context/LanguageContext";
@@ -191,6 +192,7 @@ function App() {
   const lastSyncedProfileRef = useRef<string>("");
   const previousLevelRef = useRef<number | null>(null);
   const previousUserUidRef = useRef<string | null>(null);
+  const previousXpRef = useRef<number>(0);
   const [inviteInfo, setInviteInfo] = useState<{
     inviterId: string;
     inviterName: string;
@@ -565,7 +567,7 @@ function App() {
 
   useEffect(() => {
     if (userData) {
-      const calculatedLevel = Math.floor(userData.xp / 1000) + 1;
+      const calculatedLevel = getLevelFromXp(userData.xp);
       const sessionKey = `lastCelebratedLevel_${userData.uid}`;
 
       // Initial load or user change: silently initialize without triggering the toast
@@ -574,6 +576,7 @@ function App() {
         previousLevelRef.current === null
       ) {
         previousUserUidRef.current = userData.uid;
+        previousXpRef.current = userData.xp;
 
         const celebratedLevelStr = sessionStorage.getItem(sessionKey);
         const celebratedLevel = celebratedLevelStr
@@ -610,6 +613,7 @@ function App() {
 
       // Always keep the persistent ref updated with the latest state
       previousLevelRef.current = calculatedLevel;
+      previousXpRef.current = userData.xp;
     }
   }, [userData?.xp, userData?.level, userData?.uid]);
 
@@ -911,6 +915,15 @@ function App() {
       {showWhatsNew && (
         <Suspense fallback={null}>
           <WhatsNewModal />
+        </Suspense>
+      )}
+      {userData && previousXpRef.current !== undefined && (
+        <Suspense fallback={null}>
+          <LevelUpEffects
+            xp={userData.xp}
+            previousXp={previousXpRef.current}
+            userId={userData.uid}
+          />
         </Suspense>
       )}
     </>

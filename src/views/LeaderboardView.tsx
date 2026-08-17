@@ -134,7 +134,8 @@ function onSnapshot(...args: any[]) {
 }
 
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { getLevelFromXp, getLevelColor } from '../lib/levelConfig';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';
 import NavPill from './NavPill';
@@ -280,10 +281,10 @@ export default function LeaderboardView({
                     <span
                       className={cn(
                         "text-[10px] font-bold truncate",
-                        getAstronautRank(leader.xp, undefined, lang).color,
+                        getLevelColor(getLevelFromXp(leader.xp)).text,
                       )}
                     >
-                      {getAstronautRank(leader.xp, undefined, lang).title}
+                      {'Level ' + getLevelFromXp(leader.xp)}
                     </span>
                   </div>
                 </div>

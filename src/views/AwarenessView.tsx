@@ -142,7 +142,6 @@ function onSnapshot(...args: any[]) {
 import { DEFAULT_SIGNALS } from "../data/AwarenessDefaults";
 import {
   SURAHS,
-  getAstronautRank,
   BADGES,
   MeteorEffect,
   RECITERS,

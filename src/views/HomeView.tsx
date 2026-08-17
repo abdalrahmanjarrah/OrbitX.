@@ -137,7 +137,8 @@ function onSnapshot(...args: any[]) {
 }
 
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
+import { getLevelFromXp } from '../lib/levelConfig';
 import NotificationsDropdown from './NotificationsDropdown';
 import Dashboard from './Dashboard';
 import NavPill from './NavPill';
@@ -502,7 +503,7 @@ export default function HomeView({
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                   <Star size={12} className="text-fuchsia-400" /> {t("home.space_rank", "رتبة الفضاء")}
                 </span>
-                <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-xs font-semibold text-gray-500">{getAstronautRank(user.xp, undefined, lang).title}</span></div>
+                <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-xs font-semibold text-gray-500"></span></div>
              </div>
 
              <DailyHabitCard user={user} />

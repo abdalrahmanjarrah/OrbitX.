@@ -143,7 +143,6 @@ function onSnapshot(...args: any[]) {
 
 import {
   SURAHS,
-  getAstronautRank,
   BADGES,
   MeteorEffect,
   RECITERS,

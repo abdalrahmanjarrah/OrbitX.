@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { getAstronautRank } from '../shared';
+import { getLevelFromXp, getLevelColor } from '../lib/levelConfig';
 
 export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser: (id: string) => void }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,8 +92,8 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
                 />
                 <div className="flex-1">
                   <div className="font-bold text-lg text-white mb-1 group-hover:text-indigo-300 transition-colors">{u.displayName || 'رائد مجهول'}</div>
-                  <div className={cn("text-xs font-bold inline-block px-2 py-0.5 rounded border border-current", getAstronautRank(u.xp || 0).color.replace('text-', 'bg-').replace('400', '500/20'))}>
-                    {getAstronautRank(u.xp || 0).title}
+                  <div className={cn("text-xs font-bold inline-block px-2 py-0.5 rounded border border-current", getLevelColor(getLevelFromXp(u.xp || 0)).bg)}>
+                    {'Level ' + getLevelFromXp(u.xp || 0)}
                   </div>
                 </div>
                 <div className="flex flex-col items-center justify-center gap-1 min-w-[70px]">

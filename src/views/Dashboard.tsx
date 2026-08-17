@@ -135,7 +135,8 @@ function onSnapshot(...args: any[]) {
 }
 
 
-import { SURAHS, getAstronautRank, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message, getTourSteps } from '../shared';
+import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message, getTourSteps } from '../shared';
+import { getLevelFromXp, getLevelProgress, getLevelColor } from '../lib/levelConfig';
 import NotificationsDropdown from './NotificationsDropdown';
 import NavPill from './NavPill';
 import MobileNavPill from './MobileNavPill';
@@ -509,16 +510,13 @@ export default function Dashboard({
           >
             <div className="hidden md:flex flex-col gap-0.5">
               <div className="text-[10px] font-bold text-indigo-300 flex items-center gap-1">
-                {getAstronautRank(user.xp, undefined, lang).icon} {getAstronautRank(user.xp, undefined, lang).title}
+                LVL {user.level || 1}
               </div>
               <div className="w-20 h-1.5 bg-indigo-950 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-full transition-all"
-                  style={{ width: `${((user.xp % 1000) / 1000) * 100}%` }}
+                  style={{ width: `${getLevelProgress(user.xp, user.level || 1)}%` }}
                 />
-              </div>
-              <div className="text-[8px] text-gray-500 font-semibold">
-                {(user.xp % 1000)}/1000 XP
               </div>
             </div>
 

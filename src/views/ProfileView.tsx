@@ -43,10 +43,11 @@ import {
   serverTimestamp,
   limit,
 } from "firebase/firestore";
-import { UserData, getAstronautRank, BADGES, RANK_TIERS, RANK_BADGES } from "../shared";
+import { UserData, BADGES } from "../shared";
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
 import { useLanguage } from "../context/LanguageContext";
+import { getLevelFromXp, getLevelProgress, getLevelColor, getXpForLevel, getXpToNextLevel } from "../lib/levelConfig";
 
 export default function ProfileView({
   user,
@@ -285,9 +286,9 @@ export default function ProfileView({
   };
 
   const achievementCount = BADGES.filter((b) => user.xp >= b.minXp).length;
-  const userRank = getAstronautRank(user.xp);
-  const rankColor = userRank.color.replace("text-", "bg-");
-  const rankTextColor = userRank.color;
+  const userLevel = getLevelFromXp(user.xp);
+  const levelColors = getLevelColor(userLevel);
+  const levelProgress = getLevelProgress(user.xp, userLevel);
 
   return (
     <div
@@ -333,11 +334,11 @@ export default function ProfileView({
               <div className="absolute inset-0 border-[1px] border-indigo-500/20 rounded-full animate-[spin_10s_linear_infinite]" />
               <div className="absolute inset-2 border-[1px] border-dashed border-fuchsia-500/30 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
 
-              {/* Glowing Aura based on Rank */}
+              {/* Glowing Aura based on Level */}
               <div
                 className={cn(
                   "absolute inset-6 rounded-full blur-[40px] opacity-60 animate-[pulse_4s_ease-in-out_infinite]",
-                  rankColor,
+                  levelColors.bg,
                 )}
               />
 
@@ -352,12 +353,12 @@ export default function ProfileView({
                 }}
                 className={cn(
                   "absolute top-2 left-2 px-3 py-1.5 rounded-full text-[11px] font-black border z-30 shadow-[0_0_20px_currentColor] flex items-center gap-1",
-                  rankColor.replace("bg-", "text-"),
+                  levelColors.text,
                   "border-current bg-[#080b1a]",
                 )}
               >
                 <Award size={12} />
-                LVL {user.level}
+                LVL {userLevel}
               </motion.div>
 
               {/* Main Avatar Avatar */}
@@ -413,10 +414,10 @@ export default function ProfileView({
                   stroke="url(#xpGradient)"
                   strokeWidth="4"
                   strokeLinecap="round"
-                  strokeDasharray={`${userRank.progressPercentage * 3.01} 301`}
+                  strokeDasharray={`${levelProgress * 3.01} 301`}
                   initial={{ strokeDasharray: "0 301" }}
                   animate={{
-                    strokeDasharray: `${userRank.progressPercentage * 3.01} 301`,
+                    strokeDasharray: `${levelProgress * 3.01} 301`,
                   }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
                 />
@@ -488,10 +489,10 @@ export default function ProfileView({
                       <span
                         className={cn(
                           "text-lg font-bold drop-shadow-md",
-                          rankTextColor,
+                          levelColors.text,
                         )}
                       >
-                        {userRank.title}
+                        المستوى {userLevel}
                       </span>
                       <div className="w-1.5 h-1.5 rounded-full bg-gray-600" />
                       <span className="text-sm font-mono text-gray-400 bg-white/5 px-2 py-0.5 rounded-md">
@@ -695,176 +696,35 @@ export default function ProfileView({
             </div>
           </div>
 
-          {/* Levels & Rank System — explains the ladder right on the profile */}
-          <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-              <Rocket size={150} />
-            </div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-2xl font-black font-display text-white flex items-center gap-3">
-                  <Rocket className="text-indigo-400" /> نظام المستويات والرتب
-                </h3>
-                <span className="text-3xl">{userRank.icon}</span>
-              </div>
-              <p className="text-sm text-gray-400 font-mono mb-6">
-                {isAr
-                  ? "كل 1000 XP ترفع مستوى واحد. ولكل رتبة وسامها الخاص — أوسمة الرتب أدناه تفتح تلقائياً مع رتبتك."
-                  : "Every 1000 XP raises your level by one. Each rank has its own emblem — the rank emblems below unlock automatically with your rank."}
-              </p>
-
-              <div className="mb-6">
-                <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono mb-2">
-                  <span>
-                    {isAr ? "مستواك الحالي" : "Your level"} · LVL{" "}
-                    {user.level ?? 1}
-                  </span>
-                  <span>
-                    {isAr
-                      ? `${user.xp.toLocaleString()} XP إجمالي`
-                      : `${user.xp.toLocaleString()} total XP`}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-black rounded-full overflow-hidden border border-white/5">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500"
-                    style={{
-                      width: `${
-                        ((user.xp % 1000) / 1000) * 100
-                      }%`,
-                    }}
-                  />
-                </div>
-                <p className="text-[11px] text-gray-500 mt-2 font-mono">
-                  {isAr
-                    ? `${1000 - (user.xp % 1000)} XP متبقية للمستوى التالي`
-                    : `${1000 - (user.xp % 1000)} XP left to next level`}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {RANK_TIERS.map((tier, i) => {
-                  const unlocked = user.xp >= tier.minXp;
-                  const isCurrent = userRank.title.replace(" · ", " ") ===
-                    `${isAr ? tier.ar : tier.en}` ||
-                    (user.xp >= tier.minXp &&
-                      (i === RANK_TIERS.length - 1 ||
-                        user.xp < RANK_TIERS[i + 1].minXp));
-                  return (
-                    <div
-                      key={i}
-                      className={`p-4 rounded-3xl border transition-all duration-300 ${
-                        isCurrent
-                          ? "bg-indigo-500/10 border-indigo-500/40 shadow-[0_0_20px_theme(colors.indigo.500/15)]"
-                          : unlocked
-                            ? "bg-[#0a0f25]/80 border-white/10"
-                            : "bg-black/40 border-white/5 opacity-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${unlocked ? tier.color : "text-gray-500"}`}
-                        >
-                          {tier.icon}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h4
-                            className={`font-bold text-[13px] leading-tight ${unlocked ? "text-white" : "text-gray-500"}`}
-                          >
-                            {isAr ? tier.ar : tier.en}
-                          </h4>
-                          <p className="text-[10px] font-mono text-gray-500">
-                            {isAr
-                              ? `${tier.minXp.toLocaleString()} XP`
-                              : `${tier.minXp.toLocaleString()} XP`}
-                          </p>
-                        </div>
-                        {isCurrent && (
-                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
-                            {isAr ? "أنت هنا" : "YOU"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Rank emblems — the level system tied to badges */}
-              <div className="mt-6">
-                <h4 className="text-sm font-black font-display text-white flex items-center gap-2 mb-3">
-                  <Award className="text-amber-400" size={16} />
-                  {isAr ? "أوسمة الرتب — تفتح مع كل رتبة" : "Rank Emblems — unlock with each rank"}
-                </h4>
-                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
-                  {RANK_BADGES.map((rb, i) => {
-                    const unlocked = user.xp >= rb.minXp;
-                    const isCurrent =
-                      user.xp >= rb.minXp &&
-                      (i === RANK_BADGES.length - 1 ||
-                        user.xp < RANK_BADGES[i + 1].minXp);
-                    return (
-                      <div
-                        key={rb.id}
-                        title={`${rb.title} — ${rb.minXp.toLocaleString()} XP`}
-                        className={`p-3 rounded-2xl flex flex-col items-center gap-1 text-center transition-all ${
-                          isCurrent
-                            ? "bg-amber-500/10 border border-amber-500/40 shadow-[0_0_16px_theme(colors.amber.500/20)]"
-                            : unlocked
-                              ? "bg-[#0a0f25]/80 border border-white/10"
-                              : "bg-black/40 border border-white/5 opacity-40 grayscale"
-                        }`}
-                      >
-                        <span className="text-xl">{rb.emoji}</span>
-                        <span
-                          className={`text-[9px] font-bold leading-tight ${unlocked ? "text-white" : "text-gray-500"}`}
-                        >
-                          {rb.title}
-                        </span>
-                        <span className="text-[8px] font-mono text-gray-500">
-                          {rb.minXp.toLocaleString()} XP
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <p className="text-[11px] text-gray-500 mt-5 font-mono leading-relaxed">
-                {isAr
-                  ? "💡 مستواك رقم بلا حدود، ورتبتك واحدة من 9، ووسامها أعلاه يفتح تلقائياً بنقاطك. أما مجرة الإنجازات فتُمنح مقابل إنجازات خاصة (جلسات، ستريك، نزالات، مستويات عالية)."
-                  : "💡 Your level is an unlimited number, your rank is one of 9, and its emblem above unlocks automatically with XP. The achievements galaxy below is for special feats (sessions, streaks, duels, high levels)."}
-              </p>
-            </div>
-          </div>
-
           {/* Mission Progress + Today's Missions — powered by real data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 overflow-hidden relative group">
               <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/10 rounded-br-full -translate-x-16 -translate-y-16 blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between mb-6 gap-3">
                 <h3 className="text-lg font-bold font-display text-white flex items-center gap-3">
-                  <Rocket className="text-amber-400" /> رحلتك إلى الرتبة القادمة
+                  <Rocket className="text-amber-400" /> رحلتك نحو المستوى التالي
                 </h3>
                 <span
-                  className={`text-[11px] font-bold px-3 py-1 rounded-full border border-white/10 bg-white/5 ${userRank.color} whitespace-nowrap`}
+                  className={`text-[11px] font-bold px-3 py-1 rounded-full border border-white/10 bg-white/5 ${levelColors.text} whitespace-nowrap`}
                 >
-                  {userRank.icon} {userRank.title}
+                  LVL {userLevel}
                 </span>
               </div>
               <div className="relative z-10">
                 <div className="flex items-end justify-between mb-2">
                   <p className="text-[12px] text-gray-400">
-                    التقدم نحو {userRank.nextRankTitle}
+                    {isAr
+                      ? `${getXpToNextLevel(userLevel)} XP متبقية للمستوى ${userLevel + 1}`
+                      : `${getXpToNextLevel(userLevel)} XP left to Level ${userLevel + 1}`}
                   </p>
                   <p className="text-sm font-mono font-bold text-amber-400">
-                    {Math.round(userRank.progressPercentage)}%
+                    {Math.round(levelProgress)}%
                   </p>
                 </div>
                 <div className="w-full h-2.5 rounded-full bg-white/5 border border-white/10 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${userRank.progressPercentage}%` }}
+                    animate={{ width: `${levelProgress}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
                   />

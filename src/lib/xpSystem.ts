@@ -51,6 +51,7 @@ import { db, runTransaction, updateDoc } from '../firebase';
 import { doc, increment } from 'firebase/firestore';
 import { Debugger } from '../firebaseDebug';
 import { callRpc, isRpcUnavailable } from '../supabaseAdapter';
+import { getLevelFromXp } from './levelConfig';
 
 // Whether the server-side grant_xp RPC has been deployed. Once confirmed
 // present we stop using the client-side fallback entirely.
@@ -160,13 +161,13 @@ export const requestXpGrant = async (
        oldXp = uData.xp || 0;
        newXp = oldXp + amount;
        
-       let levelUpdates = {};
-       const calculatedLevel = Math.floor(newXp / 1000) + 1;
-       if (calculatedLevel !== (uData.level || 1)) {
-           levelUpdates = { level: calculatedLevel };
-       }
-       
-       const updates: any = {
+        let levelUpdates = {};
+        const calculatedLevel = getLevelFromXp(newXp);
+        if (calculatedLevel !== (uData.level || 1)) {
+            levelUpdates = { level: calculatedLevel };
+        }
+        
+        const updates: any = {
            xp: increment(amount),
            ...(amount > 0 ? { lastXpUpdate: now } : {}),
            ...levelUpdates
@@ -243,10 +244,10 @@ export const purchaseItemXpDeduction = async (userId: string, price: number): Pr
              return; // Insufficient funds
          }
          
-         const newXp = oldXp - price;
-         let levelUpdates = {};
-         const calculatedLevel = Math.floor(newXp / 1000) + 1;
-         if (calculatedLevel !== (data.level || 1)) {
+          const newXp = oldXp - price;
+          let levelUpdates = {};
+          const calculatedLevel = getLevelFromXp(newXp);
+          if (calculatedLevel !== (data.level || 1)) {
              levelUpdates = { level: calculatedLevel };
          }
          
