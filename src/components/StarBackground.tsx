@@ -28,7 +28,7 @@ export default function StarBackground() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#05050A]">
+    <div className="stars-container fixed inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-500" style={{ backgroundColor: "var(--bg)" }}>
       {/* Dynamic Nebulas (radial gradients — no blur filter, no blend mode,
           so they animate purely on the GPU compositor) */}
       <div

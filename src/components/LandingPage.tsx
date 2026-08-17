@@ -28,11 +28,14 @@ import {
   Trophy,
   HelpCircle,
   Eye,
+  Sun,
+  Moon,
 } from "lucide-react";
 import StarBackground from "./StarBackground";
 import HeroSolarSystem from "./HeroSolarSystem";
 import InteractiveSecretGlobe from "./InteractiveSecretGlobe";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 
 function cn(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
@@ -212,6 +215,7 @@ export default function LandingPage({
   inviterName?: string;
 }) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(false);
@@ -595,7 +599,8 @@ export default function LandingPage({
 
   return (
     <div
-      className="orbitx-cursor min-h-screen bg-space-dark text-[#f1f3fd] font-sans selection:bg-amber-500/40 overflow-x-hidden relative"
+      className="orbitx-cursor min-h-screen text-[#f1f3fd] font-sans selection:bg-amber-500/40 overflow-x-hidden relative transition-colors duration-300"
+      style={{ backgroundColor: "var(--bg)", color: "var(--text-primary)" }}
       dir={isAr ? "rtl" : "ltr"}
     >
       <CustomCursor />
@@ -667,7 +672,16 @@ export default function LandingPage({
           </nav>
 
           {/* Access Button and Volume Trigger */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-amber-400 transition-all hover:scale-105 flex items-center justify-center"
+              title={isDark ? (isAr ? "الوضع الفاتح" : "Light mode") : (isAr ? "الوضع الداكن" : "Dark mode")}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
             <button
               onClick={toggleLanguage}
               className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-white hover:text-amber-400 transition-all hover:scale-105 flex items-center justify-center gap-1.5"
@@ -729,7 +743,7 @@ export default function LandingPage({
          ============================================================= */}
       <section className="relative min-h-screen flex items-center justify-center p-6 pt-32 pb-24 z-10 overflow-hidden">
         <HeroSolarSystem mousePos={mousePos} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ background: isDark ? "linear-gradient(to top, #030308, transparent, #030308/50)" : "linear-gradient(to top, #f1f5f9, transparent, #f8fafc/50)" }} />
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
           <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.12] tracking-tight mb-8 drop-shadow-2xl">
@@ -796,7 +810,7 @@ export default function LandingPage({
       {/* =============================================================
           STATS STRIP
          ============================================================= */}
-      <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5">
+      <section className="py-16 px-6 relative z-10 border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f1f5f9, #e2e8f0)" }}>
         <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-amber-500/8 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-xl text-center shadow-[0_0_50px_rgba(245,158,11,0.08)]">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
@@ -851,7 +865,7 @@ export default function LandingPage({
       {/* =============================================================
           FEATURES
          ============================================================= */}
-      <section id="features" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
+      <section id="features" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="max-w-7xl mx-auto">
           <SectionHead
             kicker={isAr ? "الميزات" : "Features"}
@@ -923,7 +937,7 @@ export default function LandingPage({
       {/* =============================================================
           HOW IT WORKS
          ============================================================= */}
-      <section id="how-it-works" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
+      <section id="how-it-works" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="max-w-6xl mx-auto">
           <SectionHead
             kicker={isAr ? "كيف نعمل" : "How it works"}
@@ -1036,7 +1050,7 @@ export default function LandingPage({
       {/* =============================================================
           INTERACTIVE SIMULATOR
          ============================================================= */}
-      <section id="simulator" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
+      <section id="simulator" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="max-w-7xl mx-auto">
           <SectionHead
             kicker={isAr ? "جربها الآن" : "Try it live"}
@@ -1245,7 +1259,7 @@ export default function LandingPage({
       {/* =============================================================
           BLACK HOLE
          ============================================================= */}
-      <section className="py-24 px-6 relative z-10 overflow-hidden bg-black border-t border-white/5">
+      <section className="py-24 px-6 relative z-10 overflow-hidden border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? "#000000" : "#0f172a" }}>
         <div className="absolute inset-0 z-0 pointer-events-none w-full h-full flex items-center justify-center">
           <div className="absolute w-[600px] h-[600px] rounded-full border border-fuchsia-600/10 bg-gradient-to-tr from-[#9d174d]/15 via-transparent to-[#1e1b4b]/20 filter blur-[80px] animate-cosmic-pulse" />
           <div className="absolute w-[420px] h-[420px] rounded-full border-[10px] border-amber-500/10 border-t-amber-400/50 border-b-teal-500/40" style={{ filter: "blur(18px)", animation: "aura-rotate 16s linear infinite" }} />
@@ -1285,7 +1299,7 @@ export default function LandingPage({
       {/* =============================================================
           AWARENESS / MINDSET
          ============================================================= */}
-      <section id="awareness" className="py-24 px-6 relative z-10 bg-[#020207] border-t border-white/5 scroll-mt-20">
+      <section id="awareness" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "#020207" : "#f8fafc" }}>
         <div className="max-w-7xl mx-auto">
           <div className="mb-12" dir={isAr ? "rtl" : "ltr"}>
             <div className="inline-flex items-center gap-2 font-mono text-xs text-purple-400 tracking-[0.2em] mb-4 uppercase">
@@ -1344,9 +1358,9 @@ export default function LandingPage({
       {/* =============================================================
           FINAL CTA
          ============================================================= */}
-      <section className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 overflow-hidden">
+      <section className="py-24 px-6 relative z-10 border-t border-white/5 overflow-hidden transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[700px] h-[400px] bg-amber-600/8 rounded-full blur-[120px]" />
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[700px] h-[400px] rounded-full blur-[120px]" style={{ background: isDark ? "rgba(245, 158, 11, 0.08)" : "rgba(217, 119, 6, 0.06)" }} />
         </div>
         <div className="relative z-10 max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 font-mono text-xs text-cyan-400 tracking-[0.2em] mb-6 uppercase">
@@ -1380,7 +1394,7 @@ export default function LandingPage({
       {/* =============================================================
           FOOTER
          ============================================================= */}
-      <footer className={cn("bg-[#020205] border-t border-white/5 pt-20 pb-12 px-6 relative z-10", isAr ? "text-right" : "text-left")}>
+      <footer className={cn("border-t border-white/5 pt-20 pb-12 px-6 relative z-10 transition-colors duration-300", isAr ? "text-right" : "text-left")} style={{ background: isDark ? "#020205" : "#f1f5f9" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 mb-16" dir={isAr ? "rtl" : "ltr"}>
           <div className="md:col-span-5">
             <div className={cn("flex items-center gap-3 mb-6", isAr ? "" : "flex-row-reverse")}>
@@ -1456,18 +1470,20 @@ export default function LandingPage({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowLoginModal(false)}
-              className="absolute inset-0 bg-[#020205]/90 backdrop-blur-xl"
+              className="absolute inset-0 backdrop-blur-xl transition-colors duration-300"
+              style={{ backgroundColor: isDark ? "rgba(2, 2, 5, 0.9)" : "rgba(0, 0, 0, 0.5)" }}
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className={cn("relative bg-[#070814]/95 border border-amber-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg shadow-[0_0_100px_rgba(245,158,11,0.15)] overflow-hidden", isAr ? "text-right" : "text-left")}
+              className={cn("relative border border-amber-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg overflow-hidden transition-colors duration-300", isAr ? "text-right" : "text-left")}
+              style={{ backgroundColor: isDark ? "rgba(7, 8, 20, 0.95)" : "rgba(255, 255, 255, 0.98)", boxShadow: isDark ? "0 0 100px rgba(245,158,11,0.15)" : "0 25px 60px rgba(0,0,0,0.2)" }}
               dir={isAr ? "rtl" : "ltr"}
             >
-              <div className="absolute -top-20 -left-20 w-44 h-44 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-20 -right-20 w-44 h-44 bg-teal-500/8 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-20 -left-20 w-44 h-44 rounded-full blur-3xl pointer-events-none" style={{ background: isDark ? "rgba(245, 158, 11, 0.08)" : "rgba(217, 119, 6, 0.06)" }} />
+              <div className="absolute -bottom-20 -right-20 w-44 h-44 rounded-full blur-3xl pointer-events-none" style={{ background: isDark ? "rgba(20, 184, 166, 0.08)" : "rgba(13, 148, 136, 0.06)" }} />
 
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5 relative z-10">
                 <div className={cn("flex items-center gap-3", isAr ? "" : "flex-row-reverse")}>
@@ -1507,8 +1523,9 @@ export default function LandingPage({
                 </div>
               </div>
 
-              <div className={cn("space-y-3 mb-8 text-xs text-gray-400 bg-black/40 p-5 rounded-2xl border border-white/5 font-sans leading-relaxed", isAr ? "text-right" : "text-left")}>
-                <div className="font-black text-gray-200 text-sm mb-2">{isAr ? "رحلتك الإنجازية اليوم تشمل:" : "Your achievement journey today includes:"}</div>
+              <div className={cn("space-y-3 mb-8 text-xs rounded-2xl border p-5 font-sans leading-relaxed transition-colors duration-300", isAr ? "text-right" : "text-left")}
+                style={{ color: "var(--text-secondary)", backgroundColor: isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)" }}>
+                <div className="font-black text-sm mb-2" style={{ color: "var(--text-primary)" }}>{isAr ? "رحلتك الإنجازية اليوم تشمل:" : "Your achievement journey today includes:"}</div>
                 <div className="flex items-start gap-3">
                   <span className="text-amber-400">🌌</span>
                   <span><strong>{isAr ? "غرف دراسة حية" : "Live Study Rooms"}</strong> {isAr ? "بلا تشتت أو مقاطعات إعلانية." : "without distractions or advertisement loops."}</span>
