@@ -41,83 +41,40 @@ function cn(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-// ── Magnetic Button Effect — makes buttons "feel" alive ──────
+// ── Magnetic Button Effect ────────────────────────────────────
 function MagneticButton({ children, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const ref = useRef<HTMLButtonElement>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-
   const onMouseMove = (e: React.MouseEvent) => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    setOffset({ x: x * 0.15, y: y * 0.15 });
+    setOffset({ x: (e.clientX - rect.left - rect.width / 2) * 0.15, y: (e.clientY - rect.top - rect.height / 2) * 0.15 });
   };
-
-  const onMouseLeave = () => setOffset({ x: 0, y: 0 });
-
   return (
-    <button
-      ref={ref}
-      className={className}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-      {...props}
-    >
+    <button ref={ref} className={className} onMouseMove={onMouseMove} onMouseLeave={() => setOffset({ x: 0, y: 0 })} style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }} {...props}>
       {children}
     </button>
   );
 }
 
-// ── Custom Cursor Component ──────────────────────────────────────
+// ── Custom Cursor ─────────────────────────────────────────────
 function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const dot = dotRef.current;
-    const ring = ringRef.current;
+    const dot = dotRef.current, ring = ringRef.current;
     if (!dot || !ring) return;
-
-    let mouseX = 0, mouseY = 0;
-    let ringX = 0, ringY = 0;
-
-    const onMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      dot.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
-    };
-
-    const animate = () => {
-      ringX += (mouseX - ringX) * 0.15;
-      ringY += (mouseY - ringY) * 0.15;
-      ring.style.transform = `translate(${ringX - 18}px, ${ringY - 18}px)`;
-      requestAnimationFrame(animate);
-    };
-    const raf = requestAnimationFrame(animate);
-
-    const onHoverStart = () => ring.classList.add("hovering");
-    const onHoverEnd = () => ring.classList.remove("hovering");
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.querySelectorAll("a, button, [role='button']").forEach((el) => {
-      el.addEventListener("mouseenter", onHoverStart);
-      el.addEventListener("mouseleave", onHoverEnd);
-    });
-
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      cancelAnimationFrame(raf);
-    };
+    let mx = 0, my = 0, rx = 0, ry = 0;
+    const onMove = (e: MouseEvent) => { mx = e.clientX; my = e.clientY; dot.style.transform = `translate(${mx - 4}px, ${my - 4}px)`; };
+    const anim = () => { rx += (mx - rx) * 0.15; ry += (my - ry) * 0.15; ring.style.transform = `translate(${rx - 18}px, ${ry - 18}px)`; requestAnimationFrame(anim); };
+    const raf = requestAnimationFrame(anim);
+    const enter = () => ring.classList.add("hovering");
+    const leave = () => ring.classList.remove("hovering");
+    document.addEventListener("mousemove", onMove);
+    document.querySelectorAll("a, button, [role='button']").forEach(el => { el.addEventListener("mouseenter", enter); el.addEventListener("mouseleave", leave); });
+    return () => { document.removeEventListener("mousemove", onMove); cancelAnimationFrame(raf); };
   }, []);
-
-  return (
-    <>
-      <div ref={dotRef} className="cursor-dot" />
-      <div ref={ringRef} className="cursor-ring" />
-    </>
-  );
+  return (<><div ref={dotRef} className="cursor-dot" /><div ref={ringRef} className="cursor-ring" /></>);
 }
 
 // Optimized CountUp Component using easing for zero frame drops with cleanup
@@ -161,8 +118,8 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 // ---------------------------------------------------------------
 function SectionHead({
   kicker,
-  kickerColor = "text-amber-400",
-  barColor = "bg-amber-500/50",
+  kickerColor = "text-indigo-400",
+  barColor = "bg-indigo-500/50",
   title,
   highlight,
   sub,
@@ -192,7 +149,7 @@ function SectionHead({
         {highlight && (
           <>
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-l from-amber-400 via-teal-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-fuchsia-400 to-cyan-400">
               {highlight}
             </span>
           </>
@@ -368,9 +325,9 @@ export default function LandingPage({
   const pillars = [
     {
       icon: Shield,
-      color: "text-amber-400",
-      border: "border-amber-500/25",
-      bg: "bg-amber-500/10",
+      color: "text-indigo-400",
+      border: "border-indigo-500/25",
+      bg: "bg-indigo-500/10",
       title: isAr ? "إنفاذ حقيقي، لا وعود" : "Real enforcement, not promises",
       desc: isAr
         ? "رادار حضور حي يتحقق أنك فعلاً أمام شاشتك، يخصم XP عند الهروب، ويمنع النقر الآلي."
@@ -378,9 +335,9 @@ export default function LandingPage({
     },
     {
       icon: Users,
-      color: "text-teal-400",
-      border: "border-teal-500/25",
-      bg: "bg-teal-500/10",
+      color: "text-fuchsia-400",
+      border: "border-fuchsia-500/25",
+      bg: "bg-fuchsia-500/10",
       title: isAr ? "مجتمع فضائي حي" : "A live cosmic community",
       desc: isAr
         ? "غرف دراسة مشتركة، معارك تركيز 1v1، أساطيل متحالفة، ومتصدّرون عالميون بجلسة حية."
@@ -393,15 +350,15 @@ export default function LandingPage({
       bg: "bg-cyan-500/10",
       title: isAr ? "تحفيز عميق يقودك" : "Deep gamification drives you",
       desc: isAr
-        ? "XP، 100 لفل متزايد، شارات نادرة، وتحدي الثقب الأسود الأسبوعي."
-        : "XP, 100 progressive levels, rare badges, and the weekly Black Hole quest.",
+        ? "XP، 9 رتب فضائية، شارات نادرة، وتحدي الثقب الأسود الأسبوعي."
+        : "XP, 9 astronaut ranks, rare badges, and the weekly Black Hole quest.",
     },
   ];
 
   const features = [
     {
       icon: Timer,
-      color: "text-amber-400",
+      color: "text-indigo-400",
       title: isAr ? "محطات التركيز" : "Focus Stations",
       desc: isAr
         ? "محطات تركيز مباشرة بموضوعك الخاص، خالية من أي إعلان، مع عدّاد ثابت يلتقط حضورك لحظة بلحظة."
@@ -409,10 +366,10 @@ export default function LandingPage({
     },
     {
       icon: Swords,
-      color: "text-teal-400",
+      color: "text-fuchsia-400",
       title: isAr ? "معارك التركيز 1v1" : "1v1 Focus Duels",
       desc: isAr
-        ? "تحدي مباشر مع صديق: من يصمد أطول؟ الفائز يحصد وسام Battle Champion ويرتفع رصيده."
+        ? "تحدٍ مباشر مع صديق: من يصمد أطول؟ الفائز يحصد وسام Battle Champion ويرتفع رصيده."
         : "A direct duel with a friend: who endures longest? The winner earns the Battle Champion badge.",
     },
     {
@@ -428,7 +385,7 @@ export default function LandingPage({
       color: "text-rose-400",
       title: isAr ? "الثقب الأسود الأسبوعي" : "Weekly Black Hole",
       desc: isAr
-        ? "تحدي جماعي: كل الرواد يجمعون ساعات تركيز لاختراق هدف الأسبوع وسحب الجائزة السرية."
+        ? "تحدٍ جماعي: كل الرواد يجمعون ساعات تركيز لاختراق هدف الأسبوع وسحب الجائزة السرية."
         : "A collective challenge: all astronauts pool focus hours to crack the weekly target and claim the secret bounty.",
     },
     {
@@ -441,7 +398,7 @@ export default function LandingPage({
     },
     {
       icon: MessageSquare,
-      color: "text-amber-300",
+      color: "text-indigo-400",
       title: isAr ? "المجتمع والمناقشات" : "Community & Discussions",
       desc: isAr
         ? "ابحث عن رفاقك، تابع مستوياتهم، شارك في المناقشات، وتنافس على قائمة أفضل 50 رائداً."
@@ -460,8 +417,8 @@ export default function LandingPage({
       color: "text-cyan-400",
       title: isAr ? "الهوية والشارات" : "Identity & Badges",
       desc: isAr
-        ? "جواز رائد فضائي، 100 لفل متدرج معك، شارات من الندرة إلى الأسطورية، ولوحة إنجازات شهرية."
-        : "An astronaut passport, 100 progressive levels, badges from common to legendary, and a monthly heatmap.",
+        ? "جواز رائد فضائي، رتب تتدرج معك، شارات من الندرة إلى الأسطورية، ولوحة إنجازات شهرية."
+        : "An astronaut passport, progressive ranks, badges from common to legendary, and a monthly heatmap.",
     },
   ];
 
@@ -565,16 +522,16 @@ export default function LandingPage({
   const stats = [
     {
       icon: Users,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10 border-amber-500/20",
+      color: "text-indigo-400",
+      bg: "bg-indigo-500/10 border-indigo-500/20",
       value: 14298,
       suffix: "",
       label: isAr ? "مستكشف على متن المنصة" : "Explorers onboard",
     },
     {
       icon: Clock,
-      color: "text-teal-400",
-      bg: "bg-teal-500/10 border-teal-500/20",
+      color: "text-fuchsia-400",
+      bg: "bg-fuchsia-500/10 border-fuchsia-500/20",
       value: 329481,
       suffix: " H",
       label: isAr ? "ساعة تركيز مسجلة" : "Total focus hours",
@@ -599,8 +556,8 @@ export default function LandingPage({
 
   return (
     <div
-      className="orbitx-cursor min-h-screen text-[#f1f3fd] font-sans selection:bg-amber-500/40 overflow-x-hidden relative transition-colors duration-300"
-      style={{ backgroundColor: "var(--bg)", color: "var(--text-primary)" }}
+      className="orbitx-cursor min-h-screen text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative transition-colors duration-300"
+      style={{ backgroundColor: isDark ? "#0a0b16" : "#f8fafc", color: isDark ? "#f1f3fd" : "#0f172a" }}
       dir={isAr ? "rtl" : "ltr"}
     >
       <CustomCursor />
@@ -624,35 +581,27 @@ export default function LandingPage({
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes hero-text-shimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
         .animate-subtle-float { animation: subtle-float 8s ease-in-out infinite; }
         .animate-cosmic-pulse { animation: cosmic-pulse 5s ease-in-out infinite; }
         .animate-warning-breathe { animation: warning-breathe 2s ease-in-out infinite; }
-        .hero-shimmer {
-          background-size: 200% auto;
-          animation: hero-text-shimmer 8s linear infinite;
-        }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.3); border-radius: 9px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 9px; }
       `}</style>
 
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-space-dark/60 border-b border-amber-500/8 transition-all select-none">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-space-dark/60 border-b border-indigo-500/10 transition-all select-none">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo Brand — unique rotating rings */}
+          {/* Logo Brand with animated ring */}
           <a href="#" className="flex items-center gap-3" dir="ltr">
             <div className="relative flex items-center justify-center w-9 h-9">
-              <div className="absolute inset-0 border-[1.5px] border-amber-500/25 rounded-full" />
-              <div className="absolute inset-0 border-[1.5px] border-transparent border-t-amber-500 border-l-teal-500 rounded-full animate-[spin_4s_linear_infinite]" />
-              <div className="absolute inset-1 border-[1.5px] border-transparent border-b-cyan-400 border-r-amber-400 rounded-full animate-[spin_2.5s_linear_infinite_reverse]" />
+              <div className="absolute inset-0 border-[1.5px] border-indigo-500/30 rounded-full" />
+              <div className="absolute inset-0 border-[1.5px] border-transparent border-t-indigo-500 border-l-fuchsia-500 rounded-full animate-[spin_4s_linear_infinite]" />
+              <div className="absolute inset-1 border-[1.5px] border-transparent border-b-cyan-400 border-r-indigo-400 rounded-full animate-[spin_2.5s_linear_infinite_reverse]" />
               <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_12px_rgba(255,255,255,1)] z-10" />
             </div>
             <div className="font-display font-black tracking-[0.2em] text-[19px] text-white">
               ORBIT
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-teal-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">
                 X
               </span>
             </div>
@@ -673,10 +622,9 @@ export default function LandingPage({
 
           {/* Access Button and Volume Trigger */}
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-amber-400 transition-all hover:scale-105 flex items-center justify-center"
+              className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-indigo-400 transition-all hover:scale-105 flex items-center justify-center"
               title={isDark ? (isAr ? "الوضع الفاتح" : "Light mode") : (isAr ? "الوضع الداكن" : "Dark mode")}
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -684,7 +632,7 @@ export default function LandingPage({
 
             <button
               onClick={toggleLanguage}
-              className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-white hover:text-amber-400 transition-all hover:scale-105 flex items-center justify-center gap-1.5"
+              className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-white hover:text-indigo-400 transition-all hover:scale-105 flex items-center justify-center gap-1.5"
               title={isAr ? "Switch to English" : "التحويل للعربية"}
             >
               <Globe className="w-4 h-4" />
@@ -698,7 +646,7 @@ export default function LandingPage({
               className={cn(
                 "p-2.5 rounded-xl border transition-all hover:scale-105",
                 isSoundOn
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                  ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
                   : "bg-white/5 border-white/5 text-gray-400 hover:text-white",
               )}
               title={isAr ? "مولد الترددات الكونية" : "Cosmic Frequency Soundwave"}
@@ -729,7 +677,7 @@ export default function LandingPage({
       {/* Invite welcome banner (shown when arriving through a friend's link) */}
       {inviterName && (
         <div className="fixed top-[74px] left-0 right-0 z-[60] flex justify-center px-4">
-          <div className="w-full max-w-3xl bg-gradient-to-r from-amber-600/80 via-teal-600/80 to-amber-600/80 backdrop-blur-md border border-white/10 text-white text-xs md:text-sm py-3 px-4 text-center font-semibold shadow-lg rounded-2xl">
+          <div className="w-full max-w-3xl bg-gradient-to-r from-indigo-600/80 via-fuchsia-600/80 to-indigo-600/80 backdrop-blur-md border border-white/10 text-white text-xs md:text-sm py-3 px-4 text-center font-semibold shadow-lg rounded-2xl">
             🚀 <strong>{inviterName}</strong>{" "}
             {isAr
               ? "دعاك إلى مجرة OrbitX — أنشئ حسابك، تبارزا في نزالات التركيز، واربح كلٌّ منكما 100 XP!"
@@ -743,14 +691,14 @@ export default function LandingPage({
          ============================================================= */}
       <section className="relative min-h-screen flex items-center justify-center p-6 pt-32 pb-24 z-10 overflow-hidden">
         <HeroSolarSystem mousePos={mousePos} />
-        <div className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ background: isDark ? "linear-gradient(to top, #030308, transparent, #030308/50)" : "linear-gradient(to top, #f1f5f9, transparent, #f8fafc/50)" }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none transition-opacity duration-300" style={{ opacity: isDark ? 1 : 0 }} />
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
           <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.12] tracking-tight mb-8 drop-shadow-2xl">
             <span className="block text-white mb-3">
               {isAr ? "ليست مجرّد منصة دراسة..." : "Not Just Another Focus App..."}
             </span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-l from-amber-400 via-teal-400 to-cyan-400 hero-shimmer drop-shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-fuchsia-400 to-cyan-400 drop-shadow-[0_0_30px_rgba(99,102,241,0.1)]">
               {isAr ? "نظام تشغيل متكامل للتركيز العميق." : "An Immersive OS for Deep Focus."}
             </span>
           </h1>
@@ -765,16 +713,16 @@ export default function LandingPage({
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-5 justify-center w-full sm:w-auto relative z-10">
-            <MagneticButton
+            <button
               onClick={() => setShowLoginModal(true)}
-              className="group relative w-full sm:w-auto overflow-hidden bg-gradient-to-r from-amber-600 via-teal-600 to-cyan-600 rounded-2xl px-12 py-4.5 text-sm font-black text-white shadow-[0_0_50px_rgba(245,158,11,0.35)] hover:shadow-[0_0_70px_rgba(245,158,11,0.55)] transition-shadow hover:scale-[1.03]"
+              className="group relative w-full sm:w-auto overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl px-12 py-4.5 text-sm font-black text-white shadow-[0_0_50px_rgba(99,102,241,0.45)] hover:shadow-[0_0_70px_rgba(99,102,241,0.65)] transition-all hover:scale-[1.03]"
             >
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 {isAr ? "أطلق المركبة وابدأ الآن" : "Ignite Engine & Focus Now"}
               </span>
-            </MagneticButton>
+            </button>
 
             <button
               onClick={() =>
@@ -792,16 +740,16 @@ export default function LandingPage({
               onClick={onGuest}
               className="mt-6 text-gray-400 hover:text-white transition-colors text-sm font-medium flex items-center gap-2 group"
             >
-              <Eye className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              <Eye className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
               {isAr ? "جرّب كمشاهد بدون حساب" : "Try as a guest — no account needed"}
             </button>
           )}
 
-          <div className="mt-14 text-[10px] md:text-xs font-mono tracking-widest text-[#d4a864]/40 uppercase flex items-center gap-4 flex-wrap justify-center">
+          <div className="mt-14 text-[10px] md:text-xs font-mono tracking-widest text-[#a5b4fc]/40 uppercase flex items-center gap-4 flex-wrap justify-center">
             <span>🛡️ NO ADS IN CABIN</span>
-            <span className="w-1.5 h-1.5 bg-amber-500/20 rounded-full" />
+            <span className="w-1.5 h-1.5 bg-indigo-500/20 rounded-full" />
             <span>🌌 REALTIME MULTIPLAYER</span>
-            <span className="w-1.5 h-1.5 bg-amber-500/20 rounded-full" />
+            <span className="w-1.5 h-1.5 bg-indigo-500/20 rounded-full" />
             <span>🛸 PRESENCE RADAR</span>
           </div>
         </div>
@@ -810,8 +758,8 @@ export default function LandingPage({
       {/* =============================================================
           STATS STRIP
          ============================================================= */}
-      <section className="py-16 px-6 relative z-10 border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f1f5f9, #e2e8f0)" }}>
-        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-amber-500/8 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-xl text-center shadow-[0_0_50px_rgba(245,158,11,0.08)]">
+      <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f1f5f9, #e2e8f0)" }}>
+        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center ${s.color} mb-4 shadow-[0_0_15px_rgba(99,102,241,0.1)]`}>
@@ -820,7 +768,7 @@ export default function LandingPage({
               <div className="text-4xl font-mono font-black text-white leading-none tracking-tight">
                 <CountUp target={s.value} suffix={s.suffix} />
               </div>
-              <span className="text-[10px] text-amber-300/60 font-mono tracking-widest mt-2 block uppercase">
+              <span className="text-[10px] text-indigo-300/60 font-mono tracking-widest mt-2 block uppercase">
                 {s.label}
               </span>
             </div>
@@ -865,7 +813,7 @@ export default function LandingPage({
       {/* =============================================================
           FEATURES
          ============================================================= */}
-      <section id="features" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section id="features" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="max-w-7xl mx-auto">
           <SectionHead
             kicker={isAr ? "الميزات" : "Features"}
@@ -883,7 +831,7 @@ export default function LandingPage({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.55, delay: (i % 3) * 0.08 }}
-                className="group rounded-3xl border border-white/5 bg-space-dark/70 p-7 hover:border-amber-500/30 hover:bg-[#08091c]/80 transition-all duration-300"
+                className="group rounded-3xl border border-white/5 bg-space-dark/70 p-7 hover:border-indigo-500/30 hover:bg-[#08091c]/80 transition-all duration-300"
               >
                 <div className={`w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center ${f.color} mb-5`}>
                   <f.icon className="w-5 h-5" />
@@ -902,12 +850,12 @@ export default function LandingPage({
       <section id="ranks" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20">
         <div className="max-w-5xl mx-auto">
           <SectionHead
-            kicker={isAr ? "نظام المستويات" : "Level system"}
+            kicker={isAr ? "نظام الرتب" : "Rank system"}
             title={isAr ? "ارتقِ من أول خطوة" : "Climb from your first step"}
-            highlight={isAr ? "100 لفل متزايد" : "100 progressive levels"}
+            highlight={isAr ? "حتى أسطورة OrbitX" : "to OrbitX Legend"}
             sub={isAr
-              ? "كل XP تقرّبك من لفل جديد. 100 مستوى متدرج يعكس تطورك الحقيقي."
-              : "Every XP brings you closer to a new level. 100 progressive levels reflect your real growth."}
+              ? "كل XP تقرّبك من رتبة جديدة. 9 رتب فضائية تعكس تطورك الحقيقي وليس مجرد شارة زخرفية."
+              : "Every XP brings a new rank. Nine astronaut ranks reflect real progress, not decorative badges."}
           />
           <div className="flex flex-col items-center">
             {ranks.map((r, i) => (
@@ -922,7 +870,7 @@ export default function LandingPage({
                   </div>
                 </div>
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-3 h-3 rounded-full ${i === ranks.length - 1 ? "bg-gradient-to-br from-amber-300 to-teal-500 shadow-[0_0_15px_rgba(245,158,11,0.8)]" : "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.6)]"}`} />
+                  <div className={`w-3 h-3 rounded-full ${i === ranks.length - 1 ? "bg-gradient-to-br from-amber-300 to-fuchsia-500 shadow-[0_0_15px_rgba(251,191,36,0.8)]" : "bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.6)]"}`} />
                   {i < ranks.length - 1 && <div className="w-px h-8 bg-white/10" />}
                 </div>
                 <div className={`flex-1 flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
@@ -937,12 +885,12 @@ export default function LandingPage({
       {/* =============================================================
           HOW IT WORKS
          ============================================================= */}
-      <section id="how-it-works" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section id="how-it-works" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="max-w-6xl mx-auto">
           <SectionHead
             kicker={isAr ? "كيف نعمل" : "How it works"}
             title={isAr ? "من إنشاء الحساب" : "From signing up"}
-            highlight={isAr ? "إلى 100 لفل" : "to level 100"}
+            highlight={isAr ? "إلى أسطورة المجرة" : "to Galaxy Legend"}
             sub={isAr
               ? "أربع خطوات واضحة تبدأ بها رحلتك في مدار OrbitX."
               : "Four clear steps begin your journey in OrbitX's orbit."}
@@ -957,8 +905,8 @@ export default function LandingPage({
                 transition={{ duration: 0.55, delay: i * 0.1 }}
                 className="relative rounded-3xl border border-white/5 bg-space-dark/70 p-7"
               >
-                <div className="text-[11px] font-mono text-amber-400 tracking-widest mb-4">STEP_0{i + 1}</div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-5">
+                <div className="text-[11px] font-mono text-indigo-400 tracking-widest mb-4">STEP_0{i + 1}</div>
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-5">
                   <s.icon className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-black text-white mb-2">{s.title}</h3>
@@ -1023,7 +971,7 @@ export default function LandingPage({
                 {[
                   { label: "BIOMETRIC PRESENCE PROXY", percent: "99.8%", color: "text-emerald-400", status: "STABLE" },
                   { label: "WINDOW FOCUS GUARANTOR", percent: "ACTIVE", color: "text-rose-500 animate-pulse", status: "LOCKDOWN" },
-                  { label: "MECHANICAL CLICK DETECTOR", percent: "100%", color: "text-amber-400", status: "ARMED" },
+                  { label: "MECHANICAL CLICK DETECTOR", percent: "100%", color: "text-indigo-400", status: "ARMED" },
                 ].map((guard, idx) => (
                   <div key={idx} className="bg-black/40 border border-white/5 p-4 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2 font-mono text-[10px]">
@@ -1050,7 +998,7 @@ export default function LandingPage({
       {/* =============================================================
           INTERACTIVE SIMULATOR
          ============================================================= */}
-      <section id="simulator" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section id="simulator" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
         <div className="max-w-7xl mx-auto">
           <SectionHead
             kicker={isAr ? "جربها الآن" : "Try it live"}
@@ -1095,7 +1043,7 @@ export default function LandingPage({
                       className={cn(
                         "w-full text-right p-4 rounded-xl border text-xs font-bold transition-all flex flex-col gap-1",
                         selectedSimStation === station.name
-                          ? "bg-amber-500/10 border-amber-500/40 text-white shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+                          ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                           : "bg-black/40 border-white/5 text-gray-400 hover:text-white",
                       )}
                     >
@@ -1106,20 +1054,20 @@ export default function LandingPage({
                 </div>
               </div>
 
-              <div className="border border-amber-500/10 bg-amber-950/10 p-4.5 rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 bottom-0 left-0 w-1 bg-amber-500" />
-                <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5 mb-1.5">
+              <div className="border border-indigo-500/10 bg-indigo-950/10 p-4.5 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 bottom-0 left-0 w-1 bg-indigo-500" />
+                <h4 className="text-xs font-bold text-indigo-300 flex items-center gap-1.5 mb-1.5">
                   <Activity size={13} />
                   <span>{isAr ? "بروتوكول تحصيل الـ XP" : "XP accumulation protocol"}</span>
                 </h4>
-                <p className="text-[11px] text-amber-200/50 leading-relaxed">
+                <p className="text-[11px] text-indigo-200/50 leading-relaxed">
                   {isAr ? "عند تشغيل الجلسة يزداد مخزون طاقة القيادة تلقائياً. المدار يضمن التزامك بعدم هجر الشاشة." : "When the session runs, your power bank rises automatically. The orbit ensures you never leave the screen."}
                 </p>
               </div>
             </div>
 
             {/* Interactive Cabin Dashboard */}
-            <div className="lg:col-span-8 bg-[#04040a] border-2 border-amber-500/12 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden flex flex-col justify-between shadow-[0_0_60px_rgba(245,158,11,0.08)]">
+            <div className="lg:col-span-8 bg-[#04040a] border-2 border-indigo-500/15 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden flex flex-col justify-between shadow-[0_0_60px_rgba(99,102,241,0.1)]">
               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] pointer-events-none opacity-30" />
               {simAlertActive && (
                 <div className="absolute inset-0 bg-red-950/20 z-0 animate-warning-breathe pointer-events-none" />
@@ -1160,7 +1108,7 @@ export default function LandingPage({
                   ))}
                 </div>
 
-                <div className="text-[clamp(45px,6vw,70px)] font-mono font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-b from-white via-amber-200 to-amber-400 mb-2 drop-shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                <div className="text-[clamp(45px,6vw,70px)] font-mono font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-200 to-indigo-400 mb-2 drop-shadow-[0_0_20px_rgba(99,102,241,0.2)]">
                   {formatSimTime(simTime)}
                 </div>
                 <div className="text-xs text-gray-400/70 font-mono tracking-widest uppercase mb-8">
@@ -1169,12 +1117,12 @@ export default function LandingPage({
 
                 <div className="inline-flex items-center gap-6 bg-black/40 border border-white/5 p-4 rounded-2xl mb-8">
                   <div className="text-right">
-                    <div className="text-[11px] text-[#d4a864] font-mono leading-none mb-1">XP ENERGY BANK</div>
+                    <div className="text-[11px] text-[#818cf8] font-mono leading-none mb-1">XP ENERGY BANK</div>
                     <div className="text-lg font-black font-mono text-emerald-400">{simXp} XP</div>
                   </div>
                   <div className="w-px h-8 bg-white/10" />
                   <div className="text-right">
-                    <div className="text-[11px] text-[#d4a864] font-mono leading-none mb-1">XP MULTIPLIER</div>
+                    <div className="text-[11px] text-[#818cf8] font-mono leading-none mb-1">XP MULTIPLIER</div>
                     <div className="text-sm font-bold font-mono text-white">1.0x NORMAL</div>
                   </div>
                 </div>
@@ -1188,7 +1136,7 @@ export default function LandingPage({
                       className="max-w-md mx-auto p-4 border border-red-500/30 bg-red-950/20 rounded-xl text-right mb-8"
                     >
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-bounce" />
                         <div>
                           <h4 className="text-xs font-black text-red-300">
                             {isAr ? "خرق الحضور! غادرت كبينة القيادة 🚨" : "Presence breach! You left the cockpit 🚨"}
@@ -1231,7 +1179,7 @@ export default function LandingPage({
                     "flex-1 min-w-[150px] font-black rounded-xl py-3.5 text-xs transition-all flex items-center justify-center gap-2",
                     simActive
                       ? "bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-                      : "bg-amber-500 hover:bg-amber-600 text-white",
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white",
                   )}
                 >
                   <Rocket className="w-4 h-4" />
@@ -1247,7 +1195,7 @@ export default function LandingPage({
                   disabled={simAlertActive}
                   className="bg-black/40 hover:bg-white/5 border border-white/10 hover:border-red-500/40 text-xs font-bold font-sans text-gray-400 hover:text-red-400 rounded-xl px-5 py-3.5 transition-all text-center flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
                 >
-                  <ShieldAlert className="w-4 h-4 text-red-500" />
+                  <ShieldAlert className="w-4 h-4 text-red-500 animate-pulse" />
                   <span>{isAr ? "محاكاة إنذار التشتت" : "Simulate distraction alert"}</span>
                 </button>
               </div>
@@ -1259,24 +1207,24 @@ export default function LandingPage({
       {/* =============================================================
           BLACK HOLE
          ============================================================= */}
-      <section className="py-24 px-6 relative z-10 overflow-hidden border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? "#000000" : "#0f172a" }}>
+      <section className="py-24 px-6 relative z-10 overflow-hidden bg-black border-t border-white/5">
         <div className="absolute inset-0 z-0 pointer-events-none w-full h-full flex items-center justify-center">
           <div className="absolute w-[600px] h-[600px] rounded-full border border-fuchsia-600/10 bg-gradient-to-tr from-[#9d174d]/15 via-transparent to-[#1e1b4b]/20 filter blur-[80px] animate-cosmic-pulse" />
-          <div className="absolute w-[420px] h-[420px] rounded-full border-[10px] border-amber-500/10 border-t-amber-400/50 border-b-teal-500/40" style={{ filter: "blur(18px)", animation: "aura-rotate 16s linear infinite" }} />
+          <div className="absolute w-[420px] h-[420px] rounded-full border-[10px] border-amber-500/10 border-t-amber-400/50 border-b-indigo-500/40" style={{ filter: "blur(18px)", animation: "aura-rotate 16s linear infinite" }} />
           <div className="absolute w-[440px] h-[440px] rounded-full border-[2px] border-dashed border-rose-500/20" style={{ filter: "blur(4px)", animation: "aura-rotate 28s linear infinite reverse" }} />
           <div className="absolute w-44 h-44 rounded-full bg-black shadow-[0_0_120px_rgba(244,63,94,0.35),0_0_40px_rgba(0,0,0,1)] z-10" />
         </div>
 
         <div className="relative z-10 max-w-3xl mx-auto text-center py-10 px-4">
           <div className="inline-flex items-center gap-2 bg-[#1c0812]/50 border border-rose-500/30 rounded-full px-4 py-1.5 text-[10px] text-rose-300 font-bold tracking-widest mb-8">
-            <Flame className="w-3.5 h-3.5 text-rose-400" />
+            <Flame className="w-3.5 h-3.5 text-rose-400 animate-bounce" />
             {isAr ? "بروتوكول التركيز الجماعي الأسبوعي" : "Weekly Collective Focus Protocol"}
           </div>
 
           <h3 className="text-[clamp(32px,5vw,60px)] font-black leading-tight mb-8">
             {isAr ? "تحدي الثقب الأسود" : "The Black Hole Challenge"}
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-amber-400 to-teal-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-amber-400 to-indigo-500">
               {isAr ? "ساعات جماعية وجوائز أسبوعية!" : "Pooled hours & weekly bounties!"}
             </span>
           </h3>
@@ -1299,7 +1247,7 @@ export default function LandingPage({
       {/* =============================================================
           AWARENESS / MINDSET
          ============================================================= */}
-      <section id="awareness" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? "#020207" : "#f8fafc" }}>
+      <section id="awareness" className="py-24 px-6 relative z-10 bg-[#020207] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "#f8fafc" }}>
         <div className="max-w-7xl mx-auto">
           <div className="mb-12" dir={isAr ? "rtl" : "ltr"}>
             <div className="inline-flex items-center gap-2 font-mono text-xs text-purple-400 tracking-[0.2em] mb-4 uppercase">
@@ -1309,7 +1257,7 @@ export default function LandingPage({
             <h3 className="text-[clamp(28px,4vw,42px)] font-black leading-tight">
               {isAr ? "التركيز ليس ميكانيكياً فقط" : "Focus is not purely mechanical"}
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-l from-purple-400 via-amber-400 to-cyan-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-l from-purple-400 via-indigo-400 to-cyan-400">
                 {isAr ? "بل وعي سلوكي يُبنى." : "It is a built behavioral craft."}
               </span>
             </h3>
@@ -1344,7 +1292,7 @@ export default function LandingPage({
               >
                 <summary className="flex items-center justify-between gap-4 cursor-pointer list-none p-5 md:p-6 text-sm md:text-base font-bold text-white hover:bg-white/[0.03] transition-colors">
                   {item.q}
-                  <span className="text-amber-400 shrink-0 transition-transform group-open:rotate-45">+</span>
+                  <span className="text-indigo-400 shrink-0 transition-transform group-open:rotate-45">+</span>
                 </summary>
                 <p className="px-5 md:px-6 pb-5 md:pb-6 text-sm text-gray-400 leading-relaxed">
                   {item.a}
@@ -1358,9 +1306,9 @@ export default function LandingPage({
       {/* =============================================================
           FINAL CTA
          ============================================================= */}
-      <section className="py-24 px-6 relative z-10 border-t border-white/5 overflow-hidden transition-colors duration-300" style={{ background: isDark ? "linear-gradient(to bottom, #030308, #040410)" : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 overflow-hidden transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[700px] h-[400px] rounded-full blur-[120px]" style={{ background: isDark ? "rgba(245, 158, 11, 0.08)" : "rgba(217, 119, 6, 0.06)" }} />
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[120px]" />
         </div>
         <div className="relative z-10 max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 font-mono text-xs text-cyan-400 tracking-[0.2em] mb-6 uppercase">
@@ -1371,39 +1319,39 @@ export default function LandingPage({
           <h2 className="text-[clamp(30px,5vw,54px)] font-black leading-tight mb-6">
             {isAr ? "جاهز تنطلق في المدار؟" : "Ready to launch into orbit?"}
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-l from-amber-400 via-teal-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-fuchsia-400 to-cyan-400">
               {isAr ? "مركبتك بانتظار قائدها." : "Your ship awaits its captain."}
             </span>
           </h2>
           <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-10 leading-relaxed">
             {isAr
-              ? "انضم الآن وابدأ أول جلسة تركيز لك. خلال ثوانٍ ستحصل على لفل 1 وتبدأ بجمع الـ XP الذي يرفع مستواك بين المستكشفين."
-              : "Join now and start your first focus session. Within seconds you'll reach level 1 and start collecting XP to rise among explorers."}
+              ? "انضم الآن وابدأ أول جلسة تركيز لك. خلال ثوانٍ ستحصل على رتبة أول خطوة وتبدأ بجمع الـ XP الذي يرفع مقامك بين المستكشفين."
+              : "Join now and start your first focus session. Within seconds you'll earn your First Step rank and start collecting XP to rise among explorers."}
           </p>
-          <MagneticButton
+          <button
             onClick={() => setShowLoginModal(true)}
-            className="group relative inline-flex items-center gap-3 overflow-hidden bg-gradient-to-r from-amber-600 via-teal-600 to-cyan-600 rounded-2xl px-14 py-5 text-sm font-black text-white shadow-[0_0_50px_rgba(245,158,11,0.35)] hover:shadow-[0_0_70px_rgba(245,158,11,0.55)] transition-shadow hover:scale-[1.03]"
+            className="group relative inline-flex items-center gap-3 overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl px-14 py-5 text-sm font-black text-white shadow-[0_0_50px_rgba(99,102,241,0.45)] hover:shadow-[0_0_70px_rgba(99,102,241,0.65)] transition-all hover:scale-[1.03]"
           >
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             <Rocket className="w-5 h-5 relative z-10 group-hover:-translate-y-1 transition-transform" />
             <span className="relative z-10">{isAr ? "أنشئ حسابك وابدأ الآن" : "Create your account & start now"}</span>
-          </MagneticButton>
+          </button>
         </div>
       </section>
 
       {/* =============================================================
           FOOTER
          ============================================================= */}
-      <footer className={cn("border-t border-white/5 pt-20 pb-12 px-6 relative z-10 transition-colors duration-300", isAr ? "text-right" : "text-left")} style={{ background: isDark ? "#020205" : "#f1f5f9" }}>
+      <footer className={cn("bg-[#020205] border-t border-white/5 pt-20 pb-12 px-6 relative z-10 transition-colors duration-300", isAr ? "text-right" : "text-left")} style={{ background: isDark ? undefined : "#f1f5f9" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 mb-16" dir={isAr ? "rtl" : "ltr"}>
           <div className="md:col-span-5">
             <div className={cn("flex items-center gap-3 mb-6", isAr ? "" : "flex-row-reverse")}>
               <div className="relative flex items-center justify-center w-8 h-8">
-                <div className="absolute inset-0 border-2 border-amber-500 rounded-full" />
-                <div className="absolute w-2.5 h-2.5 bg-amber-400 rounded-full" />
+                <div className="absolute inset-0 border-2 border-indigo-500 rounded-full" />
+                <div className="absolute w-2.5 h-2.5 bg-indigo-400 rounded-full" />
               </div>
               <div className="font-display font-black tracking-[0.2em] text-[18px] text-white">
-                ORBIT<span className="text-amber-400">X</span>
+                ORBIT<span className="text-indigo-400">X</span>
               </div>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed max-w-sm mb-6">
@@ -1421,10 +1369,10 @@ export default function LandingPage({
               {isAr ? "وحدات النظام" : "System Modules"}
             </h4>
             <ul className="space-y-3 text-[11px] text-gray-400">
-              <li><a href="#features" className="hover:text-amber-400 transition-colors">{isAr ? "الميزات" : "Features"}</a></li>
-              <li><a href="#ranks" className="hover:text-amber-400 transition-colors">{isAr ? "نظام المستويات" : "Level System"}</a></li>
-              <li><a href="#how-it-works" className="hover:text-amber-400 transition-colors">{isAr ? "كيف نعمل" : "How It Works"}</a></li>
-              <li><a href="#anti-cheat" className="hover:text-amber-400 transition-colors">{isAr ? "درع الحماية" : "Protection Shield"}</a></li>
+              <li><a href="#features" className="hover:text-indigo-400 transition-colors">{isAr ? "الميزات" : "Features"}</a></li>
+              <li><a href="#ranks" className="hover:text-indigo-400 transition-colors">{isAr ? "نظام الرتب" : "Rank System"}</a></li>
+              <li><a href="#how-it-works" className="hover:text-indigo-400 transition-colors">{isAr ? "كيف نعمل" : "How It Works"}</a></li>
+              <li><a href="#anti-cheat" className="hover:text-indigo-400 transition-colors">{isAr ? "درع الحماية" : "Protection Shield"}</a></li>
             </ul>
           </div>
 
@@ -1450,7 +1398,7 @@ export default function LandingPage({
             {isAr
               ? "بروتوكول الفضاء أوربت إكس © 2026. تصميم وتطوير"
               : "ORBITX SPACE PROTOCOL © 2026. Developed and Crafted by"}{" "}
-            <span className="text-amber-400 font-bold font-sans">abdalrahman nabeel Al jarrah</span>.
+            <span className="text-indigo-400 font-bold font-sans">abdalrahman nabeel Al jarrah</span>.
           </div>
           <div className="flex items-center gap-1.5" dir="ltr">
             <span>{isAr ? "بريد الدعم:" : "Ground Support Email:"}</span>
@@ -1470,31 +1418,31 @@ export default function LandingPage({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowLoginModal(false)}
-              className="absolute inset-0 backdrop-blur-xl transition-colors duration-300"
-              style={{ backgroundColor: isDark ? "rgba(2, 2, 5, 0.9)" : "rgba(0, 0, 0, 0.5)" }}
+              className="absolute inset-0 bg-[#020205]/90 backdrop-blur-xl transition-colors duration-300"
+              style={{ backgroundColor: isDark ? undefined : "rgba(0, 0, 0, 0.5)" }}
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className={cn("relative border border-amber-500/30 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg overflow-hidden transition-colors duration-300", isAr ? "text-right" : "text-left")}
-              style={{ backgroundColor: isDark ? "rgba(7, 8, 20, 0.95)" : "rgba(255, 255, 255, 0.98)", boxShadow: isDark ? "0 0 100px rgba(245,158,11,0.15)" : "0 25px 60px rgba(0,0,0,0.2)" }}
+              className={cn("relative bg-[#070814]/95 border border-indigo-500/40 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg shadow-[0_0_100px_rgba(99,102,241,0.25)] overflow-hidden transition-colors duration-300", isAr ? "text-right" : "text-left")}
+              style={{ backgroundColor: isDark ? undefined : "rgba(255, 255, 255, 0.98)", boxShadow: isDark ? undefined : "0 25px 60px rgba(0,0,0,0.2)" }}
               dir={isAr ? "rtl" : "ltr"}
             >
-              <div className="absolute -top-20 -left-20 w-44 h-44 rounded-full blur-3xl pointer-events-none" style={{ background: isDark ? "rgba(245, 158, 11, 0.08)" : "rgba(217, 119, 6, 0.06)" }} />
-              <div className="absolute -bottom-20 -right-20 w-44 h-44 rounded-full blur-3xl pointer-events-none" style={{ background: isDark ? "rgba(20, 184, 166, 0.08)" : "rgba(13, 148, 136, 0.06)" }} />
+              <div className="absolute -top-20 -left-20 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -right-20 w-44 h-44 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
 
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5 relative z-10">
                 <div className={cn("flex items-center gap-3", isAr ? "" : "flex-row-reverse")}>
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                     <Rocket className="w-5 h-5" />
                   </div>
                   <div className={isAr ? "text-right" : "text-left"}>
                     <h2 className="text-xl font-black text-white font-sans">
                       {isAr ? "بصمة العبور للـ OrbitX" : "OrbitX Transit Signature"}
                     </h2>
-                    <p className="text-[11px] text-amber-300/60 font-mono tracking-wider mt-0.5">
+                    <p className="text-[11px] text-indigo-300/60 font-mono tracking-wider mt-0.5">
                       LAUNCH_CONTROL_GATEWAY
                     </p>
                   </div>
@@ -1513,25 +1461,24 @@ export default function LandingPage({
                   transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                   className="absolute left-0 right-0 h-[1.5px] bg-indigo-500/30 pointer-events-none"
                 />
-                <div className="w-14 h-14 rounded-2xl border border-amber-500/30 bg-amber-950/40 flex items-center justify-center overflow-hidden shrink-0">
-                  <Rocket className="w-7 h-7 text-amber-400 animate-pulse" />
+                <div className="w-14 h-14 rounded-2xl border border-indigo-500/30 bg-indigo-950/40 flex items-center justify-center overflow-hidden shrink-0">
+                  <Rocket className="w-7 h-7 text-indigo-400 animate-pulse" />
                 </div>
                 <div className={cn("flex-1", isAr ? "text-right" : "text-left")}>
-                  <div className="text-[10px] text-amber-400 font-mono tracking-widest leading-none mb-1 uppercase">PILOT REGISTER STATUS</div>
+                  <div className="text-[10px] text-indigo-400 font-mono tracking-widest leading-none mb-1 uppercase">PILOT REGISTER STATUS</div>
                   <div className="text-sm font-bold text-white">{isAr ? "رائد فضاء مستكشف" : "Exploring Astronaut"}</div>
-                  <div className="text-xs text-amber-200/50 mt-1">{isAr ? "المدار: بانتظار الترشيح الشخصي" : "Orbit: Awaiting deployment status"}</div>
+                  <div className="text-xs text-indigo-200/50 mt-1">{isAr ? "المدار: بانتظار الترشيح الشخصي" : "Orbit: Awaiting deployment status"}</div>
                 </div>
               </div>
 
-              <div className={cn("space-y-3 mb-8 text-xs rounded-2xl border p-5 font-sans leading-relaxed transition-colors duration-300", isAr ? "text-right" : "text-left")}
-                style={{ color: "var(--text-secondary)", backgroundColor: isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)" }}>
-                <div className="font-black text-sm mb-2" style={{ color: "var(--text-primary)" }}>{isAr ? "رحلتك الإنجازية اليوم تشمل:" : "Your achievement journey today includes:"}</div>
+              <div className={cn("space-y-3 mb-8 text-xs text-gray-400 bg-black/40 p-5 rounded-2xl border border-white/5 font-sans leading-relaxed", isAr ? "text-right" : "text-left")}>
+                <div className="font-black text-gray-200 text-sm mb-2">{isAr ? "رحلتك الإنجازية اليوم تشمل:" : "Your achievement journey today includes:"}</div>
                 <div className="flex items-start gap-3">
-                  <span className="text-amber-400">🌌</span>
+                  <span className="text-indigo-400">🌌</span>
                   <span><strong>{isAr ? "غرف دراسة حية" : "Live Study Rooms"}</strong> {isAr ? "بلا تشتت أو مقاطعات إعلانية." : "without distractions or advertisement loops."}</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="text-amber-400">⚡</span>
+                  <span className="text-indigo-400">⚡</span>
                   <span>{isAr ? "كسب نقاط الخبرة (XP) وترقية الشارات الفضائية." : "Earning XP and upgrading custom space badges."}</span>
                 </div>
               </div>
@@ -1542,7 +1489,7 @@ export default function LandingPage({
                   setShowLoginModal(false);
                   onLogin();
                 }}
-                className="relative w-full group overflow-hidden bg-gradient-to-r from-amber-600 via-teal-600 to-cyan-600 rounded-2xl py-4.5 text-[16px] font-black text-white shadow-[0_0_35px_rgba(245,158,11,0.25)] hover:shadow-[0_0_55px_rgba(245,158,11,0.45)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3 relative z-10"
+                className="relative w-full group overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-cyan-600 rounded-2xl py-4.5 text-[16px] font-black text-white shadow-[0_0_35px_rgba(99,102,241,0.35)] hover:shadow-[0_0_55px_rgba(99,102,241,0.55)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3 relative z-10"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <svg className="w-5 h-5 fill-white shrink-0" viewBox="0 0 24 24">
