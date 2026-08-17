@@ -22,7 +22,7 @@ export function ReferralCard({ user }: ReferralCardProps) {
   }, [user.uid]);
 
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
+    <div className="fixed top-24 right-6 z-40 hidden lg:block">
       <motion.button
         onClick={handleCopy}
         whileHover={{ scale: 1.05, x: -4 }}

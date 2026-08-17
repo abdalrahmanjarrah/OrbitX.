@@ -53,7 +53,7 @@ export function TimeChests({ user }: TimeChestsProps) {
   const mainChest = CHEST_CONFIG[mainIdx];
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 md:left-auto md:translate-x-0 md:bottom-6 md:right-6">
+    <div className="fixed bottom-6 right-6 z-40">
       <AnimatePresence>
         {showReward && (
           <motion.div
