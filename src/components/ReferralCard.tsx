@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { UserPlus, Check } from "lucide-react";
+import { motion } from "motion/react";
 import { buildInviteLink } from "../lib/share";
 import { useLanguage } from "../context/LanguageContext";
 import type { UserData } from "../shared";
@@ -21,41 +22,34 @@ export function ReferralCard({ user }: ReferralCardProps) {
   }, [user.uid]);
 
   return (
-    <div
-      className="relative rounded-3xl bg-[#0e1025]/80 backdrop-blur-xl border border-white/5 p-5 overflow-hidden group hover:border-fuchsia-500/20 transition-all cursor-pointer"
-      onClick={handleCopy}
-    >
-      <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
+      <motion.button
+        onClick={handleCopy}
+        whileHover={{ scale: 1.05, x: -4 }}
+        whileTap={{ scale: 0.95 }}
+        className="relative group"
+      >
+        {/* Glow ring */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-fuchsia-500/30 via-purple-500/20 to-fuchsia-500/30 rounded-2xl blur-sm opacity-60 group-hover:opacity-100 transition-opacity animate-pulse" />
 
-      <div className="relative flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/25 flex items-center justify-center">
-            <UserPlus size={14} className="text-fuchsia-400" />
+        {/* Main card */}
+        <div className="relative flex items-center gap-3 px-4 py-3 bg-[#0e1025]/90 backdrop-blur-xl border border-fuchsia-500/30 rounded-2xl shadow-[0_0_30px_rgba(192,132,252,0.15)] group-hover:shadow-[0_0_40px_rgba(192,132,252,0.3)] transition-all">
+          <div className="w-9 h-9 rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/25 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <UserPlus size={16} className="text-fuchsia-400" />
           </div>
-          <span className="text-sm font-bold text-white">
-            {isAr ? "ادعُ صديقاً واحصل على 100 XP" : "Invite a friend & get 100 XP"}
-          </span>
+          <div className="flex flex-col items-start">
+            <span className="text-[10px] font-bold text-fuchsia-300/70 leading-none whitespace-nowrap">
+              {isAr ? "ادعُ صديق" : "Invite Friend"}
+            </span>
+            <span className="text-xs font-black text-white leading-tight whitespace-nowrap">
+              {copied
+                ? (isAr ? "تم النسخ ✅" : "Copied! ✅")
+                : (isAr ? "+100 XP مكافأة" : "+100 XP reward")
+              }
+            </span>
+          </div>
         </div>
-
-        <div
-          className={`
-            flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0
-            ${copied
-              ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
-              : "bg-fuchsia-500/10 border border-fuchsia-500/25 text-fuchsia-400 group-hover:bg-fuchsia-500/20"
-            }
-          `}
-        >
-          {copied ? (
-            <>
-              <Check size={12} />
-              {isAr ? "تم النسخ" : "Copied!"}
-            </>
-          ) : (
-            isAr ? "الرابط" : "Link"
-          )}
-        </div>
-      </div>
+      </motion.button>
     </div>
   );
 }

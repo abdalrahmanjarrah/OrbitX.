@@ -510,12 +510,6 @@ export default function HomeView({
           </div>
         </motion.div>
 
-        {/* Time Chests + Referral — engagement drivers */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          {!user.isGuest && <TimeChests user={user} />}
-          {!user.isGuest && <ReferralCard user={user} />}
-        </div>
-
         {/* Weekly Duel — retention driver */}
         <WeeklyDuelPanel user={user} />
 
@@ -766,6 +760,10 @@ export default function HomeView({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Fixed-position engagement widgets — only on home */}
+      {!user.isGuest && <TimeChests user={user} />}
+      {!user.isGuest && <ReferralCard user={user} />}
     </div>
   );
 }
