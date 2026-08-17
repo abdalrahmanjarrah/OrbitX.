@@ -45,140 +45,183 @@ export function TimeChests({ user }: TimeChestsProps) {
   }, [user, claiming]);
 
   const nextLockedIdx = state.statuses.findIndex((s) => s === "locked");
-
-  // Find the next available chest to show as the main button
   const readyIdx = state.statuses.findIndex((s) => s === "ready");
   const mainIdx = readyIdx >= 0 ? readyIdx : (nextLockedIdx >= 0 ? nextLockedIdx : 0);
   const mainStatus = state.statuses[mainIdx];
   const mainChest = CHEST_CONFIG[mainIdx];
 
+  const readyCount = state.statuses.filter((s) => s === "ready").length;
+  const claimedCount = state.statuses.filter((s) => s === "claimed").length;
+
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-5 right-5 z-[55]">
+      {/* Reward popup */}
       <AnimatePresence>
         {showReward && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.8 }}
-            animate={{ opacity: 1, y: -60, scale: 1 }}
-            exit={{ opacity: 0, y: -80, scale: 0.8 }}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none z-50"
+            animate={{ opacity: 1, y: -50, scale: 1 }}
+            exit={{ opacity: 0, y: -70, scale: 0.8 }}
+            className="absolute bottom-full right-0 mb-3 pointer-events-none z-50"
           >
-            <div className="bg-amber-500/20 border border-amber-500/40 rounded-2xl px-5 py-3 backdrop-blur-xl shadow-[0_0_40px_rgba(245,158,11,0.3)]">
-              <div className="text-2xl mb-1">{showReward.icon}</div>
-              <div className="text-sm font-black text-amber-300">+{showReward.xp} XP</div>
+            <div className="bg-gradient-to-b from-amber-500/20 to-amber-600/10 border border-amber-500/40 rounded-2xl px-5 py-3 backdrop-blur-xl shadow-[0_0_40px_rgba(245,158,11,0.4)]">
+              <div className="text-2xl mb-1 text-center">{showReward.icon}</div>
+              <div className="text-sm font-black text-amber-300 text-center">+{showReward.xp} XP</div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Compact mode: single chest + timer */}
-      {!expanded ? (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setExpanded(true)}
-          className={`
-            relative flex items-center gap-2.5 px-4 py-2.5 rounded-2xl backdrop-blur-xl border shadow-lg transition-all
-            ${mainStatus === "ready"
-              ? "bg-amber-500/15 border-amber-500/40 shadow-[0_0_25px_rgba(245,158,11,0.25)] animate-pulse cursor-pointer"
-              : mainStatus === "claimed"
-                ? "bg-emerald-500/10 border-emerald-500/25"
-                : "bg-[#0e1025]/80 border-white/10"
-            }
-          `}
-        >
-          <div className="text-xl">
+      {/* Expanded panel */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="absolute bottom-full right-0 mb-3 w-[260px]"
+          >
+            <div className="relative bg-[#0c0f20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_60px_rgba(0,0,0,0.9),0_0_1px_rgba(255,255,255,0.1)]">
+              {/* Corner accent */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-[40px] pointer-events-none" />
+
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                    <Timer size={12} className="text-amber-400" />
+                  </div>
+                  <span className="text-[11px] font-black text-white tracking-wide">
+                    {isAr ? "صناديق الوقت" : "TIME CHESTS"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setExpanded(false)}
+                  className="w-5 h-5 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-500 hover:text-white text-[10px] transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 mb-3">
+                {CHEST_CONFIG.map((chest, i) => {
+                  const status = state.statuses[i];
+                  return (
+                    <button
+                      key={i}
+                      disabled={status !== "ready" || claiming !== null}
+                      onClick={() => handleClaim(i)}
+                      className={`
+                        flex-1 relative flex items-center justify-center h-10 rounded-xl text-base transition-all
+                        ${status === "claimed"
+                          ? "bg-emerald-500/10 border border-emerald-500/20"
+                          : status === "ready"
+                            ? "bg-amber-500/10 border border-amber-500/30 hover:scale-105 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer"
+                            : "bg-white/[0.03] border border-white/5 opacity-30"
+                        }
+                      `}
+                    >
+                      {status === "claimed" ? (
+                        <CheckCircle size={14} className="text-emerald-400" />
+                      ) : status === "ready" ? (
+                        <Gift size={14} className="text-amber-400 animate-pulse" />
+                      ) : (
+                        <Lock size={10} className="text-gray-600" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Progress dots */}
+              <div className="flex items-center justify-center gap-1 mb-2">
+                {CHEST_CONFIG.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      state.statuses[i] === "claimed"
+                        ? "bg-emerald-400"
+                        : state.statuses[i] === "ready"
+                          ? "bg-amber-400"
+                          : "bg-white/10"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {state.allClaimed ? (
+                <div className="text-center text-[10px] font-bold text-emerald-400/80">
+                  {isAr ? "✓ الدورة كاملة — تتجدد بعد 24 ساعة" : "✓ Complete — resets in 24h"}
+                </div>
+              ) : (
+                <div className="text-center text-[10px] font-bold text-gray-500">
+                  {nextLockedIdx >= 0 ? (
+                    <>
+                      {isAr ? "الجاي بعد" : "Next in"}{" "}
+                      <span className="text-amber-400 font-mono">{formatTime(state.timeUntilNext)}</span>
+                    </>
+                  ) : (
+                    <span className="text-amber-400">{isAr ? "صندوق جاهز!" : "Chest ready!"}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main floating button */}
+      <motion.button
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
+        onClick={() => setExpanded(!expanded)}
+        className="relative group"
+      >
+        {/* Outer glow */}
+        <div className={`absolute -inset-0.5 rounded-2xl blur-sm transition-opacity ${
+          mainStatus === "ready"
+            ? "bg-gradient-to-r from-amber-500/40 via-orange-500/30 to-amber-500/40 opacity-70 group-hover:opacity-100"
+            : "bg-gradient-to-r from-white/5 via-white/3 to-white/5 opacity-40"
+        }`} />
+
+        {/* Button body */}
+        <div className={`relative flex items-center gap-2 px-3.5 py-2.5 rounded-xl backdrop-blur-xl border transition-all ${
+          mainStatus === "ready"
+            ? "bg-[#0c0f20]/90 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+            : mainStatus === "claimed"
+              ? "bg-[#0c0f20]/90 border-emerald-500/20"
+              : "bg-[#0c0f20]/80 border-white/8"
+        }`}>
+          <div className="text-lg leading-none">
             {mainStatus === "claimed" ? "✅" : mainChest.icon}
           </div>
-          <div className="flex flex-col items-start">
-            <span className="text-[10px] font-bold text-white/70 leading-none">
-              {isAr ? "صندوق الوقت" : "Time Chest"}
+          <div className="flex flex-col items-start leading-none">
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
+              {isAr ? "صندوق" : "CHEST"}
             </span>
             {mainStatus === "ready" ? (
-              <span className="text-xs font-black text-amber-400 leading-tight">
-                {isAr ? "جاهز! افتح" : "Ready! Open"}
+              <span className="text-[11px] font-black text-amber-400">
+                {isAr ? "جاهز ✓" : "READY ✓"}
               </span>
             ) : mainStatus === "claimed" ? (
-              <span className="text-xs font-bold text-emerald-400/70 leading-tight">
-                {isAr ? "تم فتحه" : "Claimed"}
+              <span className="text-[11px] font-bold text-emerald-400/60">
+                {claimedCount}/5
               </span>
             ) : (
-              <span className="text-xs font-black text-amber-400/80 leading-tight font-mono">
+              <span className="text-[11px] font-black text-amber-400/70 font-mono">
                 {formatTime(state.timeUntilNext)}
               </span>
             )}
           </div>
-        </motion.button>
-      ) : (
-        /* Expanded mode: all chests */
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.9 }}
-          className="bg-[#0e1025]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] min-w-[280px]"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Timer size={14} className="text-amber-400" />
-              <span className="text-xs font-black text-white">
-                {isAr ? "صناديق الوقت" : "Time Chests"}
-              </span>
-            </div>
-            <button
-              onClick={() => setExpanded(false)}
-              className="text-gray-500 hover:text-white text-xs font-bold transition-colors"
-            >
-              ✕
-            </button>
-          </div>
 
-          <div className="flex items-center justify-between gap-2 mb-3">
-            {CHEST_CONFIG.map((chest, i) => {
-              const status = state.statuses[i];
-              return (
-                <button
-                  key={i}
-                  disabled={status !== "ready" || claiming !== null}
-                  onClick={() => handleClaim(i)}
-                  className={`
-                    relative flex items-center justify-center w-11 h-11 rounded-xl text-lg transition-all
-                    ${status === "claimed"
-                      ? "bg-emerald-500/10 border border-emerald-500/30"
-                      : status === "ready"
-                        ? "bg-amber-500/15 border border-amber-500/40 hover:scale-110 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer animate-pulse"
-                        : "bg-white/5 border border-white/5 opacity-40"
-                    }
-                  `}
-                >
-                  {status === "claimed" ? (
-                    <CheckCircle size={16} className="text-emerald-400" />
-                  ) : status === "ready" ? (
-                    <Gift size={16} className="text-amber-400" />
-                  ) : (
-                    <Lock size={12} className="text-gray-600" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {state.allClaimed ? (
-            <div className="text-center text-[10px] font-bold text-emerald-400/80">
-              {isAr ? "أكملت الدورة! تتجدد بعد 24 ساعة" : "Cycle complete! Resets in 24h"}
-            </div>
-          ) : nextLockedIdx >= 0 ? (
-            <div className="text-center text-[10px] font-bold text-gray-500">
-              {isAr ? "الصندوق الجاي يفتح بعد" : "Next chest in"}{" "}
-              <span className="text-amber-400 font-black">{formatTime(state.timeUntilNext)}</span>
-            </div>
-          ) : (
-            <div className="text-center text-[10px] font-bold text-amber-400/80">
-              {isAr ? "صندوق جاهز! اضغط لفتحه" : "Chest ready! Tap to open"}
+          {/* Ready badge */}
+          {readyCount > 0 && (
+            <div className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+              {readyCount}
             </div>
           )}
-        </motion.div>
-      )}
+        </div>
+      </motion.button>
     </div>
   );
 }
