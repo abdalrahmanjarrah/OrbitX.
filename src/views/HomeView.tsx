@@ -148,6 +148,8 @@ import ArticleModal from './ArticleModal';
 import StationCard from './StationCard';
 import { getGreetingForTime } from '../lib/dashboardGreetings';
 import { DailyHabitCard } from '../components/DailyHabitCard';
+import { TimeChests } from '../components/TimeChests';
+import { ReferralCard } from '../components/ReferralCard';
 import ExhibitionGallery from './ExhibitionGallery';
 import SuggestionsSection from './SuggestionsSection';
 import QuranPlayer from './QuranPlayer';
@@ -506,6 +508,12 @@ export default function HomeView({
              <DailyHabitCard user={user} />
           </div>
         </motion.div>
+
+        {/* Time Chests + Referral — engagement drivers */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {!user.isGuest && <TimeChests user={user} />}
+          {!user.isGuest && <ReferralCard user={user} />}
+        </div>
 
         {/* Weekly Duel — retention driver */}
         <WeeklyDuelPanel user={user} />

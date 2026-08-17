@@ -2,6 +2,7 @@ import { playSound } from "./lib/sound";
 import { useRenderLog, authorizeDebugger } from "./firebaseDebug";
 import { buildInviteLink } from "./lib/share";
 import { checkAndRewardReferrals, REFERRAL_REWARD_XP } from "./lib/referrals";
+import { shouldShowWhatsNew } from "./lib/versionConfig";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -13,6 +14,7 @@ import { checkAndRewardReferrals, REFERRAL_REWARD_XP } from "./lib/referrals";
  */
 
 import React, { useState, useEffect, useRef, Component, Suspense, lazy } from "react";
+import LandingPage from "./components/LandingPage";
 import { isAdminUser } from "./supabaseAdapter";
 import {
   Leaf,
@@ -160,7 +162,7 @@ import {
   Message,
   ErrorBoundary,
 } from "./shared";
-import LandingPage from "./components/LandingPage";
+
 import { showToast } from "./lib/cosmicUI";
 
 const Dashboard = lazy(() => import("./views/Dashboard"));
@@ -168,6 +170,7 @@ const QuranPlayer = lazy(() => import("./views/QuranPlayer"));
 const MissionRoleWizard = lazy(() =>
   import("./views/MissionRoleWizard"),
 );
+const WhatsNewModal = lazy(() => import("./components/WhatsNewModal"));
 
 
 import { useLanguage } from "./context/LanguageContext";
@@ -178,6 +181,7 @@ function App() {
   const [user, loading] = useAuthState(auth);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [view, setView] = useState<"landing" | "dashboard">("landing");
   const [loginError, setLoginError] = useState<{
     code: string;
@@ -496,6 +500,13 @@ function App() {
       );
     }).catch(() => {});
   }, [userData?.uid, userData?.isGuest]);
+
+  // What's New: show once per version
+  useEffect(() => {
+    if (userData && !userData.isGuest && shouldShowWhatsNew()) {
+      setShowWhatsNew(true);
+    }
+  }, [userData]);
 
   useEffect(() => {
     if (userData) {
@@ -897,6 +908,11 @@ function App() {
       <Suspense fallback={null}>
         <Dashboard user={userData} onLogout={logout} onLogin={handleLogin} />
       </Suspense>
+      {showWhatsNew && (
+        <Suspense fallback={null}>
+          <WhatsNewModal />
+        </Suspense>
+      )}
     </>
   );
 }

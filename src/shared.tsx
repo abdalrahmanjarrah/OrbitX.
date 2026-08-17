@@ -516,6 +516,11 @@ export interface UserData {
   weekSessions?: number;
   invitedBy?: string;
   referralsRewarded?: string[];
+  timeChests?: {
+    cycleStart: number;
+    claimedChests: number[];
+    lastCycleDate: string;
+  };
 }
 
 export interface Fleet {

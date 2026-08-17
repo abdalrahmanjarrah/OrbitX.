@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @layer utilities {
@@ -22,6 +22,7 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-arabic: "Cairo", "Inter", sans-serif;
   
   --color-space-dark: #0a0b16;
   --color-space-card: rgba(20, 22, 43, 0.6);
@@ -43,6 +44,11 @@ body {
   overflow-x: hidden;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+[dir="rtl"] body,
+.font-arabic {
+  font-family: var(--font-arabic);
 }
 
 /* Atmospheric Background - Soft Space */

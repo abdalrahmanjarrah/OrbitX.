@@ -504,32 +504,35 @@ export default function Dashboard({
           )}
 
           <div
-            className="tour-step-stats flex items-center gap-2.5 bg-gradient-to-r from-indigo-500/10 to-transparent hover:bg-indigo-500/20 transition-all border border-indigo-500/20 rounded-full p-1 pl-4 cursor-pointer backdrop-blur-xl group"
+            className="tour-step-stats flex items-center gap-2.5 bg-gradient-to-r from-indigo-500/10 to-transparent hover:bg-indigo-500/20 transition-all border border-indigo-500/20 rounded-full p-1 pl-3 cursor-pointer backdrop-blur-xl group"
             onClick={() => handleTabChange("profile")}
           >
-            <div className="hidden md:flex flex-col text-left mr-2">
-              <div className="text-xs font-bold text-white flex items-center justify-end gap-1 group-hover:text-indigo-300 transition-colors">
-                {user.displayName} {getAstronautRank(user.xp, undefined, lang).icon}
+            <div className="hidden md:flex flex-col gap-0.5">
+              <div className="text-[10px] font-bold text-indigo-300 flex items-center gap-1">
+                {getAstronautRank(user.xp, undefined, lang).icon} {getAstronautRank(user.xp, undefined, lang).title}
               </div>
-              <div className={cn("text-[10px] font-black uppercase tracking-wider", getAstronautRank(user.xp, undefined, lang).color)}>
-                {getAstronautRank(user.xp, undefined, lang).title}
+              <div className="w-20 h-1.5 bg-indigo-950 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-full transition-all"
+                  style={{ width: `${((user.xp % 1000) / 1000) * 100}%` }}
+                />
               </div>
-            </div>
-            
-            <div className="flex flex-col items-end border-r border-white/10 pr-3 mr-1">
-               <div className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400">
-                  <Zap size={10} /> {Math.floor(user.xp || 0).toLocaleString()} XP
-               </div>
+              <div className="text-[8px] text-gray-500 font-semibold">
+                {(user.xp % 1000)}/1000 XP
+              </div>
             </div>
 
             <div className="relative">
-              <div className="w-8 h-8 rounded-full border border-indigo-500/30 overflow-hidden bg-space-dark shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+              <div className="w-9 h-9 rounded-full border-2 border-indigo-500/40 overflow-hidden bg-space-dark shadow-[0_0_20px_rgba(99,102,241,0.4)]">
                 <img
                   src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
                   alt="avatar"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-[7px] font-black text-white rounded-full w-4 h-4 flex items-center justify-center border border-indigo-400 shadow-md">
+                {user.level || 1}
               </div>
             </div>
           </div>
