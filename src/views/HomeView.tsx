@@ -761,9 +761,11 @@ export default function HomeView({
         )}
       </AnimatePresence>
 
-      {/* Fixed-position engagement widgets — only on home */}
-      {!user.isGuest && <TimeChests user={user} />}
-      {!user.isGuest && <ReferralCard user={user} />}
+      {/* Time Chests + Referral — at the bottom */}
+      <div className="flex flex-col sm:flex-row gap-4 mt-6">
+        {!user.isGuest && <TimeChests user={user} />}
+        {!user.isGuest && <ReferralCard user={user} />}
+      </div>
     </div>
   );
 }
