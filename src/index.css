@@ -34,6 +34,60 @@
   --radius-4xl: 2rem;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   CUSTOM CURSOR — unique fingerprint, not generic AI
+   ═══════════════════════════════════════════════════════════ */
+.orbitx-cursor {
+  cursor: none !important;
+}
+.orbitx-cursor * {
+  cursor: none !important;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  mix-blend-mode: difference;
+  transition: transform 0.1s ease;
+}
+
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease;
+}
+
+.cursor-ring.hovering {
+  width: 56px;
+  height: 56px;
+  border-color: rgba(245, 158, 11, 0.8);
+}
+
+@media (pointer: coarse) {
+  .orbitx-cursor,
+  .orbitx-cursor * {
+    cursor: auto !important;
+  }
+  .cursor-dot,
+  .cursor-ring {
+    display: none !important;
+  }
+}
+
 :root {
   color-scheme: dark;
 }
@@ -57,8 +111,8 @@ body {
   inset: 0;
   z-index: -2;
   background: 
-    radial-gradient(circle at 15% 40%, rgba(129, 140, 248, 0.12) 0%, transparent 60%),
-    radial-gradient(circle at 85% 60%, rgba(232, 121, 249, 0.08) 0%, transparent 60%);
+    radial-gradient(circle at 15% 40%, rgba(245, 158, 11, 0.10) 0%, transparent 60%),
+    radial-gradient(circle at 85% 60%, rgba(20, 184, 166, 0.06) 0%, transparent 60%);
   filter: blur(80px);
 }
 
@@ -66,13 +120,13 @@ body {
 .glass {
   background: rgba(20, 22, 43, 0.4);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.08);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
 }
 
 .glass-hover:hover {
   background: rgba(30, 33, 63, 0.5);
-  border-color: rgba(129, 140, 248, 0.25);
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 /* Star background effect */
@@ -93,7 +147,7 @@ body {
   border-radius: 50%;
   opacity: 0.6;
   animation: twinkle var(--duration) infinite ease-in-out;
-  box-shadow: 0 0 4px #e879f9, 0 0 10px #818cf8;
+  box-shadow: 0 0 4px #f59e0b, 0 0 10px #14b8a6;
 }
 
 @keyframes twinkle {
@@ -120,12 +174,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #312e81;
+  background: #78350f;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4338ca;
+  background: #92400e;
 }
 
 /* Custom scrollbar and masks */

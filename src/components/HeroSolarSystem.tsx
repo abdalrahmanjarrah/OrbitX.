@@ -8,8 +8,8 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {/* Dynamic Futuristic Nebula glows */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-gradient-to-tr from-indigo-500/15 via-purple-500/5 to-cyan-500/15 rounded-full blur-[180px] opacity-80 animate-[pulse_12s_ease-in-out_infinite]" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-600/10 rounded-full blur-[140px] opacity-60 animate-[pulse_9s_ease-in-out_infinite_2s]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-gradient-to-tr from-amber-500/12 via-purple-500/4 to-teal-500/12 rounded-full blur-[180px] opacity-80 animate-[pulse_12s_ease-in-out_infinite]" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-amber-600/8 rounded-full blur-[140px] opacity-60 animate-[pulse_9s_ease-in-out_infinite_2s]" />
 
       {/* Embedded CSS for perfect 3D depth, sphere shading & orbital movement */}
       <style>{`
@@ -37,7 +37,7 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
           perspective: 1200px;
         }
         .planet-sphere {
-          box-shadow: inset -6px -6px 12px rgba(0,0,0,0.85), inset 4px 4px 10px rgba(255,255,255,0.4), 0 0 20px rgba(99,102,241,0.4);
+          box-shadow: inset -6px -6px 12px rgba(0,0,0,0.85), inset 4px 4px 10px rgba(255,255,255,0.4), 0 0 20px rgba(245,158,11,0.3);
         }
         .planet-ring {
           transform: rotateX(0deg) rotateY(0deg);
@@ -70,7 +70,7 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
           >
             {/* Planet 1: Azure Core Station */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 group">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-300 via-blue-500 to-indigo-900 planet-sphere relative">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-300 via-blue-500 to-teal-900 planet-sphere relative">
                 {/* Tiny fast moon */}
                 <div className="absolute -top-3 -left-3 w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] animate-[planet-spin_3s_linear_infinite]" />
               </div>
@@ -79,21 +79,21 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
 
           {/* Orbit 2: Medium Ring (Metallic Purple theme) */}
           <div 
-            className="absolute w-[620px] h-[620px] rounded-full border border-dashed border-indigo-500/20"
+            className="absolute w-[620px] h-[620px] rounded-full border border-dashed border-amber-500/15"
             style={{ animation: "orbit-rotate-ccw 32s linear infinite" }}
           >
             {/* Planet 2: Chrono Gas Giant */}
             <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 group">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-fuchsia-400 via-indigo-600 to-purple-950 planet-sphere relative flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-fuchsia-400 via-amber-600 to-purple-950 planet-sphere relative flex items-center justify-center">
                 {/* Translucent Planetary Ring */}
-                <div className="absolute w-[220%] h-2 border border-indigo-300/30 rounded-full planet-ring bg-indigo-500/5 backdrop-blur-[1px]" />
+                <div className="absolute w-[220%] h-2 border border-amber-300/30 rounded-full planet-ring bg-amber-500/5 backdrop-blur-[1px]" />
               </div>
             </div>
           </div>
 
           {/* Orbit 3: Outermost Deep Focus Ring (Slow, epic Crimson & Gold theme) */}
           <div 
-            className="absolute w-[920px] h-[920px] rounded-full border border-white/5 shadow-[inset_0_0_80px_rgba(99,102,241,0.03)]"
+            className="absolute w-[920px] h-[920px] rounded-full border border-white/5 shadow-[inset_0_0_80px_rgba(245,158,11,0.02)]"
             style={{ animation: "orbit-rotate-cw 55s linear infinite" }}
           >
             {/* Planet 3: Crimson Keep Titan */}
@@ -109,7 +109,7 @@ export default function HeroSolarSystem({ mousePos }: HeroSolarSystemProps) {
 
           {/* Orbit 4: Border Void Ring (Ghostly translucent) */}
           <div 
-            className="absolute w-[1180px] h-[1180px] rounded-full border border-fuchsia-500/5"
+            className="absolute w-[1180px] h-[1180px] rounded-full border border-teal-500/5"
             style={{ animation: "orbit-rotate-ccw 85s linear infinite" }}
           >
             {/* Planet 4: Amber Explorer Station */}
