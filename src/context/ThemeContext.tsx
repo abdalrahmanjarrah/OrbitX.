@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-type Theme = "dark" | "light";
+type Theme = "default" | "amber";
 
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
-  isDark: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -13,32 +12,27 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("orbitx_theme") as Theme;
-      if (stored === "dark" || stored === "light") return stored;
+      const stored = localStorage.getItem("orbitx_theme");
+      if (stored === "amber") return "amber";
     }
-    return "dark";
+    return "default";
   });
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    setTheme((prev) => (prev === "default" ? "amber" : "default"));
   };
 
   useEffect(() => {
     localStorage.setItem("orbitx_theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
-    if (theme === "dark") {
-      document.documentElement.classList.remove("light");
-      document.documentElement.classList.add("dark");
+    if (theme === "amber") {
+      document.documentElement.classList.add("theme-amber");
     } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("theme-amber");
     }
-    }, [theme]);
-
-  const isDark = theme === "dark";
+  }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -167,7 +167,8 @@ body {
 .cursor-dot {
   position: fixed; top: 0; left: 0;
   width: 8px; height: 8px;
-  background: #818cf8; border-radius: 50%;
+  background: var(--cursor-dot, #818cf8);
+  border-radius: 50%;
   pointer-events: none; z-index: 99999;
   mix-blend-mode: difference;
   transition: transform 0.1s ease;
@@ -176,7 +177,7 @@ body {
 .cursor-ring {
   position: fixed; top: 0; left: 0;
   width: 36px; height: 36px;
-  border: 1.5px solid rgba(129, 140, 248, 0.5);
+  border: 1.5px solid var(--cursor-ring, rgba(129, 140, 248, 0.5));
   border-radius: 50%; pointer-events: none;
   z-index: 99998;
   transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease;
@@ -184,7 +185,7 @@ body {
 
 .cursor-ring.hovering {
   width: 56px; height: 56px;
-  border-color: rgba(232, 121, 249, 0.7);
+  border-color: var(--cursor-hover, rgba(232, 121, 249, 0.7));
 }
 
 @media (pointer: coarse) {
@@ -193,22 +194,74 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LIGHT MODE
+   THEME: AMBER — remap indigo→amber, fuchsia→teal
    ═══════════════════════════════════════════════════════════ */
-.light header {
-  background: rgba(248, 250, 252, 0.92) !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
-  backdrop-filter: blur(12px) !important;
+.theme-amber {
+  /* Cursor colors */
+  --cursor-dot: #fbbf24;
+  --cursor-ring: rgba(251, 191, 36, 0.5);
+  --cursor-hover: rgba(45, 212, 191, 0.7);
+
+  /* Atmosphere glow */
+  --atmosphere-a: rgba(251, 191, 36, 0.12);
+  --atmosphere-b: rgba(20, 184, 166, 0.08);
+
+  /* Indigo → Amber */
+  --color-indigo-50: oklch(0.97 0.02 95);
+  --color-indigo-100: oklch(0.93 0.04 95);
+  --color-indigo-200: oklch(0.88 0.08 90);
+  --color-indigo-300: oklch(0.82 0.12 85);
+  --color-indigo-400: oklch(0.77 0.15 75);
+  --color-indigo-500: oklch(0.72 0.18 75);
+  --color-indigo-600: oklch(0.65 0.20 70);
+  --color-indigo-700: oklch(0.55 0.18 70);
+  --color-indigo-800: oklch(0.45 0.15 70);
+  --color-indigo-900: oklch(0.37 0.12 70);
+  --color-indigo-950: oklch(0.25 0.08 70);
+
+  /* Fuchsia → Teal */
+  --color-fuchsia-50: oklch(0.97 0.02 175);
+  --color-fuchsia-100: oklch(0.94 0.05 175);
+  --color-fuchsia-200: oklch(0.88 0.08 175);
+  --color-fuchsia-300: oklch(0.82 0.12 175);
+  --color-fuchsia-400: oklch(0.75 0.15 175);
+  --color-fuchsia-500: oklch(0.70 0.18 175);
+  --color-fuchsia-600: oklch(0.62 0.20 175);
+  --color-fuchsia-700: oklch(0.55 0.18 175);
+  --color-fuchsia-800: oklch(0.45 0.15 175);
+  --color-fuchsia-900: oklch(0.35 0.12 175);
+  --color-fuchsia-950: oklch(0.25 0.08 175);
+
+  /* Space palette */
+  --color-space-purple: #f59e0b;
+  --color-space-accent: #14b8a6;
 }
 
-.light .stars-container { opacity: 0; pointer-events: none; }
-
-.light .glass {
-  background: rgba(255, 255, 255, 0.7) !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
+/* ═══════════════════════════════════════════════════════════
+   THEME: AMBER — atmosphere background
+   ═══════════════════════════════════════════════════════════ */
+.theme-amber .atmosphere-bg {
+  background:
+    radial-gradient(circle at 15% 40%, rgba(251, 191, 36, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 85% 60%, rgba(20, 184, 166, 0.08) 0%, transparent 60%);
 }
 
-.light ::selection {
-  background-color: rgba(99, 102, 241, 0.25);
-  color: #0f172a;
+.theme-amber .glass {
+  border-color: rgba(251, 191, 36, 0.1);
+}
+
+.theme-amber .glass-hover:hover {
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+.theme-amber .star {
+  box-shadow: 0 0 4px #14b8a6, 0 0 10px #f59e0b;
+}
+
+.theme-amber ::-webkit-scrollbar-thumb {
+  background: #78350f;
+}
+
+.theme-amber ::-webkit-scrollbar-thumb:hover {
+  background: #92400e;
 }

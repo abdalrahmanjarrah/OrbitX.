@@ -28,8 +28,7 @@ import {
   Trophy,
   HelpCircle,
   Eye,
-  Sun,
-  Moon,
+  Palette,
 } from "lucide-react";
 import StarBackground from "./StarBackground";
 import HeroSolarSystem from "./HeroSolarSystem";
@@ -172,7 +171,7 @@ export default function LandingPage({
   inviterName?: string;
 }) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(false);
@@ -556,8 +555,7 @@ export default function LandingPage({
 
   return (
     <div
-      className="orbitx-cursor min-h-screen text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative transition-colors duration-300"
-      style={{ backgroundColor: isDark ? "#0a0b16" : "#f8fafc", color: isDark ? "#f1f3fd" : "#0f172a" }}
+      className="orbitx-cursor min-h-screen text-[#f1f3fd] font-sans selection:bg-indigo-600/50 overflow-x-hidden relative"
       dir={isAr ? "rtl" : "ltr"}
     >
       <CustomCursor />
@@ -625,9 +623,9 @@ export default function LandingPage({
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl border bg-white/5 border-white/5 text-gray-400 hover:text-indigo-400 transition-all hover:scale-105 flex items-center justify-center"
-              title={isDark ? (isAr ? "الوضع الفاتح" : "Light mode") : (isAr ? "الوضع الداكن" : "Dark mode")}
+              title={theme === "default" ? (isAr ? "التبديل للثيم الثاني" : "Switch theme") : (isAr ? "التبديل للثيم الأساسي" : "Switch theme")}
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <Palette className="w-4 h-4" />
             </button>
 
             <button
@@ -691,7 +689,7 @@ export default function LandingPage({
          ============================================================= */}
       <section className="relative min-h-screen flex items-center justify-center p-6 pt-32 pb-24 z-10 overflow-hidden">
         <HeroSolarSystem mousePos={mousePos} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none transition-opacity duration-300" style={{ opacity: isDark ? 1 : 0 }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
           <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.12] tracking-tight mb-8 drop-shadow-2xl">
@@ -758,7 +756,7 @@ export default function LandingPage({
       {/* =============================================================
           STATS STRIP
          ============================================================= */}
-      <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f1f5f9, #e2e8f0)" }}>
+      <section className="py-16 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5">
         <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 border border-indigo-500/10 rounded-[2.5rem] p-8 md:p-12 bg-space-dark/80 backdrop-blur-xl text-center shadow-[0_0_50px_rgba(99,102,241,0.1)]">
           {stats.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
@@ -813,7 +811,7 @@ export default function LandingPage({
       {/* =============================================================
           FEATURES
          ============================================================= */}
-      <section id="features" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section id="features" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
         <div className="max-w-7xl mx-auto">
           <SectionHead
             kicker={isAr ? "الميزات" : "Features"}
@@ -885,7 +883,7 @@ export default function LandingPage({
       {/* =============================================================
           HOW IT WORKS
          ============================================================= */}
-      <section id="how-it-works" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section id="how-it-works" className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
           <SectionHead
             kicker={isAr ? "كيف نعمل" : "How it works"}
@@ -1247,7 +1245,7 @@ export default function LandingPage({
       {/* =============================================================
           AWARENESS / MINDSET
          ============================================================= */}
-      <section id="awareness" className="py-24 px-6 relative z-10 bg-[#020207] border-t border-white/5 scroll-mt-20 transition-colors duration-300" style={{ background: isDark ? undefined : "#f8fafc" }}>
+      <section id="awareness" className="py-24 px-6 relative z-10 bg-[#020207] border-t border-white/5 scroll-mt-20">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12" dir={isAr ? "rtl" : "ltr"}>
             <div className="inline-flex items-center gap-2 font-mono text-xs text-purple-400 tracking-[0.2em] mb-4 uppercase">
@@ -1306,7 +1304,7 @@ export default function LandingPage({
       {/* =============================================================
           FINAL CTA
          ============================================================= */}
-      <section className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 overflow-hidden transition-colors duration-300" style={{ background: isDark ? undefined : "linear-gradient(to bottom, #f8fafc, #f1f5f9)" }}>
+      <section className="py-24 px-6 relative z-10 bg-gradient-to-b from-[#030308] to-[#040410] border-t border-white/5 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[120px]" />
         </div>
@@ -1342,7 +1340,7 @@ export default function LandingPage({
       {/* =============================================================
           FOOTER
          ============================================================= */}
-      <footer className={cn("bg-[#020205] border-t border-white/5 pt-20 pb-12 px-6 relative z-10 transition-colors duration-300", isAr ? "text-right" : "text-left")} style={{ background: isDark ? undefined : "#f1f5f9" }}>
+      <footer className={cn("bg-[#020205] border-t border-white/5 pt-20 pb-12 px-6 relative z-10", isAr ? "text-right" : "text-left")}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 mb-16" dir={isAr ? "rtl" : "ltr"}>
           <div className="md:col-span-5">
             <div className={cn("flex items-center gap-3 mb-6", isAr ? "" : "flex-row-reverse")}>
@@ -1418,16 +1416,14 @@ export default function LandingPage({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowLoginModal(false)}
-              className="absolute inset-0 bg-[#020205]/90 backdrop-blur-xl transition-colors duration-300"
-              style={{ backgroundColor: isDark ? undefined : "rgba(0, 0, 0, 0.5)" }}
+              className="absolute inset-0 bg-[#020205]/90 backdrop-blur-xl"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className={cn("relative bg-[#070814]/95 border border-indigo-500/40 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg shadow-[0_0_100px_rgba(99,102,241,0.25)] overflow-hidden transition-colors duration-300", isAr ? "text-right" : "text-left")}
-              style={{ backgroundColor: isDark ? undefined : "rgba(255, 255, 255, 0.98)", boxShadow: isDark ? undefined : "0 25px 60px rgba(0,0,0,0.2)" }}
+              className={cn("relative bg-[#070814]/95 border border-indigo-500/40 rounded-[2.5rem] p-6 md:p-10 w-full max-w-lg shadow-[0_0_100px_rgba(99,102,241,0.25)] overflow-hidden", isAr ? "text-right" : "text-left")}
               dir={isAr ? "rtl" : "ltr"}
             >
               <div className="absolute -top-20 -left-20 w-44 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
