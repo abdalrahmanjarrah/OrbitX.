@@ -12,6 +12,7 @@ export default defineConfig(({mode}) => {
       react(),
       tailwindcss(),
       VitePWA({
+        base: env.VITE_BASE_PATH || '/',
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'pwa-sw.ts',
@@ -20,6 +21,8 @@ export default defineConfig(({mode}) => {
         manifest: {
           name: 'OrbitX',
           short_name: 'OrbitX',
+          start_url: env.VITE_BASE_PATH || '/',
+          scope: env.VITE_BASE_PATH || '/',
           theme_color: '#0a0b16',
           background_color: '#0a0b16',
           display: 'standalone',

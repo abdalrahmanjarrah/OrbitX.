@@ -51,8 +51,7 @@ registerRoute(
 registerRoute(
   ({ url }) =>
     url.hostname === "raw.githubusercontent.com" ||
-    url.hostname === "www.transparenttextures.com" ||
-    url.hostname === "grainy-gradients.vercel.app",
+    url.hostname === "www.transparenttextures.com",
   new CacheFirst({
     cacheName: "orbitx-assets",
     plugins: [
