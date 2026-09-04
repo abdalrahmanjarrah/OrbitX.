@@ -112,7 +112,7 @@ export const ChallengeLeaderboard: React.FC<ChallengeLeaderboardProps> = ({
                       {leader.displayName}
                     </span>
                     <span className="text-[10px] text-gray-500 font-semibold">
-                      المستوى: {leader.level} — رتبة المجرة 🎖️
+                      المستوى: {leader.level}
                     </span>
                   </div>
                 </div>

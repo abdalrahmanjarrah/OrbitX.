@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Search } from 'lucide-react';
+import { Search, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { getLevelFromXp, getLevelColor } from '../lib/levelConfig';
@@ -10,14 +10,17 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     const searchTimer = setTimeout(async () => {
       if (searchTerm.trim().length < 2) {
         setResults([]);
+        setSearchError(null);
         return;
       }
       setIsSearching(true);
+      setSearchError(null);
       try {
         const usersRef = collection(db, 'profiles');
         const searchTermExact = searchTerm.trim();
@@ -34,6 +37,7 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
         setResults(fetchedUsers);
       } catch (err) {
         console.error("Search error:", err);
+        setSearchError("تعذر البحث. تحقق من اتصالك بالإنترنت.");
       } finally {
         setIsSearching(false);
       }
@@ -71,6 +75,13 @@ export function UserSearchView({ user, onSelectUser }: { user: any, onSelectUser
           </div>
         )}
       </div>
+
+      {searchError && searchTerm.trim().length >= 2 && (
+        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+          <Zap size={18} className="text-red-400 shrink-0" />
+          <span className="text-sm text-red-400 font-semibold">{searchError}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <AnimatePresence>

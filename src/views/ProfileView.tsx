@@ -21,6 +21,7 @@ import {
   Star,
   Shield,
   Swords,
+  Palette,
 } from "lucide-react";
 import {
   auth,
@@ -47,6 +48,7 @@ import { UserData, BADGES } from "../shared";
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 import { getLevelFromXp, getLevelProgress, getLevelColor, getXpForLevel, getXpToNextLevel } from "../lib/levelConfig";
 
 export default function ProfileView({
@@ -57,6 +59,7 @@ export default function ProfileView({
   isStudying?: boolean;
 }) {
   const { isAr, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [exhibitions, setExhibitions] = useState<any[]>([]);
   const [deletingExhibitionId, setDeletingExhibitionId] = useState<
     string | null
@@ -324,6 +327,13 @@ export default function ProfileView({
               className="p-3 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 rounded-2xl transition-all group/logout shadow-lg"
             >
               <LogOut className="w-5 h-5 text-red-300 group-hover/logout:text-red-200" />
+            </button>
+            <button
+              onClick={toggleTheme}
+              title={theme === "amber" ? (isAr ? "الوضع الأصلي" : "Default theme") : (isAr ? "الوضع الذهبي" : "Amber theme")}
+              className="p-3 bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/50 rounded-2xl transition-all group/theme shadow-lg"
+            >
+              <Palette className={cn("w-5 h-5 transition-colors", theme === "amber" ? "text-amber-400 group-hover/theme:text-amber-300" : "text-gray-400 group-hover/theme:text-amber-400")} />
             </button>
           </div>
 

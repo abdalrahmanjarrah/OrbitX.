@@ -530,7 +530,7 @@ export default function UserModal({
                 <span className={getLevelColor(getLevelFromXp(userData.xp)).text}>
                   {'Level ' + getLevelFromXp(userData.xp)}
                 </span>
-                <span>التقدم للرتبة التالية</span>
+                <span>التقدم للمستوى التالي</span>
                 <span>{'Level ' + (getLevelFromXp(userData.xp) + 1)}</span>
               </div>
               <div className="h-6 bg-space-dark shadow-inner shadow-black/80 rounded-full overflow-hidden border border-white/10 relative">

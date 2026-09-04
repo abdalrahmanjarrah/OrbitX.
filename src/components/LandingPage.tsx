@@ -31,7 +31,7 @@ import {
   Palette,
 } from "lucide-react";
 import StarBackground from "./StarBackground";
-import HeroSolarSystem from "./HeroSolarSystem";
+import GalaxyHero from "./GalaxyHero";
 import InteractiveSecretGlobe from "./InteractiveSecretGlobe";
 import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
@@ -172,7 +172,6 @@ export default function LandingPage({
 }) {
   const { lang, isAr, t, toggleLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -200,18 +199,6 @@ export default function LandingPage({
     return () => {
       audioRef.current?.pause();
     };
-  }, []);
-
-  // Handle subtle mouse movements for beautiful depth effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
-        x: (e.clientX / window.innerWidth - 0.5) * 35,
-        y: (e.clientY / window.innerHeight - 0.5) * 35,
-      });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   // -------------------------------------------------------------
@@ -315,7 +302,6 @@ export default function LandingPage({
   // -------------------------------------------------------------
   const navLinks = [
     { label: isAr ? "الميزات" : "Features", href: "#features" },
-    { label: isAr ? "الرتب" : "Ranks", href: "#ranks" },
     { label: isAr ? "كيف نعمل" : "How it works", href: "#how-it-works" },
     { label: isAr ? "درع الحماية" : "Protection", href: "#anti-cheat" },
     { label: isAr ? "الأسئلة" : "FAQ", href: "#faq" },
@@ -349,8 +335,8 @@ export default function LandingPage({
       bg: "bg-cyan-500/10",
       title: isAr ? "تحفيز عميق يقودك" : "Deep gamification drives you",
       desc: isAr
-        ? "XP، 9 رتب فضائية، شارات نادرة، وتحدي الثقب الأسود الأسبوعي."
-        : "XP, 9 astronaut ranks, rare badges, and the weekly Black Hole quest.",
+        ? "XP، 9 مستويات تقدم، شارات نادرة، وتحدي الثقب الأسود الأسبوعي."
+        : "XP, 9 progression levels, rare badges, and the weekly Black Hole quest.",
     },
   ];
 
@@ -416,21 +402,9 @@ export default function LandingPage({
       color: "text-cyan-400",
       title: isAr ? "الهوية والشارات" : "Identity & Badges",
       desc: isAr
-        ? "جواز رائد فضائي، رتب تتدرج معك، شارات من الندرة إلى الأسطورية، ولوحة إنجازات شهرية."
-        : "An astronaut passport, progressive ranks, badges from common to legendary, and a monthly heatmap.",
+        ? "جواز رائد فضائي، مستويات تتدرج معك، شارات من الندرة إلى الأسطورية، ولوحة إنجازات شهرية."
+        : "An astronaut passport, progressive levels, badges from common to legendary, and a monthly heatmap.",
     },
-  ];
-
-  const ranks = [
-    { icon: "👨‍🚀", name: isAr ? "أول خطوة" : "First Step", xp: "0" },
-    { icon: "🌌", name: isAr ? "مستكشف كوني" : "Cosmic Explorer", xp: "2K" },
-    { icon: "⭐", name: isAr ? "عاشق النجوم" : "Star Lover", xp: "5K" },
-    { icon: "🚀", name: isAr ? "رحالة فضائي" : "Space Voyager", xp: "10K" },
-    { icon: "🧠", name: isAr ? "منضبط كوني" : "Cosmic Disciplined", xp: "15K" },
-    { icon: "⚫", name: isAr ? "فارس الثقوب السوداء" : "Black Hole Knight", xp: "22K" },
-    { icon: "🌠", name: isAr ? "خبير المجرة" : "Galaxy Expert", xp: "30K" },
-    { icon: "🪐", name: isAr ? "حاكم سديم" : "Nebula Sovereign", xp: "40K" },
-    { icon: "👑", name: isAr ? "أسطورة OrbitX" : "OrbitX Legend", xp: "50K" },
   ];
 
   const steps = [
@@ -438,8 +412,8 @@ export default function LandingPage({
       icon: Rocket,
       title: isAr ? "أنشئ حسابك الفضائي" : "Create your space account",
       desc: isAr
-        ? "سجّل الدخول بثانية عبر Google، اختر تخصصك وهدفك اليومي، واحصل على رتبة أول خطوة."
-        : "Sign in with Google in seconds, pick your specialty and daily goal, and earn your First Step rank.",
+        ? "سجّل الدخول بثانية عبر Google، اختر تخصصك وهدفك اليومي، واحصل على المستوى الأول."
+        : "Sign in with Google in seconds, pick your specialty and daily goal, and earn your first level.",
     },
     {
       icon: Timer,
@@ -457,10 +431,10 @@ export default function LandingPage({
     },
     {
       icon: Award,
-      title: isAr ? "ارتقِ رتبة برتبة" : "Climb rank after rank",
+      title: isAr ? "ارتقِ مستوى بمستوى" : "Climb level after level",
       desc: isAr
-        ? "مع كل XP تفتح رتباً وشارات ومقتنيات جديدة — حتى تصبح أسطورة OrbitX."
-        : "Every XP unlocks new ranks, badges and items — until you become an OrbitX Legend.",
+        ? "مع كل XP تفتح مستويات جديدة وشارات ومقتنيات — حتى تصبح أسطورة OrbitX."
+        : "Every XP unlocks new levels, badges and items — until you become an OrbitX Legend.",
     },
   ];
 
@@ -493,10 +467,10 @@ export default function LandingPage({
         : "Yes — and that's the core of the system. The presence radar verifies you're there, and leaving the screen starts a short grace period before XP is deducted. This turns a session into a real commitment.",
     },
     {
-      q: isAr ? "كيف أتقدم في الرتب والشارات؟" : "How do I progress in ranks and badges?",
+      q: isAr ? "كيف أتقدم في المستويات والشارات؟" : "How do I progress in levels and badges?",
       a: isAr
-        ? "كل ساعة تركيز تجلب لك XP. الرتب تتدرج من أول خطوة حتى أسطورة OrbitX عبر 9 مستويات، والشارات تُمنح عند إنجازات مثل الفوز بمعركة أو الوصول لـ 1000 XP."
-        : "Every focus hour grants XP. Ranks progress from First Step to OrbitX Legend across 9 levels, and badges unlock on achievements like winning a duel or reaching 1000 XP.",
+        ? "كل ساعة تركيز تجلب لك XP. المستويات تتدرج من أول خطوة حتى أسطورة OrbitX عبر 9 مراحل، والشارات تُمنح عند إنجازات مثل الفوز بمعركة أو الوصول لـ 1000 XP."
+        : "Every focus hour grants XP. Levels progress from First Step to OrbitX Legend across 9 stages, and badges unlock on achievements like winning a duel or reaching 1000 XP.",
     },
     {
       q: isAr ? "هل التطبيق متوفر بالعربية والإنجليزية؟" : "Is the app available in Arabic and English?",
@@ -685,12 +659,17 @@ export default function LandingPage({
       )}
 
       {/* =============================================================
-          HERO
+          HERO — Interactive Milky Way Galaxy (lazy-loaded)
          ============================================================= */}
-      <section className="relative min-h-screen flex items-center justify-center p-6 pt-32 pb-24 z-10 overflow-hidden">
-        <HeroSolarSystem mousePos={mousePos} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030308] via-transparent to-[#030308]/50 pointer-events-none" />
+      <GalaxyHero
+        className="w-full"
+        height="100vh"
+      />
 
+      {/* =============================================================
+          HERO MESSAGE — value proposition below the galaxy
+         ============================================================= */}
+      <section className="relative flex items-center justify-center p-6 pt-24 pb-24 z-10 border-t border-white/5">
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
           <h1 className="text-[clamp(36px,6.5vw,80px)] font-black leading-[1.12] tracking-tight mb-8 drop-shadow-2xl">
             <span className="block text-white mb-3">
@@ -706,8 +685,8 @@ export default function LandingPage({
             dir={isAr ? "rtl" : "ltr"}
           >
             {isAr
-              ? "OrbitX يحوّل ساعات التزامك الفعلي إلى وقود يحرّك مجرتك: غرف دراسة حية، معارك تركيز، أساطيل متحالفة، رتب وشارات، ورادار حضور يمنع التشتت — كل ذلك في بيئة خالية تماماً من الإعلانات."
-              : "OrbitX turns your real commitment hours into celestial fuel: live study rooms, focus duels, allied fleets, ranks and badges, plus a presence radar that blocks distraction — all inside an ad-free environment."}
+              ? "OrbitX يحوّل ساعات التزامك الفعلي إلى وقود يحرّك مجرتك: غرف دراسة حية، معارك تركيز، أساطيل متحالفة، مستويات وشارات، ورادار حضور يمنع التشتت — كل ذلك في بيئة خالية تماماً من الإعلانات."
+              : "OrbitX turns your real commitment hours into celestial fuel: live study rooms, focus duels, allied fleets, levels and badges, plus a presence radar that blocks distraction — all inside an ad-free environment."}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-5 justify-center w-full sm:w-auto relative z-10">
@@ -837,44 +816,6 @@ export default function LandingPage({
                 <h3 className="text-base font-black text-white mb-2">{f.title}</h3>
                 <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
               </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =============================================================
-          RANKS LADDER
-         ============================================================= */}
-      <section id="ranks" className="py-24 px-6 relative z-10 border-t border-white/5 scroll-mt-20">
-        <div className="max-w-5xl mx-auto">
-          <SectionHead
-            kicker={isAr ? "نظام الرتب" : "Rank system"}
-            title={isAr ? "ارتقِ من أول خطوة" : "Climb from your first step"}
-            highlight={isAr ? "حتى أسطورة OrbitX" : "to OrbitX Legend"}
-            sub={isAr
-              ? "كل XP تقرّبك من رتبة جديدة. 9 رتب فضائية تعكس تطورك الحقيقي وليس مجرد شارة زخرفية."
-              : "Every XP brings a new rank. Nine astronaut ranks reflect real progress, not decorative badges."}
-          />
-          <div className="flex flex-col items-center">
-            {ranks.map((r, i) => (
-              <div key={i} className="flex items-center gap-4 w-full max-w-2xl">
-                <div className={`flex-1 flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-3 inline-flex items-center gap-3">
-                    <span className="text-lg">{r.icon}</span>
-                    <div className="text-right">
-                      <div className="text-sm font-black text-white">{r.name}</div>
-                      <div className="text-[10px] font-mono text-gray-500 mt-0.5">{r.xp} XP</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-3 h-3 rounded-full ${i === ranks.length - 1 ? "bg-gradient-to-br from-amber-300 to-fuchsia-500 shadow-[0_0_15px_rgba(251,191,36,0.8)]" : "bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.6)]"}`} />
-                  {i < ranks.length - 1 && <div className="w-px h-8 bg-white/10" />}
-                </div>
-                <div className={`flex-1 flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                  <span className="text-[10px] font-mono text-gray-600 tracking-wider">#{String(i + 1).padStart(2, "0")}</span>
-                </div>
-              </div>
             ))}
           </div>
         </div>
@@ -1323,8 +1264,8 @@ export default function LandingPage({
           </h2>
           <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto mb-10 leading-relaxed">
             {isAr
-              ? "انضم الآن وابدأ أول جلسة تركيز لك. خلال ثوانٍ ستحصل على رتبة أول خطوة وتبدأ بجمع الـ XP الذي يرفع مقامك بين المستكشفين."
-              : "Join now and start your first focus session. Within seconds you'll earn your First Step rank and start collecting XP to rise among explorers."}
+              ? "انضم الآن وابدأ أول جلسة تركيز لك. خلال ثوانٍ ستحصل على المستوى الأول وتبدأ بجمع الـ XP الذي يرفع مقامك بين المستكشفين."
+              : "Join now and start your first focus session. Within seconds you'll earn your first level and start collecting XP to rise among explorers."}
           </p>
           <button
             onClick={() => setShowLoginModal(true)}
@@ -1368,7 +1309,6 @@ export default function LandingPage({
             </h4>
             <ul className="space-y-3 text-[11px] text-gray-400">
               <li><a href="#features" className="hover:text-indigo-400 transition-colors">{isAr ? "الميزات" : "Features"}</a></li>
-              <li><a href="#ranks" className="hover:text-indigo-400 transition-colors">{isAr ? "نظام الرتب" : "Rank System"}</a></li>
               <li><a href="#how-it-works" className="hover:text-indigo-400 transition-colors">{isAr ? "كيف نعمل" : "How It Works"}</a></li>
               <li><a href="#anti-cheat" className="hover:text-indigo-400 transition-colors">{isAr ? "درع الحماية" : "Protection Shield"}</a></li>
             </ul>

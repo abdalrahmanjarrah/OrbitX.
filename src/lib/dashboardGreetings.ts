@@ -52,7 +52,7 @@ export const MORNING_GREETINGS_EN: GreetingConfig[] = [
 
 export const EVENING_GREETINGS_EN: GreetingConfig[] = [
   { text: "The universe awaits your next milestone.", subtext: "Utilize the evening silence to forge outstanding momentum in your projects." },
-  { text: "Every focused minute elevates your rank.", subtext: "Keep your daily energetic loop active, advancing with elegant steps." },
+  { text: "Every focused minute elevates your level.", subtext: "Keep your daily energetic loop active, advancing with elegant steps." },
   { text: "Engage another session and shatter distractions.", subtext: "A state of pure flow is your companion to transition past obstacles." },
   { text: "Your cognitive resources are in high-definition.", subtext: "Challenge yourself to reach deep attention levels never observed before." },
   { text: "Isolate seamlessly from the external noise.", subtext: "Enjoy a silent orbital cruise inside your personalized focus chamber." }

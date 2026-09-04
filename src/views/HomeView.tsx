@@ -501,7 +501,7 @@ export default function HomeView({
              <div className="flex flex-col justify-center px-6 py-4 rounded-3xl bg-space-dark/60 backdrop-blur-md border border-white/5 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <Star size={12} className="text-fuchsia-400" /> {t("home.space_rank", "رتبة الفضاء")}
+                  <Star size={12} className="text-fuchsia-400" /> {t("home.space_rank", "المستوى")}
                 </span>
                 <div className="text-3xl font-black text-white">Lvl {user.level || 1} <span className="text-xs font-semibold text-gray-500"></span></div>
              </div>

@@ -213,7 +213,7 @@ export default function CosmicDiary({
 
   if (user.level > 1) {
     milestones.push({
-      title: `ترقية الرتبة !`,
+      title: `ترقية المستوى !`,
       description: isOwner
         ? `تم الوصول إلى المستوى ${user.level} في التسلسل القيادي للأسطول الفضائي! 🎖️`
         : `وصل إلى المستوى ${user.level} في التسلسل القيادي! 🎖️`,

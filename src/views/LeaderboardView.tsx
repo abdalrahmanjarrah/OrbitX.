@@ -171,11 +171,15 @@ export default function LeaderboardView({
 }) {
   const { isAr, lang } = useLanguage();
   const [leaders, setLeaders] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const fetchLeaders = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const q = query(
           collection(db, "profiles"),
           orderBy("xp", "desc"),
@@ -188,14 +192,19 @@ export default function LeaderboardView({
               .map((doc) => doc.data() as UserData)
               .filter((u) => u && u.displayName),
           );
+          setLoading(false);
         }
-      } catch (e) {
+      } catch (e: any) {
         handleFirestoreError(e, OperationType.GET, "profiles_leaderboard");
+        if (isMounted) {
+          setError(isAr ? "تعذر تحميل قائمة المتصدرين. تحقق من اتصالك بالإنترنت." : "Failed to load leaderboard. Check your internet connection.");
+          setLoading(false);
+        }
       }
     };
     fetchLeaders();
     return () => { isMounted = false; };
-  }, []);
+  }, [isAr]);
 
   return (
     <motion.div
@@ -223,7 +232,27 @@ export default function LeaderboardView({
         </div>
 
         <div className="divide-y divide-white/5">
-          {leaders.map((leader, index) => {
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-gray-400">{isAr ? "جارٍ تحميل المتصدرين..." : "Loading leaderboard..."}</span>
+            </div>
+          )}
+          {!loading && error && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                <Zap size={20} className="text-red-400" />
+              </div>
+              <span className="text-sm text-red-400 font-semibold">{error}</span>
+            </div>
+          )}
+          {!loading && !error && leaders.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <span className="text-4xl">🌌</span>
+              <span className="text-sm text-gray-400">{isAr ? "لا يوجد رائد فضاء في القائمة بعد" : "No astronauts on the leaderboard yet"}</span>
+            </div>
+          )}
+          {!loading && !error && leaders.map((leader, index) => {
             const rankStyle =
               index === 0
                 ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
