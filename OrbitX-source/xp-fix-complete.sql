@@ -65,9 +65,11 @@ CREATE TABLE IF NOT EXISTS public.admins (
 INSERT INTO public.admins (email) VALUES
     ('lumafashionhq@gmail.com'),
     ('abdalrahmanjarrah94@gmail.com'),
-    ('abdalrahmanjarrah1@gmail.com'),
-    ('abdalrhmanmaaith24@gmail.com')
+    ('abdalrahmanjarrah1@gmail.com')
 ON CONFLICT (email) DO NOTHING;
+
+-- Removed from admins by owner request: abdalrhmanmaaith24@gmail.com
+DELETE FROM public.admins WHERE email = 'abdalrhmanmaaith24@gmail.com';
 
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admins_readable" ON public.admins;
