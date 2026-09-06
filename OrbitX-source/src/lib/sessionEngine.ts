@@ -492,24 +492,9 @@ export function useSessionEngine(
       }
 
       if (options.isPenalty && options.penaltyReason) {
-        try {
-          console.log("[Exit Engine] Applying penalty transactional write:", options.penaltyAmount, options.penaltyReason);
-          const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
-            Promise.race([
-              promise,
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("timeout")), ms)
-              ),
-            ]);
-          await withTimeout(
-            requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, options.penaltyAmount || -10, options.penaltyReason, true),
-            2500
-          ).catch((err) => {
-            console.warn("[Exit Engine] Penalty grant timed out or failed:", err.message || err);
-          });
-        } catch (e) {
-          console.error("Failed to apply exit penalty:", e);
-        }
+        // Collective/exit XP penalty removed by product decision — leaving the
+        // station no longer deducts XP. Fuel leak (per-user) is the only drain.
+        console.log("[Exit Engine] Exit penalty is disabled by design:", options.penaltyReason);
       }
 
       if (!options.skipFirebaseUpdate) {
@@ -518,7 +503,7 @@ export function useSessionEngine(
           if (participantsCountRef.current > 1) {
             await addDoc(collection(db, "rooms", stationId, "messages"), {
               text: options.customExitMessage || (options.isPenalty 
-                ? `🚀 غادر المحرك (${userRef.current.displayName}) المحطة والتايمر يعمل بوضع الدراسة (تم خصم ${Math.abs(options.penaltyAmount || 10)} XP).`
+                ? `🚀 غادر المحرك (${userRef.current.displayName}) المحطة والتايمر يعمل بوضع الدراسة.`
                 : `🚀 غادر المحرك (${userRef.current.displayName}) المحطة.`),
               userId: "system",
               userName: "نظام التنبيه",
@@ -999,14 +984,13 @@ export function useSessionEngine(
     }
   }, [room?.timerStatus, startTimeVal, room?.timerDuration, room?.breakDuration]);
 
-  // Distraction trigger Red Alert
+  // Distraction trigger Red Alert (alert only — no XP penalty; fuel leak handles draining)
   const triggerRedAlert = useCallback(async () => {
     if (isSpectator) return;
     setShowAlert(true);
-    await requestXpGrant(userRef.current.uid, userRef.current.fleetId, null, false, -20, "distraction_penalty", true);
 
     await addDoc(collection(db, "rooms", stationId, "messages"), {
-      text: `☄️ نيزك ضرب المحطة! ${userRef.current.displayName} تشتت وفقد 20 XP!`,
+      text: `☄️ نيزك ضرب المحطة! ${userRef.current.displayName} تشتت وفقد جزءاً من وقوده!`,
       userId: userRef.current.uid,
       userName: "نظام التنبيه",
       userPhoto: "",
@@ -1369,6 +1353,8 @@ export function useSessionEngine(
                   (sameWeek ? userRef.current.weekFocusMinutes || 0 : 0) + minutesEarned;
                 updates.weekSessions =
                   (sameWeek ? userRef.current.weekSessions || 0 : 0) + 1;
+                updates.totalFocusMinutes =
+                  (userRef.current.totalFocusMinutes || 0) + minutesEarned;
 
                 updateDoc(doc(db, "users", userRef.current.uid), updates).catch(() => {});
 
@@ -1545,6 +1531,11 @@ export function useSessionEngine(
         if (winnerId !== "draw" && winnerId !== "tie" && winnerId !== "") {
           const { grantChallengeReward } = await import("../lib/xpSystem");
           await grantChallengeReward(cId, winnerId);
+
+          // Make "challengeWins" real: one win per completed challenge for the winner.
+          await updateDoc(doc(db, "users", winnerId), {
+            challengeWins: increment(1),
+          }).catch(() => {});
 
           await addDoc(collection(db, "users", winnerId, "notifications"), {
             type: "challenge_win",

@@ -101,7 +101,7 @@ export default function ChallengesHubView({
     } else {
       showToast(
         isAr
-          ? "يمكنك استدعاء مقاتلين جدد للمجرة عبر التوجه لقسم 'البث والاستكشاف' والبحث عنهم!"
+          ? "يمكنك استدعاء مقاتلين جدد للمجرة عبر التوجه لقسم 'البحث' والبحث عنهم!"
           : "You can invite new fighters to the galaxy by heading to the Radar & Explore section and searching for them!",
         "info",
       );

@@ -14,12 +14,9 @@ import {
   CheckCircle,
   Eye,
   Zap,
-  Globe,
   Target,
   Clock,
   Calendar,
-  Star,
-  Shield,
   Swords,
   Palette,
 } from "lucide-react";
@@ -44,7 +41,7 @@ import {
   serverTimestamp,
   limit,
 } from "firebase/firestore";
-import { UserData, BADGES } from "../shared";
+import { UserData } from "../shared";
 import { cn } from "../lib/utils";
 import { showToast } from "../lib/cosmicUI";
 import { useLanguage } from "../context/LanguageContext";
@@ -288,7 +285,6 @@ export default function ProfileView({
     reader.readAsDataURL(file);
   };
 
-  const achievementCount = BADGES.filter((b) => user.xp >= b.minXp).length;
   const userLevel = getLevelFromXp(user.xp);
   const levelColors = getLevelColor(userLevel);
   const levelProgress = getLevelProgress(user.xp, userLevel);
@@ -525,7 +521,7 @@ export default function ProfileView({
         {/* Left/Main Column */}
         <div className="lg:col-span-3 space-y-6">
           {/* Stats Section - Premium Glass Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {[
               {
                 title: "الخبرة الكلية",
@@ -537,7 +533,11 @@ export default function ProfileView({
               },
               {
                 title: "ساعات التركيز",
-                value: `${Math.round((user.xp / 60) * 10) / 10} س`,
+                value: `${
+                  user.totalFocusMinutes
+                    ? Math.round((user.totalFocusMinutes / 60) * 10) / 10
+                    : Math.round(((user.xp || 0) / 60) * 10) / 10
+                } س`,
                 icon: <Clock size={20} />,
                 color: "text-blue-400",
                 bg: "bg-blue-500/10",
@@ -550,6 +550,14 @@ export default function ProfileView({
                 color: "text-indigo-400",
                 bg: "bg-indigo-500/10",
                 border: "border-indigo-500/20",
+              },
+              {
+                title: "سلسلة الأيام",
+                value: `${user.streak || 0} 🔥`,
+                icon: <Flame size={20} />,
+                color: "text-orange-400",
+                bg: "bg-orange-500/10",
+                border: "border-orange-500/20",
               },
               {
                 title: "الأصدقاء",
@@ -605,105 +613,6 @@ export default function ProfileView({
                 </div>
               </motion.div>
             ))}
-          </div>
-
-          {/* Achievements Galaxy Section */}
-          <div className="bg-[#080b1a]/60 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-              <Globe size={150} />
-            </div>
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div>
-                <h3 className="text-2xl font-black font-display text-white flex items-center gap-3">
-                  <Star className="text-amber-400" /> مجرة الإنجازات
-                </h3>
-                <p className="text-sm text-gray-400 font-mono mt-1">
-                  {achievementCount} / {BADGES.length} UNLOCKED
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-1">
-                  التقدم الكلي
-                </div>
-                <div className="w-32 h-2 bg-black rounded-full overflow-hidden border border-white/5">
-                  <div
-                    className="h-full bg-amber-500/80 rounded-full"
-                    style={{
-                      width: `${(achievementCount / BADGES.length) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 relative z-10">
-              {BADGES.map((badge, i) => {
-                const unlocked =
-                  user.xp >= badge.minXp ||
-                  (user.badges && user.badges.includes(badge.id));
-                // Rarity logic mock for visuals
-                const rarity =
-                  badge.minXp > 50000
-                    ? "Legendary"
-                    : badge.minXp > 10000
-                      ? "Epic"
-                      : badge.minXp > 1000
-                        ? "Rare"
-                        : "Common";
-                const rarityColors = {
-                  Legendary:
-                    "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40 shadow-[0_0_20px_theme(colors.fuchsia.500/30)]",
-                  Epic: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30 shadow-[0_0_15px_theme(colors.indigo.500/20)]",
-                  Rare: "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_10px_theme(colors.blue.500/20)]",
-                  Common: "bg-green-500/10 text-green-400 border-green-500/20",
-                };
-
-                return (
-                  <div
-                    key={i}
-                    className={`p-4 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all duration-300 ${unlocked ? "bg-[#0a0f25] border border-white/10 hover:-translate-y-1 hover:shadow-xl" : "bg-black/40 border border-white/5 opacity-50 blur-[0.5px] hover:blur-none hover:opacity-100"}`}
-                  >
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3 transition-transform duration-500 group-hover:scale-110 ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-500 border-white/10"}`}
-                    >
-                      {unlocked ? badge.icon : <Shield size={20} />}
-                    </div>
-                    <h4
-                      className={`font-bold text-[13px] mb-1 leading-tight ${unlocked ? "text-white" : "text-gray-500"}`}
-                    >
-                      {badge.title}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 font-mono tracking-widest">
-                      {badge.minXp} XP
-                    </p>
-
-                    {/* Hover Tooltip/Detail inside the card container for simplicity (modern SaaS pop) */}
-                    <div className="absolute inset-0 bg-[#0a0f25]/95 backdrop-blur-md rounded-3xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 border border-white/20 p-4 flex flex-col items-center justify-center text-center shadow-2xl z-50">
-                      <div
-                        className={`text-xl mb-2 ${unlocked ? rarityColors[rarity] : "text-gray-500"}`}
-                      >
-                        {unlocked ? badge.icon : <Shield size={20} />}
-                      </div>
-                      <h4
-                        className={`font-bold text-[13px] mb-1 ${unlocked ? "text-white" : "text-gray-500"}`}
-                      >
-                        {badge.title}
-                      </h4>
-                      <p className="text-[10px] text-gray-400 leading-tight mb-2 line-clamp-3">
-                        {unlocked
-                          ? badge.description
-                          : "مغلق. احصل على المزيد من الطاقة لفتحه."}
-                      </p>
-                      <span
-                        className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${unlocked ? rarityColors[rarity] : "bg-white/5 text-gray-600"}`}
-                      >
-                        {unlocked ? rarity : "LOCKED"}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
 
           {/* Mission Progress + Today's Missions — powered by real data */}

@@ -74,7 +74,7 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle,
+  Search,
   LayoutGrid,
   List,
 } from "lucide-react";
@@ -542,8 +542,6 @@ export default function HomeView({
 
               <div className="flex items-center gap-1.5 rounded-2xl bg-[#1a1b32]/80 backdrop-blur-xl border border-white/10 p-1 overflow-x-auto">
                  {([
-                    { key: "all", label: isAr ? "الكل" : "All", icon: Globe2 },
-                    { key: "mine", label: isAr ? "محطاتي" : "Mine", icon: UserCircle },
                     { key: "public", label: isAr ? "عامة" : "Public", icon: Users },
                     { key: "private", label: isAr ? "خاصة" : "Private", icon: Lock },
                  ] as const).map((f) => (
@@ -763,7 +761,7 @@ export default function HomeView({
 
       {/* Time Chests + Referral — at the bottom */}
       <div className="flex flex-col sm:flex-row gap-4 mt-6">
-        {!user.isGuest && <TimeChests user={user} />}
+        <TimeChests user={user} />
         {!user.isGuest && <ReferralCard user={user} />}
       </div>
     </div>

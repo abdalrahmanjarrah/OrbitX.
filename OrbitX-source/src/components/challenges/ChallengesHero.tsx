@@ -63,7 +63,7 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/12 text-rose-400 text-xs font-medium mb-4 border border-rose-500/25 tracking-wide"
           >
             <Swords size={12} className="animate-pulse" />
-            حلبة النزالات · OrbitX
+            قسم النزالات · OrbitX
           </motion.div>
 
           <motion.h1
@@ -97,10 +97,10 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
           >
             <button
               onClick={onStartChallengeClick}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-l from-rose-500 to-amber-600 border border-rose-400/40 text-white text-sm font-medium shadow-[0_0_25px_rgba(244,63,94,0.3)] hover:from-rose-500/90 hover:to-amber-500/90 hover:shadow-[0_0_35px_rgba(244,63,94,0.45)] transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-l from-rose-500 to-amber-600 border border-rose-400/40 text-white text-base font-bold shadow-[0_0_25px_rgba(244,63,94,0.3)] hover:from-rose-500/90 hover:to-amber-500/90 hover:shadow-[0_0_35px_rgba(244,63,94,0.45)] transition-all active:scale-95 cursor-pointer"
             >
-              <Rocket size={14} />
-              فتح نزال جديد
+              <Rocket size={16} />
+              إطلاق نزال جديد
             </button>
             <button
               onClick={onInviteFriendClick}

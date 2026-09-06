@@ -20,7 +20,7 @@ import {
   Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "../lib/utils";
+import { cn, getWeekStartISO } from "../lib/utils";
 import { db, handleFirestoreError, OperationType, auth } from "../firebase";
 import {
   collection,
@@ -97,6 +97,17 @@ const PRIORITIES = [
   },
 ] as const;
 
+const TASK_COLORS = [
+  "#38BDF8",
+  "#2DD4BF",
+  "#8B5CF6",
+  "#D946EF",
+  "#F43F5E",
+  "#F59E0B",
+  "#A3E635",
+  "#94A3B8",
+];
+
 const CATEGORIES = ["دراسة", "مراجعة", "اختبار", "مشروع", "عام"];
 
 export default function ScheduleView({ user }: { user: UserData }) {
@@ -112,6 +123,8 @@ export default function ScheduleView({ user }: { user: UserData }) {
   const [duration, setDuration] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [category, setCategory] = useState("دراسة");
+  const [color, setColor] = useState(TASK_COLORS[0]);
+  const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
 
   // Filter state
   const [filterMode, setFilterMode] = useState<"all" | "today" | "pending">(
@@ -172,6 +185,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
         duration: duration ? parseInt(duration) : 0,
         priority,
         category,
+        color,
         timestamp: serverTimestamp(),
       };
       const docRef = await addDoc(
@@ -316,8 +330,35 @@ export default function ScheduleView({ user }: { user: UserData }) {
 
   const progress = useMemo(() => {
     if (items.length === 0) return 0;
-    const completed = items.filter((i) => i.completed).length;
-    return Math.round((completed / items.length) * 100);
+    // نسبة إنجاز الأسبوع الحقيقية: عدد المهام المنجزة هذا الأسبوع فقط
+    // (وفق حقل completedAt) مقسوم على مهام خطة هذا الأسبوع
+    // (وفق حقل timestamp — والمهام القديمة بلا timestamp تُعامل كخطة قائمة).
+    const weekStartMs = new Date(getWeekStartISO()).getTime();
+    const nowMs = Date.now();
+    const toMs = (v: unknown): number | null => {
+      if (!v) return null;
+      if (typeof v === "number") return v;
+      if (typeof v === "string") return new Date(v).getTime();
+      if (typeof v === "object" && v !== null) {
+        const obj = v as { seconds?: number; nanos?: number; toMillis?: () => number };
+        if (typeof obj.toMillis === "function") return obj.toMillis();
+        if (typeof obj.seconds === "number")
+          return obj.seconds * 1000 + (obj.nanos ?? 0) / 1e6;
+      }
+      return null;
+    };
+    const inWeek = items.filter((i) => {
+      const tMs = toMs((i as unknown as { timestamp?: unknown }).timestamp);
+      if (tMs === null) return true;
+      return tMs >= weekStartMs && tMs <= nowMs;
+    });
+    const doneThisWeek = inWeek.filter((i) => {
+      if (!i.completed) return false;
+      const cMs = toMs((i as unknown as { completedAt?: unknown }).completedAt);
+      return cMs !== null && cMs >= weekStartMs;
+    }).length;
+    if (inWeek.length === 0) return 0;
+    return Math.round((doneThisWeek / inWeek.length) * 100);
   }, [items]);
 
   return (
@@ -348,7 +389,7 @@ export default function ScheduleView({ user }: { user: UserData }) {
           <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-3 border border-white/10 shrink-0 w-full md:w-auto">
             <div className="text-right flex-1 md:w-32">
               <div className="flex justify-between items-center text-xs mb-1.5">
-                <span className="font-bold text-gray-300">إنجاز الأسبوع</span>
+                <span className="font-bold text-gray-300" title={isAr ? "تُحتسب المهام المنجزة من بداية الأسبوع (الاثنين) وحتى اليوم" : "Counts tasks completed from the start of the week (Monday) until today"}>نسبة إنجاز الأسبوع كامل</span>
                 <span className="text-blue-400 font-bold">{progress}%</span>
               </div>
               <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
@@ -614,6 +655,30 @@ export default function ScheduleView({ user }: { user: UserData }) {
               </div>
             </div>
 
+            {/* Task Color */}
+            <div className="space-y-2">
+              <label className={cn("text-sm font-bold text-gray-400 block", isAr ? "text-right" : "text-left")}>
+                {isAr ? "لون المهمة" : "Task Color"}
+              </label>
+              <div className={cn("flex flex-wrap gap-2", isAr ? "flex-row" : "flex-row-reverse")}>
+                {TASK_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    className={cn(
+                      "w-8 h-8 rounded-full border-2 transition-all hover:scale-110 active:scale-95",
+                      color === c
+                        ? "border-white ring-2 ring-white/30 scale-110"
+                        : "border-transparent",
+                    )}
+                    style={{ backgroundColor: c }}
+                    aria-label={`task color ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-end pt-4 space-x-reverse space-x-3">
               <button
                 onClick={handleAddItem}
@@ -745,17 +810,67 @@ export default function ScheduleView({ user }: { user: UserData }) {
                           )}
                         >
                           <div className="flex items-center gap-3 md:gap-4">
-                            {/* Time Column */}
+                            {/* Time Column — clickable to edit */}
                             <div className="shrink-0 w-14 md:w-16 text-center flex flex-col items-center">
-                              <span
-                                className={cn(
-                                  "text-sm md:text-base font-black",
-                                  isCompleted ? "text-gray-500" : "text-white",
-                                )}
-                                dir="ltr"
-                              >
-                                {item.time}
-                              </span>
+                              {editingTimeId === item.id ? (
+                                <input
+                                  type="time"
+                                  defaultValue={item.time}
+                                  autoFocus
+                                  onBlur={(e) => {
+                                    const v = e.target.value;
+                                    setEditingTimeId(null);
+                                    if (!v) {
+                                      setItems((prev) =>
+                                        prev.map((i) =>
+                                          i.id === item.id
+                                            ? { ...i, time: item.time }
+                                            : i,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    if (v !== item.time) {
+                                      updateDoc(
+                                        doc(db, "users", user.uid, "schedule", item.id),
+                                        { time: v },
+                                      ).catch((err: any) =>
+                                        handleFirestoreError(
+                                          err,
+                                          OperationType.WRITE,
+                                          `users/${user.uid}/schedule/${item.id}`,
+                                        ),
+                                      );
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-1.5 py-1 text-center text-sm md:text-base font-black text-white cursor-pointer"
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingTimeId(item.id)}
+                                  title={isAr ? "اضغط لتغيير الوقت" : "Click to change time"}
+                                  className={cn(
+                                    "relative transition-colors",
+                                    isCompleted
+                                      ? "text-gray-500 hover:text-blue-400"
+                                      : "text-white hover:text-blue-400",
+                                  )}
+                                  dir="ltr"
+                                >
+                                  {item.time}
+                                  <Clock
+                                    size={10}
+                                    className="absolute -top-1 -right-2 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  />
+                                </button>
+                              )}
                               {(item.duration ? item.duration > 0 : false) && (
                                 <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
                                   <Timer size={9} />
@@ -764,12 +879,17 @@ export default function ScheduleView({ user }: { user: UserData }) {
                               )}
                             </div>
 
-                            {/* Priority Accent Stripe */}
+                            {/* Accent Stripe (task color or priority) */}
                             <div
                               className={cn(
                                 "w-1 self-stretch rounded-full shrink-0",
                                 isCompleted ? "bg-gray-700" : pInfo.bg.replace("/10", "/60"),
                               )}
+                              style={
+                                !isCompleted && item.color
+                                  ? { backgroundColor: item.color }
+                                  : undefined
+                              }
                             />
 
                             {/* Content */}

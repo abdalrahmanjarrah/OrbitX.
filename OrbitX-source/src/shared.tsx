@@ -424,6 +424,7 @@ export interface UserData {
   lastDailyReward?: string;
   lastStudyDate?: string;
   totalFocusTime?: number;
+  totalFocusMinutes?: number;
   focusSessions?: number;
   hearts?: number;
   totalFocusSessions?: number;
@@ -488,6 +489,7 @@ export interface ScheduleItem {
   priority?: "low" | "medium" | "high";
   category?: string;
   duration?: number; // minutes
+  color?: string; // hex accent picked from the task color palette
 }
 
 export interface Room {

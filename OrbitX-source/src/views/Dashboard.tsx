@@ -411,16 +411,16 @@ export default function Dashboard({
                 <>
                   <NavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} className="tour-step-home" />
                   {!isGuest && <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />}
-                  {!isGuest && <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />}
+                  {!isGuest && <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />}
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
               )}
               {currentCategory === "community" && (
                 <>
-                  {!isGuest && <NavPill icon={<Search size={14} />} label={t("nav.search", "البث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
+                  {!isGuest && <NavPill icon={<Search size={14} />} label={t("nav.search", "بحث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
                   <NavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "النقاشات")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} className="tour-step-discussions" />
                   {!isGuest && <NavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />}
-                  <NavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "التصنيف")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
+                  <NavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "لوحة الصدارة")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} className="tour-step-leaderboard" />
                   {/* قسم الوعي (Awareness) مخفي مؤقتاً — يمكن إرجاعه بإزالة التعليق:
                   <NavPill icon={<Radio size={14} />} label={t("nav.awareness", "الوعي")} active={activeTab === "awareness"} onClick={() => handleTabChange("awareness")} className="tour-step-awareness" />
                   */}
@@ -606,17 +606,17 @@ export default function Dashboard({
                 <>
                   <MobileNavPill icon={<LayoutDashboard size={14} />} label={t("nav.home", "المحطات")} active={activeTab === "home"} onClick={() => handleTabChange("home")} />
                   {!isGuest && <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />}
-                  {!isGuest && <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "السباقات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />}
+                  {!isGuest && <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />}
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
                 </>
             )}
             {/* ... Mobile Sub-nav for others ... */}
             {currentCategory === "community" && (
                 <>
-                  {!isGuest && <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "الاستكشاف")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
+                  {!isGuest && <MobileNavPill icon={<Search size={14} />} label={t("nav.search", "بحث")} active={activeTab === "search"} onClick={() => handleTabChange("search")} />}
                   <MobileNavPill icon={<MessageCircle size={14} />} label={t("nav.discussions", "مجلس الحكماء")} active={activeTab === "discussions"} onClick={() => handleTabChange("discussions")} />
                   {!isGuest && <MobileNavPill icon={<Users size={14} />} label={t("nav.fleets", "الأساطيل")} active={activeTab === "fleets"} onClick={() => handleTabChange("fleets")} />}
-                  <MobileNavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "المتصدرين")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} />
+                  <MobileNavPill icon={<Trophy size={14} />} label={t("nav.leaderboard", "لوحة الصدارة")} active={activeTab === "leaderboard"} onClick={() => handleTabChange("leaderboard")} />
                 </>
             )}
             {currentCategory === "profile" && (

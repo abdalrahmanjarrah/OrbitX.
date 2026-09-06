@@ -216,7 +216,7 @@ export default function LeaderboardView({
       <div className={cn("flex items-center justify-between mb-8", isAr ? "flex-row" : "flex-row-reverse")}>
         <h2 className="text-3xl font-black flex items-center gap-3">
           <Trophy className="text-yellow-400" size={32} />
-          {isAr ? "قائمة المتصدرين" : "Cosmic Leaderboard"}
+          {isAr ? "لوحة الصدارة" : "Cosmic Leaderboard"}
         </h2>
         <div className="px-4 py-2 bg-space-dark shadow-lg shadow-indigo-900/10 rounded-xl border border-white/10 text-sm text-gray-400">
           {isAr ? "أفضل 50 رائد فضاء" : "Top 50 Astronauts"}
