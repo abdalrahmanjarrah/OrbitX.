@@ -360,7 +360,7 @@ export default function ProfileView({
                   className="absolute -bottom-2 right-0 z-30 px-3 py-1.5 rounded-full text-[11px] font-black border border-amber-400/60 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] flex items-center gap-1"
                 >
                   <Award size={12} />
-                  {isAr ? "مشرف الكون" : "Cosmos Admin"}
+                  ADMIN
                 </motion.div>
               )}
 
