@@ -349,19 +349,7 @@ export default function ProfileView({
                 )}
               />
 
-              {isAdminView && (
-                <motion.div
-                  initial={{ y: 0 }}
-                  animate={{ y: [-3, 3, -3], rotate: [0, 360] }}
-                  transition={{
-                    y: { repeat: Infinity, duration: 3.5, ease: "easeInOut" },
-                    rotate: { repeat: Infinity, duration: 14, ease: "linear" },
-                  }}
-                  className="absolute -top-6 -left-8 text-3xl z-30 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)] pointer-events-none"
-                >
-                  👑
-                </motion.div>
-              )}
+              
 
               {/* Admin Badge Float */}
               {isAdminView && (
