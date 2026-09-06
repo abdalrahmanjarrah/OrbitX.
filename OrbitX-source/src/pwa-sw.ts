@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
-import { CacheFirst } from "workbox-strategies";
+import { CacheFirst, NetworkFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 import { RangeRequestsPlugin } from "workbox-range-requests";
@@ -12,6 +12,22 @@ cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
 const BASE = self.registration.scope;
+
+// Navigation is Network-first so freshly deployed hashed chunks are always
+// resolved against the current index.html instead of a stale cached copy.
+// Falls back to cached index.html when offline. Must be registered before
+// precacheAndRoute so it wins over the precached index.html.
+registerRoute(
+  new NavigationRoute(
+    new NetworkFirst({
+      cacheName: "orbitx-navigation",
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [0, 200] }),
+      ],
+    }),
+    { denylist: [/\/assets\//, /\/sounds\//] },
+  )
+);
 
 registerRoute(
   ({ url }) => url.hostname === "api.dicebear.com",
@@ -60,11 +76,6 @@ registerRoute(
     ],
   })
 );
-
-const navigationHandler = new NavigationRoute(createHandlerBoundToURL("index.html"), {
-  denylist: [/\/assets\//, /\/sounds\//],
-});
-registerRoute(navigationHandler);
 
 self.addEventListener("push", (event) => {
   let payload: { title?: string; body?: string; url?: string } = {};
