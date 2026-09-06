@@ -75,7 +75,7 @@ import {
   CheckSquare,
   Bell,
   BarChart3,
-  Search, Globe2, UserCircle, UserPlus,
+  Search, Globe2, UserCircle, UserPlus, Map as MapIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
@@ -162,6 +162,7 @@ const AwarenessView = React.lazy(() => import('./AwarenessView'));
 const ChallengesHubView = React.lazy(() => import('./ChallengesHubView'));
 const FleetsView = React.lazy(() => import('./FleetsView'));
 const UserSearchView = React.lazy(() => import('../components/UserSearchView').then((m) => ({ default: m.UserSearchView })));
+const SystemMapView = React.lazy(() => import('./SystemMapView'));
 
 export default function Dashboard({
   user,
@@ -190,6 +191,7 @@ export default function Dashboard({
     | "fleets"
     | "support"
     | "challenges"
+    | "systemmap"
   >("home");
   const [activeStation, setActiveStation] = useState<string | null>(null);
 
@@ -333,6 +335,7 @@ export default function Dashboard({
     if (tab === "fleets") activity = "يدير الأسطول المجري 🌌";
     if (tab === "support") activity = "يرفع اقتراحات للدعم الفني 📡";
     if (tab === "search") activity = "يستكشف رواد الفضاء الجدد 📡";
+    if (tab === "systemmap") activity = "يفحص خريطة النظام 🗺️";
 
     if (activityTimeoutRef.current) {
       clearTimeout(activityTimeoutRef.current);
@@ -413,6 +416,7 @@ export default function Dashboard({
                   {!isGuest && <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />}
                   {!isGuest && <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />}
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
+                  {!isGuest && <NavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
                 </>
               )}
               {currentCategory === "community" && (
@@ -594,6 +598,7 @@ export default function Dashboard({
               {activeTab === "awareness" && <AwarenessView user={user} />}
               {activeTab === "blackholes" && <BlackHolesView user={user} />}
               {activeTab === "fleets" && <FleetsView user={user} />}
+              {activeTab === "systemmap" && <SystemMapView />}
             </React.Suspense>
           </motion.div>
         </AnimatePresence>
@@ -608,6 +613,7 @@ export default function Dashboard({
                   {!isGuest && <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />}
                   {!isGuest && <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />}
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
+                  {!isGuest && <MobileNavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
                 </>
             )}
             {/* ... Mobile Sub-nav for others ... */}
