@@ -288,6 +288,7 @@ export default function ProfileView({
   const userLevel = getLevelFromXp(user.xp);
   const levelColors = getLevelColor(userLevel);
   const levelProgress = getLevelProgress(user.xp, userLevel);
+  const isAdminView = user.role === "admin";
 
   return (
     <div
@@ -337,16 +338,43 @@ export default function ProfileView({
             {/* Avatar with Orbit */}
             <div className="relative w-48 h-48 md:w-56 md:h-56 shrink-0 flex items-center justify-center">
               {/* Rotating Rings */}
-              <div className="absolute inset-0 border-[1px] border-indigo-500/20 rounded-full animate-[spin_10s_linear_infinite]" />
-              <div className="absolute inset-2 border-[1px] border-dashed border-fuchsia-500/30 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+              <div className={cn("absolute border rounded-full animate-[spin_10s_linear_infinite]", isAdminView ? "inset-0 border-amber-400/50 shadow-[0_0_30px_rgba(251,191,36,0.25)]" : "inset-0 border-indigo-500/20")} />
+              <div className={cn("absolute border rounded-full animate-[spin_15s_linear_infinite_reverse]", isAdminView ? "inset-2 border-dashed border-amber-300/40" : "inset-2 border-dashed border-fuchsia-500/30")} />
 
               {/* Glowing Aura based on Level */}
               <div
                 className={cn(
                   "absolute inset-6 rounded-full blur-[40px] opacity-60 animate-[pulse_4s_ease-in-out_infinite]",
-                  levelColors.bg,
+                  isAdminView ? "bg-amber-400/40" : levelColors.bg,
                 )}
               />
+
+              {isAdminView && (
+                <motion.div
+                  initial={{ y: 0 }}
+                  animate={{ y: [-3, 3, -3], rotate: [0, 360] }}
+                  transition={{
+                    y: { repeat: Infinity, duration: 3.5, ease: "easeInOut" },
+                    rotate: { repeat: Infinity, duration: 14, ease: "linear" },
+                  }}
+                  className="absolute -top-6 -left-8 text-3xl z-30 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)] pointer-events-none"
+                >
+                  👑
+                </motion.div>
+              )}
+
+              {/* Admin Badge Float */}
+              {isAdminView && (
+                <motion.div
+                  initial={{ y: 0 }}
+                  animate={{ y: [-4, 4, -4] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                  className="absolute -bottom-2 right-0 z-30 px-3 py-1.5 rounded-full text-[11px] font-black border border-amber-400/60 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(251,191,36,0.5)] flex items-center gap-1"
+                >
+                  <Award size={12} />
+                  {isAr ? "مشرف الكون" : "Cosmos Admin"}
+                </motion.div>
+              )}
 
               {/* Level Badge Float - Top Left */}
               <motion.div
@@ -371,7 +399,9 @@ export default function ProfileView({
               <div
                 className={cn(
                   "w-36 h-36 md:w-44 md:h-44 rounded-full border-4 relative z-20 overflow-hidden cursor-pointer group/avatar max-w-full bg-[#080b1a] shrink-0",
-                  "border-indigo-400",
+                  isAdminView
+                    ? "border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.4)]"
+                    : "border-indigo-400",
                 )}
                 onClick={() => fileInputRef.current?.click()}
               >
