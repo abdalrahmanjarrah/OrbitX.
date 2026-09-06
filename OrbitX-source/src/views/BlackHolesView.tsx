@@ -1,9 +1,11 @@
 import { playSound } from "../lib/sound";
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+import {
+  fetchBlackHoleData,
+  claimBlackHolePrize,
+  BLACK_HOLE_TARGET_MINUTES,
+  BLACK_HOLE_PRIZE_XP,
+} from "../lib/blackHole";
+import { showToast } from "../lib/cosmicUI";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -80,59 +82,7 @@ import { motion, AnimatePresence } from "motion/react";
 import StarBackground from "../components/StarBackground";
 
 import { cn } from "../lib/utils";
-import {
-  auth,
-  db,
-  signInWithGoogle,
-  logout,
-  handleFirestoreError,
-  OperationType,
-} from "../firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  onSnapshot as originalOnSnapshot,
-  query,
-  orderBy,
-  limit,
-  addDoc,
-  serverTimestamp,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  where,
-  deleteDoc,
-  deleteField,
-  writeBatch,
-} from "firebase/firestore";
 import { UserSearchView } from "../components/UserSearchView";
-
-import { FirestoreError } from 'firebase/firestore';
-
-function onSnapshot(...args: any[]) {
-    // We try to catch uncaught snapshot errors
-    if (args.length === 2 && typeof args[1] === 'function') {
-        return originalOnSnapshot(args[0], args[1], (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            handleFirestoreError(e, OperationType.GET, 'snapshot_unknown');
-        });
-    }
-    if (args.length === 3 && typeof args[1] === 'function' && typeof args[2] === 'function') {
-        const originalError = args[2];
-        args[2] = (e: any) => {
-            console.error('Intercepted onSnapshot error', e, args[0]);
-            originalError(e);
-        };
-        return originalOnSnapshot(args[0], args[1], args[2]);
-    }
-    return (originalOnSnapshot as any)(...args);
-}
-
 
 import { SURAHS, BADGES, MeteorEffect, RECITERS, UserData, Fleet, Discussion, Reply, ScheduleItem, Room, Challenge, AwarenessSignal, Message } from '../shared';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -164,45 +114,59 @@ import { useLanguage } from '../context/LanguageContext';
 export default function BlackHolesView({ user }: { user: UserData }) {
   const [globalProgress, setGlobalProgress] = useState(0);
   const [topContributors, setTopContributors] = useState<UserData[]>([]);
+  const [bountyClaimed, setBountyClaimed] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const claimAttemptedRef = useRef(false);
   const { isAr, t } = useLanguage();
   const targetGoal = 1000;
 
-  // calculate total focus sessions from all users
+  // Real weekly progress: sums the current week's focus minutes from all users.
+  // It auto-resets every Monday because weekStart/weekFocusMinutes on each user
+  // already roll over on the first session of the new week.
   useEffect(() => {
-    const fetchProgress = async () => {
+    const fetchWeeklyProgress = async () => {
       try {
-        const q = query(
-          collection(db, "profiles"),
-          orderBy("xp", "desc"),
-          limit(100)
-        );
-        const usersSnapshot = await getDocs(q);
-        let totalSessions = 0;
-        let users: UserData[] = [];
-        usersSnapshot.forEach((doc) => {
-          const data = doc.data() as UserData;
-          if (data.xp) {
-            totalSessions += data.xp; // We reuse totalSessions but as total XP
-            users.push({ ...data, uid: doc.id });
+        const data = await fetchBlackHoleData(user);
+        setTopContributors(data.contributors);
+        setBountyClaimed(data.prizeAlreadyClaimed);
+
+        // 1 hour focus = 60 minutes (weekMinutes already in minutes).
+        setGlobalProgress(Math.floor(data.weekMinutes / 60));
+
+        // Bounty auto-claim: once the collective target is reached, every
+        // astronaut who contributed focus this week receives the prize once.
+        const weekMinutes = user?.weekFocusMinutes || 0;
+        const helpedThisWeek = weekMinutes > 0;
+        if (
+          !claimAttemptedRef.current &&
+          !data.prizeAlreadyClaimed &&
+          data.weekMinutes >= BLACK_HOLE_TARGET_MINUTES &&
+          helpedThisWeek
+        ) {
+          claimAttemptedRef.current = true;
+          setClaiming(true);
+          const ok = await claimBlackHolePrize(user);
+          setClaiming(false);
+          if (ok) {
+            setBountyClaimed(true);
+            showToast(
+              isAr
+                ? `🎉 تم فك شفرة الثقب الأسود! حصلت على ${BLACK_HOLE_PRIZE_XP} XP كجائزة جماعية!`
+                : `🎉 Black hole decrypted! You earned ${BLACK_HOLE_PRIZE_XP} XP as a group bounty!`,
+              "success"
+            );
+            playSound("levelup");
           }
-        });
-
-        users.sort(
-          (a, b) => (b.xp || 0) - (a.xp || 0),
-        );
-        setTopContributors(users.slice(0, 3));
-
-        // 1 hour focus = 60 XP
-        let totalHours = totalSessions / 60;
-        setGlobalProgress(Math.floor(totalHours));
+        }
       } catch (e) {
         console.error("Failed to fetch black hole progress", e);
       }
     };
-    fetchProgress();
-  }, []);
+    fetchWeeklyProgress();
+  }, [user, isAr]);
 
   const progressPercent = Math.min((globalProgress / targetGoal) * 100, 100);
+  const reachedTarget = globalProgress >= targetGoal;
 
   return (
     <div className={cn("max-w-5xl mx-auto space-y-8 animate-fade-in relative z-10 px-4 md:px-0 mt-8 mb-32", isAr ? "text-right" : "text-left")}>
@@ -279,7 +243,7 @@ export default function BlackHolesView({ user }: { user: UserData }) {
             </div>
             <div className="flex justify-between w-full max-w-md mt-3 text-sm font-medium">
               <span className="text-violet-400">
-                {isAr ? `${globalProgress} ساعة تركيز مكتملة` : `${globalProgress} hours focused completed`}
+                {isAr ? `${globalProgress} ساعة تركيز هذا الأسبوع` : `${globalProgress} hours focused this week`}
               </span>
               <span className="text-gray-500">
                 {isAr ? `الهدف: ${targetGoal} س` : `Goal: ${targetGoal}h`}
@@ -296,20 +260,73 @@ export default function BlackHolesView({ user }: { user: UserData }) {
               <span>{isAr ? "الجائزة المخبأة" : "Hidden Bounty"}</span>
             </h3>
             <div className={cn("p-4 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-4", isAr ? "flex-row" : "flex-row-reverse")}>
-              <div className="p-3 bg-black/50 rounded-xl">
-                <Lock size={20} className="text-gray-400" />
+              <div className={cn("p-3 rounded-xl", bountyClaimed ? "bg-amber-500/20" : "bg-black/50")}>
+                {bountyClaimed ? (
+                  <Award size={20} className="text-amber-400" />
+                ) : (
+                  <Lock size={20} className="text-gray-400" />
+                )}
               </div>
-              <div className={isAr ? "text-right" : "text-left"}>
+              <div className={cn("flex-1", isAr ? "text-right" : "text-left")}>
                 <h4 className="text-white font-bold mb-1 text-sm">
-                  {isAr ? "ملف مشفر (التصنيف: سري للغاية)" : "Encrypted Archive (Classified: Top Secret)"}
+                  {bountyClaimed
+                    ? (isAr ? "ملف مفكك! الجائزة في حسابك ✅" : "Decrypted archive! Bounty delivered ✅")
+                    : reachedTarget
+                      ? (isAr ? "تم فك شفرة الثقب الأسود! استلم مكافأتك الجماعية" : "Black hole decrypted! Claim your group bounty")
+                      : (isAr ? "ملف مشفر (التصنيف: سري للغاية)" : "Encrypted Archive (Classified: Top Secret)")}
                 </h4>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  {isAr 
-                    ? "يحتوي هذا الملف على حقائق قوية مخفية. لن يتم كشفها إلا بتعاون جميع الرواد!"
-                    : "This entry contains deep classified cosmos wisdom. It will remain locked until collective goals are satisfied."}
+                  {bountyClaimed
+                    ? (isAr ? `تم صرف ${BLACK_HOLE_PRIZE_XP} XP لمساهمتك هذا الأسبوع. شكراً لكونك جزءاً من نصر الجماعة!`
+                        : `You received ${BLACK_HOLE_PRIZE_XP} XP for your weekly contribution. Thanks for being part of the collective!`)
+                    : reachedTarget
+                      ? (isAr ? `الهدف الجماعي (${targetGoal} ساعة) تحقق! اضغط الزر لاستلام ${BLACK_HOLE_PRIZE_XP} XP قبل نهاية الأسبوع.`
+                          : `Collective goal (${targetGoal}h) reached! Tap the button to claim ${BLACK_HOLE_PRIZE_XP} XP before the week ends.`)
+                      : (isAr 
+                          ? `يحتوي هذا الملف على ${BLACK_HOLE_PRIZE_XP} XP لمصلّح كل مساهم يشارك في هذا الأسبوع. لن يُكشف إلا بتعاون جميع الرواد!`
+                          : `This archive holds ${BLACK_HOLE_PRIZE_XP} XP for every contributor. It stays locked until collective goals are satisfied.`)}
                 </p>
               </div>
             </div>
+
+            {reachedTarget && !bountyClaimed && (
+              <motion.button
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                disabled={claiming}
+                onClick={async () => {
+                  if (claiming) return;
+                  setClaiming(true);
+                  const ok = await claimBlackHolePrize(user);
+                  setClaiming(false);
+                  if (ok) {
+                    setBountyClaimed(true);
+                    showToast(
+                      isAr
+                        ? `🎉 استلمت ${BLACK_HOLE_PRIZE_XP} XP من الجائزة الجماعية!`
+                        : `🎉 You claimed ${BLACK_HOLE_PRIZE_XP} XP from the group bounty!`,
+                      "success"
+                    );
+                    playSound("levelup");
+                  } else {
+                    showToast(
+                      isAr ? "تعذر صرف الجائزة حالياً. أعد المحاولة خلال لحظات." : "Could not pay the bounty right now. Try again shortly.",
+                      "warning"
+                    );
+                  }
+                }}
+                className={cn(
+                  "w-full mt-4 py-2.5 px-4 rounded-xl text-sm font-bold transition-all",
+                  claiming
+                    ? "bg-white/10 text-gray-300 cursor-wait"
+                    : "bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:brightness-110 shadow-[0_0_20px_rgba(245,158,11,0.4)] cursor-pointer"
+                )}
+              >
+                {claiming
+                  ? (isAr ? "جارٍ صرف الجائزة..." : "Delivering bounty...")
+                  : (isAr ? `استلم ${BLACK_HOLE_PRIZE_XP} XP 🏆` : `Claim ${BLACK_HOLE_PRIZE_XP} XP 🏆`)}
+              </motion.button>
+            )}
           </div>
 
           <div className="p-6 bg-[#0f1123]/80 backdrop-blur-md rounded-3xl border border-white/5 relative overflow-hidden">
@@ -343,7 +360,7 @@ export default function BlackHolesView({ user }: { user: UserData }) {
                       </span>
                     </div>
                     <span className="text-xs text-orange-400 font-bold bg-orange-400/10 px-2 py-1 rounded-lg">
-                      {Math.round((usr.xp || 0) / 60)} {isAr ? "س" : "h"}
+                      {Math.round(((usr.weekFocusMinutes || 0) / 60) * 10) / 10} {isAr ? "س" : "h"} {isAr ? "هذا الأسبوع" : "this week"}
                     </span>
                   </div>
                 ))

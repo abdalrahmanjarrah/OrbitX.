@@ -436,6 +436,7 @@ export interface UserData {
   weekStart?: string;
   weekFocusMinutes?: number;
   weekSessions?: number;
+  blackHoleClaimedWeek?: string;
   invitedBy?: string;
   referralsRewarded?: string[];
   timeChests?: {
