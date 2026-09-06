@@ -177,6 +177,7 @@ export default function Dashboard({
   useRenderLog("Dashboard", { userEmail: user?.email });
   const isGuest = !!user?.isGuest;
   const guestAllowedTabs = ["home", "discussions", "leaderboard", "blackholes"] as const;
+  const isMapOwner = user?.email === "abdalrahmanjarrah94@gmail.com";
   const [activeTab, setActiveTab] = useState<
     | "home"
     | "chat"
@@ -322,6 +323,10 @@ export default function Dashboard({
       setActiveTab("home");
       return;
     }
+    if (tab === "systemmap" && !isMapOwner) {
+      setActiveTab("home");
+      return;
+    }
     setActiveTab(tab);
     let activity = "في لوحة القيادة المركزية";
     if (tab === "profile") activity = "يعاين الهوية الفضائية";
@@ -416,7 +421,7 @@ export default function Dashboard({
                   {!isGuest && <NavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} className="tour-step-schedule" />}
                   {!isGuest && <NavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} />}
                   <NavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
-                  {!isGuest && <NavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
+                  {isMapOwner && <NavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
                 </>
               )}
               {currentCategory === "community" && (
@@ -598,7 +603,7 @@ export default function Dashboard({
               {activeTab === "awareness" && <AwarenessView user={user} />}
               {activeTab === "blackholes" && <BlackHolesView user={user} />}
               {activeTab === "fleets" && <FleetsView user={user} />}
-              {activeTab === "systemmap" && <SystemMapView />}
+              {activeTab === "systemmap" && isMapOwner && <SystemMapView />}
             </React.Suspense>
           </motion.div>
         </AnimatePresence>
@@ -613,7 +618,7 @@ export default function Dashboard({
                   {!isGuest && <MobileNavPill icon={<Calendar size={14} />} label={t("nav.schedule", "الجدول")} active={activeTab === "schedule"} onClick={() => handleTabChange("schedule")} />}
                   {!isGuest && <MobileNavPill icon={<Swords size={14} />} label={t("nav.challenges", "النزالات")} active={activeTab === "challenges"} onClick={() => handleTabChange("challenges")} className="tour-step-challenges-mobile" />}
                   <MobileNavPill icon={<Target size={14} />} label={t("nav.blackholes", "الثقوب السوداء")} active={activeTab === "blackholes"} onClick={() => handleTabChange("blackholes")} />
-                  {!isGuest && <MobileNavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
+                  {isMapOwner && <MobileNavPill icon={<MapIcon size={14} />} label={t("nav.systemmap", "خريطة النظام")} active={activeTab === "systemmap"} onClick={() => handleTabChange("systemmap")} />}
                 </>
             )}
             {/* ... Mobile Sub-nav for others ... */}
