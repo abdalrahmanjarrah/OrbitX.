@@ -1,6 +1,7 @@
 import React from "react";
-import { Swords, Users, Rocket, Flame } from "lucide-react";
+import { Swords, Users, Rocket, Flame, Target, Medal } from "lucide-react";
 import { motion } from "motion/react";
+import { cn } from "../../lib/utils";
 
 interface ChallengesHeroProps {
   onStartChallengeClick: () => void;
@@ -134,6 +135,48 @@ export const ChallengesHero: React.FC<ChallengesHeroProps> = ({
           ))}
           <div className="lg:hidden col-span-3" />
         </motion.div>
+      </div>
+
+      {/* بطاقات شرح القسم - How it works */}
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+        {[
+          {
+            icon: Target,
+            step: "1",
+            title: "اختر خصمك",
+            desc: "أطلق نزالاً جديداً على صديق أو رائد فضاء آخر، وحدد مدة النزال التي تناسبكما.",
+            accent: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+          },
+          {
+            icon: Flame,
+            step: "2",
+            title: "ركز واجمع النقاط",
+            desc: "كل دقيقة تركيز حقيقية بأي محطة تضيف نقطة إلى رصيدك داخل النزال.",
+            accent: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+          },
+          {
+            icon: Medal,
+            step: "3",
+            title: "اربح الجائزة",
+            desc: "من يجمع أكبر عدد من النقاط قبل انتهاء المدة يفوز بالنزال ويكسب المكافآت.",
+            accent: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+          },
+        ].map((c) => (
+          <motion.div
+            key={c.step}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 + Number(c.step) * 0.08 }}
+            className={cn("rounded-2xl border p-4 flex items-start gap-3 backdrop-blur-sm", c.accent)}
+          >
+            <c.icon size={18} className={`mt-0.5 shrink-0`} />
+            <div>
+              <div className="text-[10px] font-black text-white/50 mb-0.5">الخطوة {c.step}</div>
+              <div className="text-sm font-bold text-white mb-1">{c.title}</div>
+              <div className="text-xs text-gray-400 leading-relaxed">{c.desc}</div>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* شريط "المجد" السفلي */}

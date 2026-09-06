@@ -262,6 +262,27 @@ export default function LeaderboardView({
                     ? "bg-amber-700/20 text-amber-600 border-amber-700/30"
                     : "bg-space-dark shadow-lg shadow-indigo-900/10 text-gray-400 border-white/10";
 
+            const medalTier =
+              index === 0
+                ? {
+                    icon: "🏆",
+                    ring: "border-yellow-400/70 shadow-[0_0_16px_rgba(251,191,36,0.45)]",
+                    bar: "bg-gradient-to-r from-yellow-400/80 via-amber-300/60 to-yellow-500/40",
+                  }
+                : index === 1
+                  ? {
+                      icon: "🥈",
+                      ring: "border-gray-200/70 shadow-[0_0_14px_rgba(203,213,225,0.4)]",
+                      bar: "bg-gradient-to-r from-slate-300/80 via-gray-300/60 to-slate-400/40",
+                    }
+                  : index === 2
+                    ? {
+                        icon: "🥉",
+                        ring: "border-orange-600/60 shadow-[0_0_12px_rgba(217,119,6,0.35)]",
+                        bar: "bg-gradient-to-r from-amber-700/80 via-orange-800/60 to-amber-900/40",
+                      }
+                    : null;
+
             return (
               <motion.div
                 key={leader.uid}
@@ -269,19 +290,34 @@ export default function LeaderboardView({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={cn(
-                  "grid grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-space-dark shadow-lg shadow-indigo-900/10",
+                  "grid grid-cols-12 gap-2 md:gap-4 p-4 items-center transition-colors hover:bg-space-dark shadow-lg shadow-indigo-900/10 relative",
                   leader.uid === user.uid && "bg-indigo-500/10",
                 )}
               >
+                {medalTier && (
+                  <div className={cn("absolute right-0 top-0 h-full w-1", medalTier.bar)} />
+                )}
+
                 <div className="col-span-2 md:col-span-1 flex justify-center">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center font-bold border",
-                      rankStyle,
-                    )}
-                  >
-                    {index + 1}
-                  </div>
+                  {medalTier ? (
+                    <div
+                      className={cn(
+                        "w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-black/50 border-2 text-lg md:text-xl",
+                        medalTier.ring,
+                      )}
+                    >
+                      <span className="drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]">{medalTier.icon}</span>
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center font-bold border",
+                        rankStyle,
+                      )}
+                    >
+                      {index + 1}
+                    </div>
+                  )}
                 </div>
 
                 <div className={cn("col-span-5 md:col-span-6 flex items-center gap-3", isAr ? "flex-row" : "flex-row-reverse justify-end")}>

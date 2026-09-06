@@ -557,9 +557,9 @@ export default function FleetsView({ user }: { user: UserData }) {
                 الأساطيل الفضائية
               </h1>
               <p className="text-gray-300/95 max-w-xl text-sm md:text-base leading-relaxed font-sans">
-                أنت لست وحدك في هذا الكون المعرفي المهيب. تقدم وانضم إلى نخبة
-                رواد الفضاء، أو أسس أسطولك الخاص لقيادة دفة التطوير، مشاركة
-                التحديات، وتحقيق نقاط الخبرة كقوة موحدة!
+                لست وحدك في رحلتك المعرفية. انضم إلى أسطولٍ من رواد الفضاء
+                للتعاون في جلسات التركيز، أو أسّس أسطولك الخاص، واعملوا
+                معاً على التحديات الجماعية لتحقيق نقاط الخبرة كقوةٍ واحدة.
               </p>
               {/* Features inline bento specifiers */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-5 text-xs text-gray-400 font-medium">
